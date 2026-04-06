@@ -18,8 +18,9 @@ dependencies:
   # Networking & Auth
   http: ^1.6.0
   flutter_secure_storage: ^9.2.4
-  jwt_decoder: ^2.0.1         # <-- Missing Package Added
-  shared_preferences: ^2.2.3  # <-- Missing Package Added
+  jwt_decoder: ^2.0.1
+  shared_preferences: ^2.2.3
+  pointycastle: ^3.7.4        # RSA encryption for passwords
 
   # UI Components
   dropdown_search: ^6.0.2

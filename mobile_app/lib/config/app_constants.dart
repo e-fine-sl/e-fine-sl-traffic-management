@@ -14,8 +14,14 @@ class AppInfo {
 
 // ── API ───────────────────────────────────────────────
 class ApiConstants {
+  // Main backend API (existing)
   static const String baseUrl       = 'https://e-fine-sl-traffic-management-1.onrender.com/api';
-  // static const String baseUrl       = 'http://192.168.8.174:5000/api';
+  // static const String baseUrl    = 'http://192.168.8.174:5000/api'; // local dev
+
+  // Auth Microservice URL (update after Render deployment)
+  static const String authServiceUrl = 'https://e-fine-sl-auth-service.onrender.com';
+  // static const String authServiceUrl = 'http://192.168.8.174:4000'; // local dev
+
   static const String walletBaseUrl = 'https://efine-mock-data-loader.onrender.com/api/wallet';
   static const int    connectTimeout = 30000;
   static const int    receiveTimeout = 30000;
@@ -120,7 +126,14 @@ class AppRadius {
 
 // ── SHARED PREFERENCE KEYS ────────────────────────────
 class PrefKeys {
+  // Legacy token key (kept for backward compatibility)
   static const String authToken    = 'token';
+
+  // New multi-token system
+  static const String accessToken  = 'access_token';   // Short-lived JWT
+  static const String refreshToken = 'refresh_token';  // Long-lived JWT
+  static const String sessionToken = 'session_token';  // UUID session ID
+
   static const String userRole     = 'role';
   static const String userId       = 'userId';
   static const String userName     = 'name';
@@ -129,7 +142,7 @@ class PrefKeys {
   static const String position     = 'position';
   static const String profileImage = 'serverProfileImage';
   static const String user         = 'user';
-  static const String profileData  = 'profile_data'; // Cached driver profile JSON
+  static const String profileData  = 'profile_data';
 }
 
 // ── EXTERNAL MEDIA/ASSETS ───────────────────────────────────────

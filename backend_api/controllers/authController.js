@@ -6,6 +6,7 @@ const Police = require('../models/policeModel');
 const generateToken = require('../utils/generateToken');
 const Driver = require('../models/driverModel');
 const { HTTP, ROLES, AUTH } = require('../config/constants');
+const { decryptPassword } = require('../utils/cryptoService'); // RSA decrypt from Flutter
 
 // @desc    Request OTP for Police Registration
 // @route   POST /api/auth/request-verification
@@ -114,8 +115,17 @@ const registerPolice = async (req, res) => {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'Officer already registered' });
     }
 
+    // Decrypt RSA-encrypted password sent from Flutter
+    let plainPassword;
+    try {
+      plainPassword = decryptPassword(password);
+    } catch (e) {
+      console.error('[AUTH/REGISTER-POLICE] RSA decrypt failed:', e.message);
+      return res.status(HTTP.BAD_REQUEST).json({ message: 'Invalid encrypted password' });
+    }
+
     const salt = await bcrypt.genSalt(AUTH.BCRYPT_SALT_ROUNDS);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(plainPassword, salt);
 
     const officer = await Police.create({
       name,
@@ -169,9 +179,19 @@ const registerDriver = async (req, res) => {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'Driver already registered' });
     }
 
+    // Decrypt RSA-encrypted password sent from Flutter
+    console.log(`[AUTH/REGISTER-DRIVER] Decrypting RSA password for: ${email}`);
+    let plainPassword;
+    try {
+      plainPassword = decryptPassword(password);
+    } catch (e) {
+      console.error('[AUTH/REGISTER-DRIVER] RSA decrypt failed:', e.message);
+      return res.status(HTTP.BAD_REQUEST).json({ message: 'Invalid encrypted password' });
+    }
+
     console.log(`[AUTH/REGISTER-DRIVER] Hashing password for: ${email}`);
     const salt = await bcrypt.genSalt(AUTH.BCRYPT_SALT_ROUNDS);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(plainPassword, salt);
 
     console.log(`[AUTH/REGISTER-DRIVER] Creating driver record for: ${email}`);
     const driver = await Driver.create({
@@ -410,8 +430,16 @@ const resetPassword = async (req, res) => {
     const record = await Verification.findOne({ badgeNumber: email, otp });
     if (!record) return res.status(HTTP.BAD_REQUEST).json({ message: 'Invalid OTP' });
 
+    // Decrypt RSA-encrypted new password sent from Flutter
+    let plainNewPassword;
+    try {
+      plainNewPassword = decryptPassword(newPassword);
+    } catch (e) {
+      return res.status(HTTP.BAD_REQUEST).json({ message: 'Invalid encrypted password' });
+    }
+
     const salt = await bcrypt.genSalt(AUTH.BCRYPT_SALT_ROUNDS);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    const hashedPassword = await bcrypt.hash(plainNewPassword, salt);
 
     let updated = await Police.findOneAndUpdate({ email }, { password: hashedPassword });
     if (!updated) updated = await Driver.findOneAndUpdate({ email }, { password: hashedPassword });
