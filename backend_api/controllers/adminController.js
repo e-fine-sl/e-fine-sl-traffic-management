@@ -1166,36 +1166,7 @@ const generateDriverViolationReport = async (req, res) => {
     }
 };
 
-module.exports = {
-    adminLogin,
-    adminLogout,
-    getDashboardStats,
-    getAllDrivers,
-    getDriverDetails,
-    suspendDriver,
-    activateDriver,
-    getAllOfficers,
-    createOfficer,
-    updateOfficer,
-    deleteOfficer,
-    getAllIssuedFines,
-    updateOffense,
-    deleteOffense,
-    getAllPayments,
-    generateMonthlyReport,
-    generatePaymentReport,
-    generateDriverViolationReport,
-    // 2FA Exports
-    generateTwoFactor,
-    enableTwoFactor,
-    disableTwoFactor,
-    initAdminRegistration,
-    completeAdminRegistration,
-    adminRefreshToken,
-    getAllAdmins,
-    updateAdmin,
-    deleteAdmin
-};
+
 
 // @desc    Get all admins
 // @route   GET /api/admin/all
@@ -1275,4 +1246,35 @@ const deleteAdmin = async (req, res) => {
         console.error('Delete admin error:', error);
         res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
     }
+};
+
+module.exports = {
+    adminLogin,
+    adminLogout,
+    getDashboardStats,
+    getAllDrivers,
+    getDriverDetails,
+    suspendDriver,
+    activateDriver,
+    getAllOfficers,
+    createOfficer,
+    updateOfficer,
+    deleteOfficer,
+    getAllIssuedFines,
+    updateOffense,
+    deleteOffense,
+    getAllPayments,
+    generateMonthlyReport,
+    generatePaymentReport,
+    generateDriverViolationReport,
+    // 2FA Exports
+    generateTwoFactor,
+    enableTwoFactor,
+    disableTwoFactor,
+    initAdminRegistration,
+    completeAdminRegistration,
+    adminRefreshToken,
+    getAllAdmins,
+    updateAdmin,
+    deleteAdmin
 };
