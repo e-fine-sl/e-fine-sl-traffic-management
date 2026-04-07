@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/services/auth_service.dart';
 import 'package:mobile_app/services/theme_manager.dart';
+import 'package:mobile_app/services/notification_service.dart';
 import 'package:mobile_app/screens/auth/login_screen.dart';
 import 'package:mobile_app/screens/driver/profile_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -17,6 +18,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final AuthService _authService = AuthService();
   bool _notificationsEnabled = true;
 
+  @override
+  void initState() {
+    super.initState();
+    _notificationsEnabled = NotificationService().isEnabled;
+  }
+
   Future<void> _logout() async {
     await _authService.logout();
     if (mounted) {
@@ -26,6 +33,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
         (route) => false 
       );
     }
+  }
+
+  Future<void> _toggleNotifications(bool val) async {
+    await NotificationService().setEnabled(val);
+    setState(() => _notificationsEnabled = val);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              val ? Icons.notifications_active : Icons.notifications_off,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Text("Notifications turned ${val ? 'ON' : 'OFF'}"),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
@@ -81,11 +113,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SwitchListTile(
             secondary: const Icon(Icons.notifications_outlined, color: Colors.amber),
             title: const Text("Notifications", style: TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(
+              _notificationsEnabled
+                  ? "Show fines in device notification bar"
+                  : "Device notifications disabled",
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
             value: _notificationsEnabled,
-            onChanged: (val) {
-              setState(() => _notificationsEnabled = val);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Notifications turned ${val ? 'ON' : 'OFF'}")));
-            },
+            onChanged: _toggleNotifications,
           ),
           _buildListTile(
             icon: Icons.info_outline, 
