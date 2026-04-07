@@ -1191,5 +1191,88 @@ module.exports = {
     disableTwoFactor,
     initAdminRegistration,
     completeAdminRegistration,
-    adminRefreshToken
+    adminRefreshToken,
+    getAllAdmins,
+    updateAdmin,
+    deleteAdmin
+};
+
+// @desc    Get all admins
+// @route   GET /api/admin/all
+// @access  Private (Admin)
+const getAllAdmins = async (req, res) => {
+    try {
+        const admins = await Admin.find().select('-password -twoFactorSecret').sort({ createdAt: -1 });
+        res.json({
+            success: true,
+            count: admins.length,
+            data: admins
+        });
+    } catch (error) {
+        console.error('Get all admins error:', error);
+        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
+    }
+};
+
+// @desc    Update admin
+// @route   PUT /api/admin/:id
+// @access  Private (Super Admin)
+const updateAdmin = async (req, res) => {
+    try {
+        const admin = await Admin.findById(req.params.id);
+        if (!admin) {
+            return res.status(HTTP.NOT_FOUND).json({ message: 'Admin not found' });
+        }
+
+        const { name, email, role, isActive } = req.body;
+
+        if (name) admin.name = name;
+        if (email) admin.email = email;
+        if (role) admin.role = role;
+        if (isActive !== undefined) admin.isActive = isActive;
+
+        await admin.save();
+
+        res.json({
+            success: true,
+            message: 'Admin updated successfully',
+            admin: {
+                id: admin._id,
+                name: admin.name,
+                email: admin.email,
+                role: admin.role,
+                isActive: admin.isActive
+            }
+        });
+    } catch (error) {
+        console.error('Update admin error:', error);
+        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
+    }
+};
+
+// @desc    Delete admin
+// @route   DELETE /api/admin/:id
+// @access  Private (Super Admin)
+const deleteAdmin = async (req, res) => {
+    try {
+        const admin = await Admin.findById(req.params.id);
+        
+        if (!admin) {
+            return res.status(HTTP.NOT_FOUND).json({ message: 'Admin not found' });
+        }
+
+        if (admin.role === 'super_admin') {
+            return res.status(HTTP.FORBIDDEN).json({ message: 'Cannot delete a Super Admin' });
+        }
+
+        await admin.deleteOne();
+
+        res.json({
+            success: true,
+            message: 'Admin deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete admin error:', error);
+        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
+    }
 };
