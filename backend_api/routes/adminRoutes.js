@@ -4,6 +4,7 @@ const { protectAdmin, requireRole } = require('../middleware/adminMiddleware');
 const {
     adminLogin,
     adminLogout,
+    adminRefreshToken,
     getDashboardStats,
     getAllDrivers,
     getDriverDetails,
@@ -32,9 +33,10 @@ const {
 // PUBLIC ROUTES
 // ==========================================
 
-// Admin login & logout (no auth required for initial hit or session revocation)
+// Admin login, logout & token refresh (no auth required)
 router.post('/login', adminLogin);
 router.post('/logout', adminLogout);
+router.post('/refresh', adminRefreshToken);
 
 // ==========================================
 // PROTECTED ROUTES - All Admin Roles

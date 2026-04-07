@@ -169,7 +169,7 @@ const adminLogout = async (req, res) => {
             return res.status(HTTP.BAD_REQUEST).json({ message: 'Session token is required' });
         }
         
-        const session = await AdminSession.findOneAndUpdate(
+        await AdminSession.findOneAndUpdate(
             { sessionToken },
             { isRevoked: true }
         );
@@ -177,6 +177,74 @@ const adminLogout = async (req, res) => {
         res.json({ success: true, message: 'Logged out successfully' });
     } catch (error) {
         console.error('Admin logout error:', error);
+        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
+    }
+};
+
+// @desc    Refresh admin access token using refresh token
+// @route   POST /api/admin/refresh
+// @access  Public
+const adminRefreshToken = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(HTTP.BAD_REQUEST).json({ message: 'Refresh token is required' });
+        }
+
+        // Step 1: Verify JWT signature + expiry
+        let decoded;
+        try {
+            decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+        } catch (err) {
+            return res.status(HTTP.UNAUTHORIZED).json({ message: 'Invalid or expired refresh token' });
+        }
+
+        // Step 2: Find session by refresh token hash
+        const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+        const session = await AdminSession.findOne({ refreshTokenHash });
+
+        if (!session) {
+            return res.status(HTTP.UNAUTHORIZED).json({ message: 'Refresh token not recognised' });
+        }
+
+        // Step 3: Check session is not revoked
+        if (session.isRevoked) {
+            return res.status(HTTP.UNAUTHORIZED).json({ message: 'Session has been revoked. Please log in again.' });
+        }
+
+        // Step 4: Check refresh token has not expired (DB-level check)
+        if (new Date() > session.refreshTokenExpiresAt) {
+            return res.status(HTTP.UNAUTHORIZED).json({ message: 'Refresh token has expired. Please log in again.' });
+        }
+
+        // Step 5: Check overall session has not expired
+        if (new Date() > session.expiresAt) {
+            await AdminSession.findByIdAndUpdate(session._id, { isRevoked: true });
+            return res.status(HTTP.UNAUTHORIZED).json({ message: 'Session expired. Please log in again.' });
+        }
+
+        // Step 6: Read current token config for access token expiry
+        const tokenConfig = await getAdminTokenConfig();
+        const accessExpiryMins = tokenConfig.access_token_expiry_minutes;
+
+        // Step 7: Issue a new access token
+        const newAccessToken = jwt.sign(
+            { id: decoded.id, role: decoded.role },
+            process.env.JWT_SECRET,
+            { expiresIn: `${accessExpiryMins}m` }
+        );
+
+        console.log(`[ADMIN/REFRESH] Issued new accessToken for userId: ${decoded.id}`);
+
+        return res.json({
+            success: true,
+            accessToken: newAccessToken,
+            token: newAccessToken  // backward compat
+        });
+
+    } catch (error) {
+        console.error('Admin refresh token error:', error);
         res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
     }
 };
@@ -1122,5 +1190,6 @@ module.exports = {
     enableTwoFactor,
     disableTwoFactor,
     initAdminRegistration,
-    completeAdminRegistration
+    completeAdminRegistration,
+    adminRefreshToken
 };
