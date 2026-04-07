@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_app/screens/driver/profile_screen.dart';
 import 'package:mobile_app/services/auth_service.dart';
 import 'package:mobile_app/services/secure_storage_service.dart';
+import 'package:mobile_app/services/notification_service.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mobile_app/services/fine_service.dart';
@@ -443,155 +444,209 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
   }
 
-  // --- Professional Notification Drawer ---
+  // ── Helper: human-readable "time ago" ──────────────────
+  String _timeAgo(String? dateStr) {
+    if (dateStr == null) return '';
+    try {
+      final dt = DateTime.parse(dateStr);
+      final diff = DateTime.now().difference(dt);
+      if (diff.inMinutes < 1) return 'Just now';
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inHours < 24) return '${diff.inHours}h ago';
+      if (diff.inDays < 7) return '${diff.inDays}d ago';
+      return DateFormat('MMM d').format(dt);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  // --- Short & Sweet Notification Drawer ---
   Widget _buildNotificationDrawer() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Drawer(
-      width: MediaQuery.of(context).size.width * 0.85,
+      width: MediaQuery.of(context).size.width * 0.82,
       backgroundColor: AppTheme.drawerBackground(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(0), bottomLeft: Radius.circular(0)),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          bottomLeft: Radius.circular(20),
+        ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
+          // ── Header ─────────────────────────────────────
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
-            color: AppColors.primaryGreen,
+            padding: const EdgeInsets.fromLTRB(20, 50, 12, 16),
+            decoration: BoxDecoration(
+              color: AppColors.primaryGreen,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+              ),
+            ),
             child: Row(
               children: [
-                const Icon(Icons.notifications_active, color: Colors.white),
+                const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 22),
                 const SizedBox(width: 10),
                 const Text(
                   "Notifications",
-                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
+                if (_notifications.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(40),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${_notifications.length}',
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: Colors.white),
-                )
+                  icon: const Icon(Icons.close_rounded, color: Colors.white, size: 22),
+                ),
               ],
             ),
           ),
-          
-          // List
+
+          // ── List ───────────────────────────────────────
           Expanded(
             child: _notifications.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.notifications_off_outlined, size: 80, color: Colors.grey[300]),
-                        const SizedBox(height: 10),
-                        Text("No new notifications", style: TextStyle(color: Colors.grey[500])),
+                        Icon(Icons.notifications_off_outlined, size: 64,
+                            color: isDark ? Colors.grey[700] : Colors.grey[300]),
+                        const SizedBox(height: 12),
+                        Text("All clear! No new fines.",
+                            style: TextStyle(color: Colors.grey[500], fontSize: 14)),
                       ],
                     ),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(10),
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     itemCount: _notifications.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final fine = _notifications[index];
-                      final String fineId = fine['_id'] ?? "";
+                      final String fineId = fine['_id'] ?? '';
                       final bool isRead = _readFineIds.contains(fineId);
+                      final String offence = fine['offenseName'] ?? 'Traffic Fine';
+                      final String amount = 'LKR ${fine['amount'] ?? '0'}';
+                      final String timeAgo = _timeAgo(fine['date'] ?? fine['createdAt']);
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        decoration: BoxDecoration(
-                          color: isRead ? AppTheme.cardBackground(context) : AppColors.errorBg,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(color: Colors.grey.withAlpha(26), spreadRadius: 1, blurRadius: 5)
-                          ],
-                          border: Border(left: BorderSide(color: isRead ? AppTheme.divider(context) : AppColors.errorRed, width: 4))
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                          title: Row(
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          bool? result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => PayFineScreen(fine: fine)),
+                          );
+                          if (result == true) _refreshData();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isRead
+                                ? AppTheme.cardBackground(context)
+                                : (isDark ? const Color(0xFF2D1515) : const Color(0xFFFFF0F0)),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border(
+                              left: BorderSide(
+                                color: isRead ? Colors.transparent : AppColors.errorRed,
+                                width: 3,
+                              ),
+                            ),
+                          ),
+                          child: Row(
                             children: [
-                              Expanded(
-                                child: Text(
-                                  fine['offenseName'] ?? 'Traffic Fine',
-                                  style: TextStyle(
-                                    fontWeight: isRead ? FontWeight.normal : FontWeight.bold, // Bold unread
-                                    fontSize: 16
-                                  ),
+                              // Icon
+                              Container(
+                                width: 40, height: 40,
+                                decoration: BoxDecoration(
+                                  color: isRead
+                                      ? (isDark ? Colors.grey[800] : Colors.grey[100])
+                                      : AppColors.errorRed.withAlpha(25),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  isRead ? Icons.receipt_long_rounded : Icons.warning_amber_rounded,
+                                  color: isRead ? Colors.grey : AppColors.errorRed,
+                                  size: 20,
                                 ),
                               ),
-                              if (!isRead)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(color: AppColors.errorRed, borderRadius: BorderRadius.circular(10)),
-                                  child: const Text("NEW", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                )
-                            ],
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 5),
-                              Text("Amount: LKR ${fine['amount']}", style: TextStyle(color: AppTheme.textPrimary(context))),
-                              const SizedBox(height: 5),
-                              
-                              // Officer ID Row
-                              Row(
-                                children: [
-                                  const Icon(Icons.badge, size: 12, color: Colors.blueGrey),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    "Officer: ${fine['policeOfficerId'] ?? 'Unknown'}", 
-                                    style: const TextStyle(fontSize: 12, color: Colors.blueGrey, fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 5),
+                              const SizedBox(width: 12),
 
-                              Row(
-                                children: [
-                                  const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
-                                  const SizedBox(width: 5),
-                                  Builder(
-                                    builder: (context) {
-                                      String dateStr = fine['date'] ?? fine['createdAt'] ?? DateTime.now().toIso8601String();
-                                      DateTime dt = DateTime.parse(dateStr);
-                                      String formattedDate = DateFormat('yyyy-MM-dd  hh:mm a').format(dt);
-                                      return Text(
-                                        formattedDate,
-                                        style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
-                                      );
-                                    }
-                                  ),
-                                ],
-                              )
+                              // Text content
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            offence,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontWeight: isRead ? FontWeight.w500 : FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        if (!isRead)
+                                          Container(
+                                            width: 8, height: 8,
+                                            margin: const EdgeInsets.only(left: 6),
+                                            decoration: const BoxDecoration(
+                                              color: AppColors.errorRed,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          amount,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: isRead ? AppTheme.textSecondary(context) : AppColors.errorRed,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          timeAgo,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: AppTheme.textHint(context),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(width: 8),
+                              Icon(Icons.chevron_right_rounded,
+                                  size: 20, color: Colors.grey[400]),
                             ],
-                          ),
-                          trailing: ElevatedButton(
-                            onPressed: () async {
-                    Navigator.pop(context); // Close Drawer
-                    bool? result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => PayFineScreen(fine: fine)),
-                    );
-                    
-                    if (result == true) {
-                      _refreshData(); // Reload fines if paid
-                    }
-                  },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.cardBackground(context),
-                              foregroundColor: AppColors.errorRed,
-                              elevation: 0,
-                              side: const BorderSide(color: AppColors.errorRed),
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                            ),
-                            child: const Text("Pay"),
                           ),
                         ),
                       );
                     },
                   ),
-          )
+          ),
         ],
       ),
     );
@@ -624,25 +679,36 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
      }
   }
 
-  // Check for new fines
+  // Check for new fines — also fires device notification
   Future<void> _checkPendingFines() async {
       try {
         final fines = await FineService().getDriverPendingFines();
         
         // Calculate Badge Count (Unread Only)
         int unreadCount = 0;
+        List<Map<String, dynamic>> newFines = [];
         for (var fine in fines) {
            if (fine['_id'] != null && !_readFineIds.contains(fine['_id'])) {
               unreadCount++;
+              newFines.add(fine);
            }
         }
 
         if (mounted) {
-          // If we have a new fine (count increased from previous known unread)
-          // Note: Logic allows checking if totally new fines arrived
-          // For simplicity, if unreadCount > _fineCount (previous unread), notify.
-          if (unreadCount > _fineCount && _fineCount > 0) {
+          // If totally new fines appeared since last check
+          if (unreadCount > _fineCount && _fineCount >= 0) {
              _showProfessionalSnackbar();
+
+             // ── Device notification bar ─────────────────────
+             for (var fine in newFines) {
+               final offence = fine['offenseName'] ?? 'Traffic Fine';
+               final amount  = fine['amount'] ?? '0';
+               NotificationService().showFineNotification(
+                 title: '⚠️ New Fine: $offence',
+                 body: 'Amount: LKR $amount — Tap to pay now.',
+                 id: fine['_id'].hashCode,
+               );
+             }
           }
           
           setState(() {

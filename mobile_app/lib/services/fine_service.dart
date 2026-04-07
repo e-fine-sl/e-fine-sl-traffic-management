@@ -3,18 +3,20 @@ import 'package:flutter/foundation.dart';
 import 'api_logger.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/app_constants.dart';
+import 'auth_service.dart';
 
 class FineService {
   // Your IP address (change here if it changes)
   static const String baseUrl = ApiConstants.baseUrl;
-  final _storage = const FlutterSecureStorage();
+  final _storage = const FlutterSecureStorage(); // For licenseNum & badgeNumber only
+  final _authService = AuthService(); // For token management
 
   // ----------------------------------------------------------------
   // 1. Offenses List (No changes)
   // ----------------------------------------------------------------
   Future<List<dynamic>> getOffenses() async {
     try {
-      String? token = await _storage.read(key: PrefKeys.authToken);
+      String? token = await _authService.getToken();
       if (token == null) return [];
 
       final response = await http.get(
@@ -40,7 +42,7 @@ class FineService {
   // ----------------------------------------------------------------
   Future<bool> issueFine(Map<String, dynamic> fineData) async {
     try {
-      String? token = await _storage.read(key: PrefKeys.authToken);
+      String? token = await _authService.getToken();
       if (token == null) {
         throw Exception("Token missing. Please Logout & Login.");
       }
@@ -70,7 +72,7 @@ class FineService {
   // ----------------------------------------------------------------
   Future<List<Map<String, dynamic>>> getOfficerFineHistory() async {
     try {
-      String? token = await _storage.read(key: PrefKeys.authToken);
+      String? token = await _authService.getToken();
       String? badge = await _storage.read(key: PrefKeys.badgeNumber); // Officer ID
 
       if (token == null || badge == null) {
@@ -111,7 +113,7 @@ class FineService {
   // ----------------------------------------------------------------
   Future<List<Map<String, dynamic>>> getDriverPendingFines() async {
     try {
-      String? token = await _storage.read(key: PrefKeys.authToken);
+      String? token = await _authService.getToken();
       String? licenseNumber = await _storage.read(key: PrefKeys.licenseNum);
       
       if (token == null || licenseNumber == null) return [];
@@ -169,7 +171,7 @@ class FineService {
   Future<bool> payFine(String fineId, String paymentId) async {
     final url = Uri.parse('$baseUrl/fines/$fineId/pay');
     try {
-      String? token = await _storage.read(key: PrefKeys.authToken);
+      String? token = await _authService.getToken();
       final response = await http.post(
         url,
         headers: {
@@ -193,7 +195,7 @@ class FineService {
 
   Future<List<Map<String, dynamic>>> getDriverPaidFines() async {
     try {
-      String? token = await _storage.read(key: PrefKeys.authToken);
+      String? token = await _authService.getToken();
       String? licenseNumber = await _storage.read(key: PrefKeys.licenseNum);
       
       if (token == null || licenseNumber == null) return [];
@@ -228,7 +230,7 @@ class FineService {
   // ----------------------------------------------------------------
   Future<Map<String, dynamic>> getDriverStatus() async {
     try {
-      String? token = await _storage.read(key: PrefKeys.authToken);
+      String? token = await _authService.getToken();
       String? licenseNumber = await _storage.read(key: PrefKeys.licenseNum);
 
       if (token == null || licenseNumber == null) {
