@@ -26,7 +26,10 @@ const {
     enableTwoFactor,
     disableTwoFactor,
     initAdminRegistration,
-    completeAdminRegistration
+    completeAdminRegistration,
+    getAllAdmins,
+    updateAdmin,
+    deleteAdmin
 } = require('../controllers/adminController');
 
 // ==========================================
@@ -97,5 +100,10 @@ router.post('/register/complete', protectAdmin, requireRole('super_admin'), comp
 // Delete operations
 router.delete('/officers/:id', protectAdmin, requireRole('super_admin'), deleteOfficer);
 router.delete('/fines/offenses/:id', protectAdmin, requireRole('super_admin'), deleteOffense);
+
+// Admin management
+router.get('/all', protectAdmin, requireRole('super_admin'), getAllAdmins);
+router.put('/:id', protectAdmin, requireRole('super_admin'), updateAdmin);
+router.delete('/:id', protectAdmin, requireRole('super_admin'), deleteAdmin);
 
 module.exports = router;
