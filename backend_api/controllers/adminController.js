@@ -5,12 +5,28 @@ const qrcode = require('qrcode');
 const crypto = require('crypto');
 const Admin = require('../models/adminModel');
 const AdminSession = require('../models/adminSessionModel');
+const AdminTokenConfig = require('../models/adminTokenConfigModel');
 const Driver = require('../models/driverModel');
 const Police = require('../models/policeModel');
 const IssuedFine = require('../models/issuedFineModel');
 const Offense = require('../models/offenseModel');
 const { sendLicenseStatusEmail } = require('../services/emailService');
 const { HTTP, ROLES, PAYMENT, AUTH, PAGINATION } = require('../config/constants');
+
+// Helper: Get or create Admin token configuration from DB
+const getAdminTokenConfig = async () => {
+    let config = await AdminTokenConfig.findOne();
+    if (!config) {
+        // Auto-create defaults on first run
+        config = await AdminTokenConfig.create({
+            access_token_expiry_minutes: 15,
+            refresh_token_expiry_hours: 1,
+            session_token_expiry_days: 7
+        });
+        console.log('[ADMIN] Created default admin_token_configs document in DB');
+    }
+    return config;
+};
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -78,37 +94,54 @@ const adminLogin = async (req, res) => {
         admin.lastLogin = new Date();
         await admin.save();
 
-        // Return success with tokens
-        const accessToken = generateToken(admin._id);
-        
-        // Generate refresh token (e.g. 7 days expiry)
-        const refreshToken = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
-            expiresIn: '7d'
-        });
+        // ── Read token expiry config from DB ─────────────────────────────────
+        const tokenConfig = await getAdminTokenConfig();
+        const accessExpiryMins    = tokenConfig.access_token_expiry_minutes;  // e.g. 15
+        const refreshExpiryHours  = tokenConfig.refresh_token_expiry_hours;   // e.g. 1
+        const sessionExpiryDays   = tokenConfig.session_token_expiry_days;    // e.g. 7
 
-        // Generate session token (using crypto.randomUUID() available natively in Node 15.6+)
+        // ── Generate Tokens ──────────────────────────────────────────────────
+        const accessToken = jwt.sign(
+            { id: admin._id, role: admin.role },
+            process.env.JWT_SECRET,
+            { expiresIn: `${accessExpiryMins}m` }
+        );
+
+        const refreshToken = jwt.sign(
+            { id: admin._id, role: admin.role },
+            process.env.JWT_SECRET,
+            { expiresIn: `${refreshExpiryHours}h` }
+        );
+
         const sessionToken = crypto.randomUUID();
         const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
 
-        // Create Admin Session
-        const sessionExpiresAt = new Date();
-        sessionExpiresAt.setDate(sessionExpiresAt.getDate() + 30); // 30 days active session
+        // ── Calculate exact expiry Dates ─────────────────────────────────────
+        const now = new Date();
 
+        const refreshTokenExpiresAt = new Date(now);
+        refreshTokenExpiresAt.setHours(refreshTokenExpiresAt.getHours() + refreshExpiryHours);
+
+        const sessionExpiresAt = new Date(now);
+        sessionExpiresAt.setDate(sessionExpiresAt.getDate() + sessionExpiryDays);
+
+        // ── Persist session to admin_auth_sessions ───────────────────────────
         await AdminSession.create({
-            userId: admin._id,
-            userRole: admin.role,
-            sessionToken: sessionToken,
-            refreshTokenHash: refreshTokenHash,
-            deviceInfo: req.headers['user-agent'] || 'Unknown Device',
-            expiresAt: sessionExpiresAt
+            userId:                admin._id,
+            userRole:              admin.role,
+            sessionToken:          sessionToken,
+            refreshTokenHash:      refreshTokenHash,
+            deviceInfo:            req.headers['user-agent'] || 'Unknown Device',
+            expiresAt:             sessionExpiresAt,          // Session expiry (7 days)
+            refreshTokenExpiresAt: refreshTokenExpiresAt,     // Refresh token expiry (1 hr)
         });
 
         res.json({
             success: true,
-            token: accessToken, // Retained for backward compatibility
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            sessionToken: sessionToken,
+            token: accessToken, // Retained for backward compatibility with admin portal
+            accessToken,
+            refreshToken,
+            sessionToken,
             user: {
                 id: admin._id,
                 name: admin.name,
