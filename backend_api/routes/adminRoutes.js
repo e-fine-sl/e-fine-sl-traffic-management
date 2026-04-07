@@ -3,6 +3,7 @@ const router = express.Router();
 const { protectAdmin, requireRole } = require('../middleware/adminMiddleware');
 const {
     adminLogin,
+    adminLogout,
     getDashboardStats,
     getAllDrivers,
     getDriverDetails,
@@ -31,8 +32,9 @@ const {
 // PUBLIC ROUTES
 // ==========================================
 
-// Admin login (no auth required)
+// Admin login & logout (no auth required for initial hit or session revocation)
 router.post('/login', adminLogin);
+router.post('/logout', adminLogout);
 
 // ==========================================
 // PROTECTED ROUTES - All Admin Roles
