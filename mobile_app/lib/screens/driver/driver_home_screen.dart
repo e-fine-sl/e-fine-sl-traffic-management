@@ -14,7 +14,6 @@ import 'package:mobile_app/screens/settings_screen.dart';
 import 'package:mobile_app/screens/driver/wallet_screen.dart';
 import 'package:mobile_app/widgets/demerit_status_card.dart';
 import '../../config/app_constants.dart';
-import 'package:intl/intl.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
