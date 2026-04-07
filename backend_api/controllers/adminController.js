@@ -2,7 +2,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
+const crypto = require('crypto');
 const Admin = require('../models/adminModel');
+const AdminSession = require('../models/adminSessionModel');
 const Driver = require('../models/driverModel');
 const Police = require('../models/policeModel');
 const IssuedFine = require('../models/issuedFineModel');
@@ -76,10 +78,37 @@ const adminLogin = async (req, res) => {
         admin.lastLogin = new Date();
         await admin.save();
 
-        // Return success with token
+        // Return success with tokens
+        const accessToken = generateToken(admin._id);
+        
+        // Generate refresh token (e.g. 7 days expiry)
+        const refreshToken = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
+            expiresIn: '7d'
+        });
+
+        // Generate session token (using crypto.randomUUID() available natively in Node 15.6+)
+        const sessionToken = crypto.randomUUID();
+        const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+        // Create Admin Session
+        const sessionExpiresAt = new Date();
+        sessionExpiresAt.setDate(sessionExpiresAt.getDate() + 30); // 30 days active session
+
+        await AdminSession.create({
+            userId: admin._id,
+            userRole: admin.role,
+            sessionToken: sessionToken,
+            refreshTokenHash: refreshTokenHash,
+            deviceInfo: req.headers['user-agent'] || 'Unknown Device',
+            expiresAt: sessionExpiresAt
+        });
+
         res.json({
             success: true,
-            token: generateToken(admin._id),
+            token: accessToken, // Retained for backward compatibility
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            sessionToken: sessionToken,
             user: {
                 id: admin._id,
                 name: admin.name,
@@ -93,6 +122,28 @@ const adminLogin = async (req, res) => {
 
     } catch (error) {
         console.error('Admin login error:', error);
+        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
+    }
+};
+
+// @desc    Admin logout
+// @route   POST /api/admin/logout
+// @access  Public
+const adminLogout = async (req, res) => {
+    try {
+        const { sessionToken } = req.body;
+        if (!sessionToken) {
+            return res.status(HTTP.BAD_REQUEST).json({ message: 'Session token is required' });
+        }
+        
+        const session = await AdminSession.findOneAndUpdate(
+            { sessionToken },
+            { isRevoked: true }
+        );
+
+        res.json({ success: true, message: 'Logged out successfully' });
+    } catch (error) {
+        console.error('Admin logout error:', error);
         res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
     }
 };
@@ -1016,6 +1067,7 @@ const generateDriverViolationReport = async (req, res) => {
 
 module.exports = {
     adminLogin,
+    adminLogout,
     getDashboardStats,
     getAllDrivers,
     getDriverDetails,
