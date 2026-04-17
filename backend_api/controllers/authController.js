@@ -455,6 +455,48 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// @desc    Check if a specific field (nic, email, phone, licenseNumber) already exists in DB
+// @route   GET /api/auth/check-exists
+// @access  Public
+const checkFieldExistence = async (req, res) => {
+  const { field, value, role } = req.query;
+
+  if (!field || !value) {
+    return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'Field and value are required.' });
+  }
+
+  try {
+    const query = {};
+    // Regex for case-insensitive exact match
+    query[field] = { $regex: new RegExp(`^${value}$`, 'i') };
+
+    let exists = false;
+    let existingRecord = null;
+
+    // By default, since this is for Driver registration, check Driver.
+    // If role parameter is not strictly driver or if we want global uniqueness for nic/email/phone, we check both.
+    existingRecord = await Driver.findOne(query).select('_id');
+    
+    // For NIC, email, phone, also check Police to avoid overlap, unless it's licenseNumber which is only on Driver
+    if (!existingRecord && field !== 'licenseNumber') {
+      existingRecord = await Police.findOne(query).select('_id');
+    }
+
+    if (existingRecord) {
+      exists = true;
+    }
+
+    res.status(HTTP.OK).json({
+      success: true,
+      exists: exists,
+      message: exists ? `${field} already exists.` : `${field} is available.`
+    });
+  } catch (error) {
+    console.error(`[AUTH/CHECK-EXISTS] Error: ${error.message}`);
+    res.status(HTTP.SERVER_ERROR).json({ success: false, message: 'Server Error', error: error.message });
+  }
+};
+
 module.exports = {
   requestVerification,
   verifyOTP,
@@ -467,5 +509,6 @@ module.exports = {
   getMe,
   verifyDriver,
   updateProfileImage,
-  updateProfile
+  updateProfile,
+  checkFieldExistence
 };

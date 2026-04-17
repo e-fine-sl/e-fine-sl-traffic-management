@@ -13,7 +13,8 @@ const {
   getMe,
   verifyDriver,
   updateProfileImage,
-  updateProfile
+  updateProfile,
+  checkFieldExistence
 } = require('../controllers/authController');
 
 
@@ -29,6 +30,8 @@ router.post('/login', loginUser);
 router.post('/forgot-password', forgotPassword);
 router.post('/verify-reset-otp', verifyResetOTP);
 router.post('/reset-password', resetPassword);
+
+router.get('/check-exists', checkFieldExistence);
 
 // Protected Routes (Login වෙලා ඉන්න ඕන)
 router.get('/me', protect, getMe);
