@@ -104,26 +104,38 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
         case 'nic':
           _isNicUnique = false;
           _nicErrorText = null;
-          if (value.isNotEmpty) _isCheckingNic = true;
-          else _isCheckingNic = false; // Empty field means not checking
+          if (value.isNotEmpty) {
+            _isCheckingNic = true;
+          } else {
+            _isCheckingNic = false; // Empty field means not checking
+          }
           break;
         case 'licenseNumber':
           _isLicenseUnique = false;
           _licenseErrorText = null;
-          if (value.isNotEmpty) _isCheckingLicense = true;
-          else _isCheckingLicense = false;
+          if (value.isNotEmpty) {
+            _isCheckingLicense = true;
+          } else {
+            _isCheckingLicense = false;
+          }
           break;
         case 'email':
           _isEmailUnique = false;
           _emailErrorText = null;
-          if (value.isNotEmpty) _isCheckingEmail = true;
-          else _isCheckingEmail = false;
+          if (value.isNotEmpty) {
+            _isCheckingEmail = true;
+          } else {
+            _isCheckingEmail = false;
+          }
           break;
         case 'phone':
           _isPhoneUnique = false;
           _phoneErrorText = null;
-          if (value.isNotEmpty) _isCheckingPhone = true;
-          else _isCheckingPhone = false;
+          if (value.isNotEmpty) {
+            _isCheckingPhone = true;
+          } else {
+            _isCheckingPhone = false;
+          }
           break;
       }
     });
@@ -162,23 +174,35 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
           switch (field) {
             case 'nic':
               _isCheckingNic = false;
-              if (isTaken) _nicErrorText = "NIC is already registered";
-              else _isNicUnique = true;
+              if (isTaken) {
+                _nicErrorText = "NIC is already registered";
+              } else {
+                _isNicUnique = true;
+              }
               break;
             case 'licenseNumber':
               _isCheckingLicense = false;
-              if (isTaken) _licenseErrorText = "License Number is already registered";
-              else _isLicenseUnique = true;
+              if (isTaken) {
+                _licenseErrorText = "License Number is already registered";
+              } else {
+                _isLicenseUnique = true;
+              }
               break;
             case 'email':
               _isCheckingEmail = false;
-              if (isTaken) _emailErrorText = "Email is already registered";
-              else _isEmailUnique = true;
+              if (isTaken) {
+                _emailErrorText = "Email is already registered";
+              } else {
+                _isEmailUnique = true;
+              }
               break;
             case 'phone':
               _isCheckingPhone = false;
-              if (isTaken) _phoneErrorText = "Phone is already registered";
-              else _isPhoneUnique = true;
+              if (isTaken) {
+                _phoneErrorText = "Phone is already registered";
+              } else {
+                _isPhoneUnique = true;
+              }
               break;
           }
         });
@@ -302,7 +326,9 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
     return _isNicUnique &&
            _isLicenseUnique &&
            _isEmailUnique &&
-           _isPhoneUnique;
+           _isPhoneUnique &&
+           _issueDate.isNotEmpty &&
+           _expiryDate.isNotEmpty;
   }
 
   Widget? _buildSuffixIcon(bool isChecking, bool isUnique) {

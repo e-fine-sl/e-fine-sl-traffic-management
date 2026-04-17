@@ -861,15 +861,7 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _ocrInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(fontSize: AppTextSize.bodySmall, color: AppColors.textSecondary)),
-        Text(value, style: const TextStyle(fontSize: AppTextSize.bodyMedium, fontWeight: FontWeight.w600)),
-      ],
-    );
-  }
+
 
   // ── Step 3: Selfie ──────────────────────────────────────────────────────────
 
