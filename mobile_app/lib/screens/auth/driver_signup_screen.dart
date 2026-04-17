@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'login_screen.dart';
@@ -37,6 +38,145 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
   // Password Visibility 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
+
+  // Real-time Validation State
+  Timer? _debounce;
+  
+  bool _isCheckingNic = false;
+  String? _nicErrorText;
+  bool _isNicUnique = false;
+
+  bool _isCheckingLicense = false;
+  String? _licenseErrorText;
+  bool _isLicenseUnique = false;
+
+  bool _isCheckingEmail = false;
+  String? _emailErrorText;
+  bool _isEmailUnique = false;
+
+  bool _isCheckingPhone = false;
+  String? _phoneErrorText;
+  bool _isPhoneUnique = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nicController.addListener(() => _onFieldChanged('nic', _nicController.text));
+    _licenseController.addListener(() => _onFieldChanged('licenseNumber', _licenseController.text));
+    _emailController.addListener(() => _onFieldChanged('email', _emailController.text));
+    _phoneController.addListener(() => _onFieldChanged('phone', _phoneController.text));
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _nameController.dispose();
+    _nicController.dispose();
+    _licenseController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _addressLine1Controller.dispose();
+    _addressLine2Controller.dispose();
+    _cityController.dispose();
+    _postalCodeController.dispose();
+    super.dispose();
+  }
+
+  // --- REAL-TIME VALIDATION LOGIC 
+
+  void _onFieldChanged(String field, String value) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    
+    // Immediately clear "unique" status if user types something new
+    // We will wait until debounce to re-check
+    setState(() {
+      switch (field) {
+        case 'nic':
+          _isNicUnique = false;
+          _nicErrorText = null;
+          if (value.isNotEmpty) _isCheckingNic = true;
+          else _isCheckingNic = false; // Empty field means not checking
+          break;
+        case 'licenseNumber':
+          _isLicenseUnique = false;
+          _licenseErrorText = null;
+          if (value.isNotEmpty) _isCheckingLicense = true;
+          else _isCheckingLicense = false;
+          break;
+        case 'email':
+          _isEmailUnique = false;
+          _emailErrorText = null;
+          if (value.isNotEmpty) _isCheckingEmail = true;
+          else _isCheckingEmail = false;
+          break;
+        case 'phone':
+          _isPhoneUnique = false;
+          _phoneErrorText = null;
+          if (value.isNotEmpty) _isCheckingPhone = true;
+          else _isCheckingPhone = false;
+          break;
+      }
+    });
+
+    if (value.trim().isEmpty) return;
+
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      // First do local regex checks if applicable
+      if (field == 'email' && !_isValidEmail(value)) {
+        setState(() {
+          _isCheckingEmail = false;
+          _emailErrorText = "Invalid email format";
+        });
+        return;
+      }
+      if (field == 'nic' && !_isValidNIC(value)) {
+        setState(() {
+          _isCheckingNic = false;
+          _nicErrorText = "Invalid NIC format";
+        });
+        return;
+      }
+      if (field == 'phone' && !_isValidPhone(value)) {
+        setState(() {
+          _isCheckingPhone = false;
+          _phoneErrorText = "Invalid phone format";
+        });
+        return;
+      }
+
+      // Check DB
+      final isTaken = await _authService.checkFieldExists(field, value.trim());
+      
+      if (mounted) {
+        setState(() {
+          switch (field) {
+            case 'nic':
+              _isCheckingNic = false;
+              if (isTaken) _nicErrorText = "NIC is already registered";
+              else _isNicUnique = true;
+              break;
+            case 'licenseNumber':
+              _isCheckingLicense = false;
+              if (isTaken) _licenseErrorText = "License Number is already registered";
+              else _isLicenseUnique = true;
+              break;
+            case 'email':
+              _isCheckingEmail = false;
+              if (isTaken) _emailErrorText = "Email is already registered";
+              else _isEmailUnique = true;
+              break;
+            case 'phone':
+              _isCheckingPhone = false;
+              if (isTaken) _phoneErrorText = "Phone is already registered";
+              else _isPhoneUnique = true;
+              break;
+          }
+        });
+      }
+    });
+  }
 
   // --- VALIDATION FUNCTIONS 
 
@@ -107,6 +247,28 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
       return false;
     }
     return true;
+  }
+
+  bool _isAllUniqueFieldsValid() {
+    return _isNicUnique &&
+           _isLicenseUnique &&
+           _isEmailUnique &&
+           _isPhoneUnique;
+  }
+
+  Widget? _buildSuffixIcon(bool isChecking, bool isUnique) {
+    if (isChecking) {
+      return const Padding(
+        padding: EdgeInsets.all(12.0),
+        child: SizedBox(
+          width: 16, height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    } else if (isUnique) {
+      return const Icon(Icons.check_circle, color: AppColors.successGreen);
+    }
+    return null;
   }
 
   // ── Phase 1: open KYC screen (called when KYC not yet done) ─────────────────
@@ -213,14 +375,27 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
             // NIC
             TextField(
               controller: _nicController,
-              decoration: const InputDecoration(labelText: "NIC Number", prefixIcon: Icon(Icons.credit_card), border: OutlineInputBorder(), helperText: "Ex: 901234567V or 199012345678"),
+              decoration: InputDecoration(
+                labelText: "NIC Number", 
+                prefixIcon: const Icon(Icons.credit_card), 
+                border: const OutlineInputBorder(), 
+                helperText: "Ex: 901234567V or 199012345678",
+                errorText: _nicErrorText,
+                suffixIcon: _buildSuffixIcon(_isCheckingNic, _isNicUnique),
+              ),
             ),
             const SizedBox(height: 15),
 
             // License Number
             TextField(
               controller: _licenseController,
-              decoration: const InputDecoration(labelText: "Driving License Number", prefixIcon: Icon(Icons.card_membership), border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                labelText: "Driving License Number", 
+                prefixIcon: const Icon(Icons.card_membership), 
+                border: const OutlineInputBorder(),
+                errorText: _licenseErrorText,
+                suffixIcon: _buildSuffixIcon(_isCheckingLicense, _isLicenseUnique),
+              ),
             ),
             const SizedBox(height: 15),
 
@@ -228,7 +403,13 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
             TextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: "Email Address", prefixIcon: Icon(Icons.email), border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                labelText: "Email Address", 
+                prefixIcon: const Icon(Icons.email), 
+                border: const OutlineInputBorder(),
+                errorText: _emailErrorText,
+                suffixIcon: _buildSuffixIcon(_isCheckingEmail, _isEmailUnique),
+              ),
             ),
             const SizedBox(height: 15),
 
@@ -236,7 +417,14 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
             TextField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: "Mobile Number", prefixIcon: Icon(Icons.phone), border: OutlineInputBorder(), helperText: "Ex: 0771234567"),
+              decoration: InputDecoration(
+                labelText: "Mobile Number", 
+                prefixIcon: const Icon(Icons.phone), 
+                border: const OutlineInputBorder(), 
+                helperText: "Ex: 0771234567",
+                errorText: _phoneErrorText,
+                suffixIcon: _buildSuffixIcon(_isCheckingPhone, _isPhoneUnique),
+              ),
             ),
             const SizedBox(height: 15),
 
@@ -342,7 +530,7 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
               child: ElevatedButton.icon(
                 // If not yet KYC-verified → open KYC screen first
                 // If already verified    → re-submit (edge case safety)
-                onPressed: _isLoading
+                onPressed: (_isLoading || !_isAllUniqueFieldsValid())
                     ? null
                     : (_kycVerified ? _registerDriver : _openKyc),
                 icon:  const Icon(Icons.verified_user),

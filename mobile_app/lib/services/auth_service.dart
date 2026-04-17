@@ -364,6 +364,21 @@ class AuthService {
   // DRIVER REGISTRATION
   // ─────────────────────────────────────────────────────────────────────────
 
+  Future<bool> checkFieldExists(String field, String value) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_mainUrl/auth/check-exists?field=$field&value=${Uri.encodeComponent(value)}'),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['exists'] == true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Encrypts driver password before sending for registration.
   Future<void> registerDriver(Map<String, dynamic> data) async {
     final publicKey = await _fetchPublicKey();
