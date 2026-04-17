@@ -160,19 +160,35 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
       if (result != null && result.images != null && result.images!.isNotEmpty) {
         final backImagePath = result.images!.first;
 
+        // Guard: front image must exist before we attempt OCR
+        if (_licenseFile == null) {
+          setState(() {
+            _errorMsg = 'Front image missing. Please restart and scan the front side again.';
+            _step     = _KycStep.licenseFront;
+          });
+          return;
+        }
+
+        // Stay on licenseBack step while OCR runs — the step already shows a
+        // "Analyzing license data…" loading spinner when _isScanning is true.
+        // _runOCR() will itself set _step = ocrResult when it's done, so we
+        // must NOT change _step here (premature step change was the crash cause).
         setState(() {
           _licenseBackFile = File(backImagePath);
-          _step = _KycStep.ocrResult; // Proceed to result review (it will run OCR on FRONT now)
-          _isScanning = true;
+          _isScanning      = true;
           _extractedClasses.clear();
         });
 
-        // Run OCR on the previously captured front image
+        // Perform on-device OCR on the front image
         await _runOCR(_licenseFile!.path);
       }
     } catch (e) {
       if (!e.toString().contains('Canceled by user')) {
-        setState(() => _errorMsg = 'Scanner Error: $e');
+        setState(() {
+          _isScanning = false;
+          _errorMsg   = 'Scanner Error: $e';
+          _step       = _KycStep.licenseBack; // Stay on back step so user can retry
+        });
       }
     }
   }
