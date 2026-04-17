@@ -452,6 +452,17 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
     _iconAnimController.reset();
   }
 
+  void _retrySelfie() {
+    setState(() {
+      _selfieFile = null;
+      _errorMsg   = '';
+      _verified   = false;
+      _score      = 0;
+      _step       = _KycStep.selfie;
+    });
+    _iconAnimController.reset();
+  }
+
   // ── Build ───────────────────────────────────────────────────────────────────
 
   @override
@@ -1137,22 +1148,53 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                icon:    const Icon(Icons.refresh),
-                label:   const Text('Try Again'),
-                style:   ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryGreenDark,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.medium),
+            // ── Retry Logic ───────────────────────────────────────────
+            if (_licenseFile != null && _licenseBackFile != null) ...[
+              // Most likely a face-match failure or submit error after successful scan
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  icon:    const Icon(Icons.face),
+                  label:   const Text('Retake Selfie & Try Again'),
+                  style:   ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGreenDark,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.medium),
+                    ),
                   ),
+                  onPressed: _retrySelfie,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton.icon(
+                icon:    const Icon(Icons.refresh, size: 18),
+                label:   const Text('Restart Full Verification'),
+                style:   TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
                 ),
                 onPressed: _retry,
               ),
-            ),
+            ] else ...[
+              // Failure happened before/during license scan
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  icon:    const Icon(Icons.refresh),
+                  label:   const Text('Try Again'),
+                  style:   ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGreenDark,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.medium),
+                    ),
+                  ),
+                  onPressed: _retry,
+                ),
+              ),
+            ],
           ],
         ),
       ),
