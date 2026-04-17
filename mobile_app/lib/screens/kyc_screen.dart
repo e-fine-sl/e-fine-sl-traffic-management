@@ -46,11 +46,19 @@ class KycScreen extends StatefulWidget {
   /// The license number entered during registration (used to verify OCR result).
   final String registeredLicenseNumber;
 
+  /// The issue date entered by the user during registration (dd/MM/yyyy).
+  final String registeredIssueDate;
+
+  /// The expiry date entered by the user during registration (dd/MM/yyyy).
+  final String registeredExpiryDate;
+
   const KycScreen({
     super.key,
     required this.onVerified,
     required this.registeredNIC,
     required this.registeredLicenseNumber,
+    required this.registeredIssueDate,
+    required this.registeredExpiryDate,
   });
 
   @override
@@ -80,6 +88,7 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
   final List<Map<String, String>> _extractedClasses = [];
   bool _isScanning = false;
   bool _ocrMatched = false;
+  bool _datesMatch = false; // true when both issue date & expiry date match the user's entries
 
   // Result from backend
   bool   _verified  = false;
@@ -186,6 +195,24 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
 
   // ── OCR Processing ─────────────────────────────────────────────────────────
 
+  /// Normalizes a date string to DDMMYYYY for comparison.
+  /// Handles formats: dd/MM/yyyy, dd.MM.yyyy, dd-MM-yyyy, yyyy-MM-dd, yyyy/MM/dd.
+  String _normalizeDateForComparison(String date) {
+    final digits = date.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length < 8) return digits;
+    // If the first 4 digits form a year (>1900), it's yyyy-first format
+    final first4 = int.tryParse(digits.substring(0, 4)) ?? 0;
+    if (first4 > 1900) {
+      // yyyy MM dd → rewrite as dd MM yyyy
+      final yyyy = digits.substring(0, 4);
+      final mm   = digits.substring(4, 6);
+      final dd   = digits.substring(6, 8);
+      return '$dd$mm$yyyy';
+    }
+    // Otherwise already dd MM yyyy
+    return digits.substring(0, 8);
+  }
+
   Future<void> _runOCR(String imagePath) async {
     final inputImage = InputImage.fromFilePath(imagePath);
     final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
@@ -239,7 +266,7 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
         expiryDate = foundDates.last;
       }
 
-      // D. Verify against registration data
+      // D. Verify NIC and License against registration data
       final regNIC = widget.registeredNIC.toUpperCase().replaceAll(' ', '');
       final regLicense = widget.registeredLicenseNumber.toUpperCase().replaceAll(' ', '');
       final scanNIC = scannedNIC.toUpperCase().replaceAll(' ', '');
@@ -248,14 +275,26 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
       final nicMatch2 = scanNIC == regNIC;
       final licenseMatch2 = scanLicense == regLicense;
 
+      // E. Compare dates against user-entered registration dates
+      final bool issueDateMatches = issueDate.isNotEmpty &&
+          widget.registeredIssueDate.isNotEmpty &&
+          _normalizeDateForComparison(issueDate) ==
+              _normalizeDateForComparison(widget.registeredIssueDate);
+
+      final bool expiryDateMatches = expiryDate.isNotEmpty &&
+          widget.registeredExpiryDate.isNotEmpty &&
+          _normalizeDateForComparison(expiryDate) ==
+              _normalizeDateForComparison(widget.registeredExpiryDate);
+
       setState(() {
-        _scannedNIC       = scannedNIC;
-        _scannedLicense   = cleanLicense;
-        _scannedIssueDate = issueDate;
+        _scannedNIC        = scannedNIC;
+        _scannedLicense    = cleanLicense;
+        _scannedIssueDate  = issueDate;
         _scannedExpiryDate = expiryDate;
-        _ocrMatched       = nicMatch2 && licenseMatch2;
-        _isScanning       = false;
-        _step             = _KycStep.ocrResult; // Move to OCR result step
+        _ocrMatched        = nicMatch2 && licenseMatch2;
+        _datesMatch        = issueDateMatches && expiryDateMatches;
+        _isScanning        = false;
+        _step              = _KycStep.ocrResult;
       });
     } catch (e) {
       setState(() {
@@ -382,16 +421,17 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
 
   void _retry() {
     setState(() {
-      _licenseFile   = null;
+      _licenseFile     = null;
       _licenseBackFile = null;
-      _selfieFile    = null;
-      _scannedNIC    = '';
-      _scannedLicense = '';
-      _scannedIssueDate = '';
+      _selfieFile      = null;
+      _scannedNIC      = '';
+      _scannedLicense  = '';
+      _scannedIssueDate  = '';
       _scannedExpiryDate = '';
-      _ocrMatched    = false;
-      _errorMsg      = '';
-      _step          = _KycStep.licenseFront;
+      _ocrMatched      = false;
+      _datesMatch      = false;
+      _errorMsg        = '';
+      _step            = _KycStep.licenseFront;
     });
     _iconAnimController.reset();
   }
@@ -563,12 +603,12 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 8),
           Text(
-            _ocrMatched
-                ? 'Your license details match your registration. Proceed to selfie.'
+            _ocrMatched && _datesMatch
+                ? 'All license details match your registration. Proceed to selfie.'
                 : 'Some details do not match. Please retake the photo or check your registration.',
             style: TextStyle(
               fontSize: AppTextSize.bodyMedium,
-              color: _ocrMatched ? AppColors.successGreen : AppColors.errorRed,
+              color: _ocrMatched && _datesMatch ? AppColors.successGreen : AppColors.errorRed,
             ),
             textAlign: TextAlign.center,
           ),
@@ -605,12 +645,24 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
                   matches:  _scannedLicense.toUpperCase().replaceAll(' ', '') ==
                             widget.registeredLicenseNumber.toUpperCase().replaceAll(' ', ''),
                 ),
-                if (_scannedIssueDate.isNotEmpty || _scannedExpiryDate.isNotEmpty) ...[
-                  const Divider(),
-                  _ocrInfoRow('Issue Date', _scannedIssueDate.isEmpty ? '—' : _scannedIssueDate),
-                  const SizedBox(height: 4),
-                  _ocrInfoRow('Expiry Date', _scannedExpiryDate.isEmpty ? '—' : _scannedExpiryDate),
-                ],
+                const Divider(),
+                _ocrRow(
+                  label:    'Issue Date',
+                  scanned:  _scannedIssueDate.isEmpty ? 'Not detected' : _scannedIssueDate,
+                  expected: widget.registeredIssueDate,
+                  matches:  _scannedIssueDate.isNotEmpty &&
+                            _normalizeDateForComparison(_scannedIssueDate) ==
+                            _normalizeDateForComparison(widget.registeredIssueDate),
+                ),
+                const Divider(),
+                _ocrRow(
+                  label:    'Expiry Date',
+                  scanned:  _scannedExpiryDate.isEmpty ? 'Not detected' : _scannedExpiryDate,
+                  expected: widget.registeredExpiryDate,
+                  matches:  _scannedExpiryDate.isNotEmpty &&
+                            _normalizeDateForComparison(_scannedExpiryDate) ==
+                            _normalizeDateForComparison(widget.registeredExpiryDate),
+                ),
                 if (_extractedClasses.isNotEmpty) ...[
                   const Divider(),
                   const Padding(
@@ -639,9 +691,62 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
 
-          if (_ocrMatched) ...[
+          // \u2500\u2500 Dates not detected warning \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+          if (_scannedIssueDate.isEmpty || _scannedExpiryDate.isEmpty) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.errorBg,
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                border: Border.all(color: AppColors.errorRed),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.camera_enhance, color: AppColors.errorRed, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Could not read one or more dates from the license. '
+                      'Retake with better lighting and ensure all dates are clearly visible.',
+                      style: TextStyle(color: AppColors.errorRed, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          // \u2500\u2500 Dates detected but do not match \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+          ] else if (!_datesMatch) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color:        AppColors.errorBg,
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                border:       Border.all(color: AppColors.errorRed),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: AppColors.errorRed, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'The dates on your license do not match what you entered. '
+                      'Please retake the license photo or go back and correct the dates.',
+                      style: TextStyle(color: AppColors.errorRed, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+
+          // \u2500\u2500 Proceed button (only when all 4 checks pass) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+          if (_ocrMatched && _datesMatch) ...[
             _primaryButton(
               label: 'Proceed to Selfie',
               icon:  Icons.camera_front,
@@ -659,8 +764,9 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
                 _scannedLicense = '';
                 _scannedIssueDate = '';
                 _scannedExpiryDate = '';
-                _extractedClasses.clear();
                 _ocrMatched = false;
+                _datesMatch = false;
+                _extractedClasses.clear();
                 _step = _KycStep.licenseFront;
               });
             },

@@ -16,8 +16,8 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
   final AuthService _authService = AuthService();
   bool _isLoading    = false;
   bool _kycVerified  = false; // Set to true after KYC passes
-  String _issueDate = '';
-  String _expiryDate = '';
+  String _issueDate = '';    // Filled from DatePicker by user
+  String _expiryDate = '';   // Filled from DatePicker by user
   List<Map<String, String>> _vehicleClasses = [];
   String? _profileImageBase64;
   String? _licenseFrontBase64;
@@ -29,13 +29,19 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController(); 
-  
+  final _confirmPasswordController = TextEditingController();
+
+  // Date picker read-only controllers
+  final _issueDateController  = TextEditingController();
+  final _expiryDateController = TextEditingController();
+  String? _issueDateErrorText;
+  String? _expiryDateErrorText;
+
   final _addressLine1Controller = TextEditingController();
   final _addressLine2Controller = TextEditingController();
   final _cityController = TextEditingController();
   final _postalCodeController = TextEditingController();
-  // Password Visibility 
+  // Password Visibility
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
@@ -77,6 +83,8 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _issueDateController.dispose();
+    _expiryDateController.dispose();
     _addressLine1Controller.dispose();
     _addressLine2Controller.dispose();
     _cityController.dispose();
@@ -178,7 +186,38 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
     });
   }
 
-  // --- VALIDATION FUNCTIONS 
+  // --- DATE PICKER HELPER
+
+  Future<void> _pickDate({
+    required TextEditingController controller,
+    required void Function(String formatted) onPicked,
+    DateTime? firstDate,
+    DateTime? lastDate,
+  }) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: firstDate ?? DateTime(1980),
+      lastDate: lastDate ?? DateTime(2040),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppColors.primaryGreenDark,
+            onPrimary: Colors.white,
+            onSurface: AppColors.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked == null) return;
+    final formatted =
+        '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+    controller.text = formatted;
+    onPicked(formatted);
+  }
+
+  // --- VALIDATION FUNCTIONS
 
   // 1. Email Validation
   bool _isValidEmail(String email) {
@@ -224,6 +263,16 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
         _cityController.text.isEmpty ||
         _postalCodeController.text.isEmpty) {
       _showError("Please fill all fields.");
+      return false;
+    }
+    if (_issueDate.isEmpty) {
+      setState(() => _issueDateErrorText = 'Please select the issue date');
+      _showError('Please select the License Issue Date.');
+      return false;
+    }
+    if (_expiryDate.isEmpty) {
+      setState(() => _expiryDateErrorText = 'Please select the expiry date');
+      _showError('Please select the License Expiry Date.');
       return false;
     }
     if (!_isValidNIC(_nicController.text)) {
@@ -281,16 +330,19 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
         builder: (_) => KycScreen(
           registeredNIC: _nicController.text,
           registeredLicenseNumber: _licenseController.text,
+          registeredIssueDate: _issueDate,
+          registeredExpiryDate: _expiryDate,
           onVerified: (issue, expiry, classes, profileImageBase64, frontBase64, backBase64) {
-            // Called when KYC succeeds — mark verified, save dates/classes, and auto-submit
+            // Called when KYC succeeds — keep the OCR dates for the DB record
             setState(() {
               _kycVerified = true;
-              _issueDate = issue;
-              _expiryDate = expiry;
-              _vehicleClasses = classes;
+              // Prefer OCR-extracted dates; fall back to user entry if OCR was empty
+              _issueDate  = issue.isNotEmpty  ? issue  : _issueDate;
+              _expiryDate = expiry.isNotEmpty ? expiry : _expiryDate;
+              _vehicleClasses     = classes;
               _profileImageBase64 = profileImageBase64;
               _licenseFrontBase64 = frontBase64;
-              _licenseBackBase64 = backBase64;
+              _licenseBackBase64  = backBase64;
             });
             _registerDriver();
           },
@@ -418,13 +470,73 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
-                labelText: "Mobile Number", 
-                prefixIcon: const Icon(Icons.phone), 
-                border: const OutlineInputBorder(), 
+                labelText: "Mobile Number",
+                prefixIcon: const Icon(Icons.phone),
+                border: const OutlineInputBorder(),
                 helperText: "Ex: 0771234567",
                 errorText: _phoneErrorText,
                 suffixIcon: _buildSuffixIcon(_isCheckingPhone, _isPhoneUnique),
               ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── License Validity Dates ────────────────────────────────────
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'License Validity',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                // Issue Date
+                Expanded(
+                  child: TextFormField(
+                    controller: _issueDateController,
+                    readOnly: true,
+                    onTap: () => _pickDate(
+                      controller: _issueDateController,
+                      lastDate: DateTime.now(),
+                      onPicked: (v) => setState(() {
+                        _issueDate = v;
+                        _issueDateErrorText = null;
+                      }),
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Issue Date',
+                      hintText: 'dd/MM/yyyy',
+                      prefixIcon: const Icon(Icons.calendar_today, size: 18),
+                      border: const OutlineInputBorder(),
+                      errorText: _issueDateErrorText,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Expiry Date
+                Expanded(
+                  child: TextFormField(
+                    controller: _expiryDateController,
+                    readOnly: true,
+                    onTap: () => _pickDate(
+                      controller: _expiryDateController,
+                      firstDate: DateTime.now(),
+                      onPicked: (v) => setState(() {
+                        _expiryDate = v;
+                        _expiryDateErrorText = null;
+                      }),
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Expiry Date',
+                      hintText: 'dd/MM/yyyy',
+                      prefixIcon: const Icon(Icons.event_available, size: 18),
+                      border: const OutlineInputBorder(),
+                      errorText: _expiryDateErrorText,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 15),
 
