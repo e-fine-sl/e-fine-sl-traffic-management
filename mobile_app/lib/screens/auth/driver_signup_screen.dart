@@ -167,7 +167,7 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
       }
 
       // Check DB
-      final isTaken = await _authService.checkFieldExists(field, value.trim());
+      final isTaken = await _authService.checkFieldExists(field, value.trim(), role: 'driver');
       
       if (mounted) {
         setState(() {

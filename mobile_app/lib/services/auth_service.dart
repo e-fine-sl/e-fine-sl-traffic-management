@@ -364,11 +364,13 @@ class AuthService {
   // DRIVER REGISTRATION
   // ─────────────────────────────────────────────────────────────────────────
 
-  Future<bool> checkFieldExists(String field, String value) async {
+  Future<bool> checkFieldExists(String field, String value, {String? role}) async {
     try {
-      final response = await http.get(
-        Uri.parse('$_mainUrl/auth/check-exists?field=$field&value=${Uri.encodeComponent(value)}'),
-      );
+      String url = '$_mainUrl/auth/check-exists?field=$field&value=${Uri.encodeComponent(value)}';
+      if (role != null) {
+        url += '&role=$role';
+      }
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['exists'] == true;
