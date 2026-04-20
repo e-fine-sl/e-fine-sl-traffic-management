@@ -27,11 +27,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:google_mlkit_document_scanner/google_mlkit_document_scanner.dart';
 import 'dart:convert';
 import '../../config/app_constants.dart';
+import '../widgets/liveness_camera_view.dart';
 
 // ─── KycScreen ───────────────────────────────────────────────────────────────
 
@@ -97,11 +97,13 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
   int    _score     = 0;
   String _errorMsg  = '';
 
+  // Liveness state
+  bool _isLivenessActive = false;
+
   // Animation controller for result icon
   late AnimationController _iconAnimController;
   late Animation<double>   _iconScaleAnim;
 
-  final ImagePicker _picker = ImagePicker();
   DocumentScanner? _documentScanner;
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
@@ -199,22 +201,6 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
         });
       }
     }
-  }
-
-  /// Capture selfie using FRONT camera only
-  Future<void> _captureSelfie() async {
-    final XFile? picked = await _picker.pickImage(
-      source:       ImageSource.camera,
-      imageQuality: 80,
-      maxWidth:     1000,
-      maxHeight:    1000,
-      preferredCameraDevice: CameraDevice.front,
-    );
-    if (picked == null) return;
-    setState(() {
-      _selfieFile = File(picked.path);
-      _step       = _KycStep.preview; // Auto-advance to preview
-    });
   }
 
   // ── OCR Processing ─────────────────────────────────────────────────────────
@@ -595,10 +581,11 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
 
       if (response.statusCode == 200 && body['success'] == true) {
         setState(() {
-          _verified = body['verified'] == true;
-          _score    = (body['score']    as num?)?.toInt()    ?? 0;
+          _score    = (body['score'] as num?)?.toInt() ?? 0;
+          // Updated: Score >= 30 is now considered a successful match
+          _verified = _score >= 30;
           _step     = _verified ? _KycStep.success : _KycStep.failure;
-          _errorMsg = _verified ? '' : 'Face does not match the license photo.';
+          _errorMsg = _verified ? '' : 'Face match score too low ($_score%). Please retry with better lighting.';
         });
       } else {
         // 422 = no face detected, 500 = server error
@@ -1118,6 +1105,42 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
   // ── Step 3: Selfie ──────────────────────────────────────────────────────────
 
   Widget _buildSelfieStep() {
+    if (_isLivenessActive) {
+      return Container(
+        key: const ValueKey('liveness_camera'),
+        color: Colors.black,
+        child: Stack(
+          children: [
+            LivenessCameraView(
+              onCompleted: (File capturedFile) {
+                setState(() {
+                  _selfieFile = capturedFile;
+                  _isLivenessActive = false;
+                  _step = _KycStep.preview; // Auto-advance to preview
+                });
+              },
+              onError: (error) {
+                setState(() {
+                  _isLivenessActive = false;
+                  _errorMsg = error;
+                  _step = _KycStep.failure;
+                });
+                _iconAnimController.forward(from: 0);
+              },
+            ),
+            Positioned(
+              top: 10,
+              left: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => setState(() => _isLivenessActive = false),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       key: const ValueKey('selfie'),
       padding: const EdgeInsets.all(24),
@@ -1130,10 +1153,10 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
           _illustrationCard(
             icon:  Icons.face,
             color: AppColors.primaryBlue,
-            title: 'Take a Live Selfie',
+            title: 'Liveness Verification',
             subtitle:
-                'Look straight at the front camera in a well-lit environment. '
-                'Remove glasses or mask if possible.',
+                'To verify you are a live human, we need to perform a quick test. '
+                'You will be asked to Blink and then Smile.',
           ),
 
           const SizedBox(height: 32),
@@ -1147,9 +1170,9 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
           ],
 
           _primaryButton(
-            label:   'Open Front Camera',
+            label:   'Start Liveness Test',
             icon:    Icons.camera_front,
-            onTap:   _captureSelfie,
+            onTap:   () => setState(() => _isLivenessActive = true),
           ),
           const SizedBox(height: 12),
           _secondaryButton(
