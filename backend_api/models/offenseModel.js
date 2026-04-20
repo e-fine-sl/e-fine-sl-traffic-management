@@ -23,9 +23,9 @@ const offenseSchema = mongoose.Schema(
     demeritValue: {
       type: Number,
       required: true,
-      default: DEMERIT.OFFENSE_LEVELS.MINOR,
+      default: DEMERIT.OFFENSE_LEVELS.P1_MINOR,
       min: 1,
-      max: DEMERIT.OFFENSE_LEVELS.CRITICAL,
+      max: DEMERIT.OFFENSE_LEVELS.P4_CRITICAL,
     }
   },
   {

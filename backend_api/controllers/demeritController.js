@@ -3,19 +3,36 @@ const Offense = require('../models/offenseModel');
 const { HTTP, DEMERIT, LICENSE_STATUS } = require('../config/constants');
 
 /**
- * Calculates the demerit level tag based on current points.
- * @param {number} points - Current demerit points (0–100)
- * @returns {string} GOOD | WARNING | DANGER | SUSPENDED
+ * Calculates the demerit level descriptive tag.
+ * @param {number} points - Current demerit points (0–24)
+ * @returns {string} EXCELLENT | GOOD | FAIR | WARNING | DANGER | SUSPENDED
  */
 function calculateLevel(points) {
   if (points <= DEMERIT.SUSPENSION_THRESHOLD) return LICENSE_STATUS.SUSPENDED;
-  if (points <= 39) return 'DANGER';
-  if (points <= 69) return 'WARNING';
-  return 'GOOD';
+  
+  const max = DEMERIT.DEFAULT_POINTS;
+  const ratio = points / max;
+
+  if (ratio >= 1.0) return 'EXCELLENT';
+  if (ratio >= 0.8) return 'GOOD';
+  if (ratio >= 0.6) return 'FAIR';
+  if (ratio >= 0.4) return 'WARNING';
+  return 'DANGER';
 }
 
 /**
- * Deducts demerit points after a fine is issued.
+ * Calculates the numerical rating (0.0 – 5.0 stars).
+ * @param {number} points 
+ * @returns {number}
+ */
+function calculateRating(points) {
+  const max = DEMERIT.DEFAULT_POINTS;
+  const rawRating = (points / max) * 5;
+  return Math.round(rawRating * 10) / 10; // Round to 1 decimal place
+}
+
+/**
+ * Deducts demerit points after a fine is issued and updates the driver's rating.
  * @param {string} licenseNumber - License Number of the driver
  * @param {string} offenseId - MongoDB ObjectId of the offense
  */
@@ -31,7 +48,8 @@ exports.applyDemeritPoints = async (licenseNumber, offenseId) => {
   // Deduct points — floor at 0
   driver.demeritPoints = Math.max(0, driver.demeritPoints - offense.demeritValue);
 
-  // Update the level tag
+  // Update Rating & Level
+  driver.ratingScore = calculateRating(driver.demeritPoints);
   driver.demeritLevel = calculateLevel(driver.demeritPoints);
 
   // Check for suspension threshold
@@ -44,6 +62,7 @@ exports.applyDemeritPoints = async (licenseNumber, offenseId) => {
 
   return {
     remainingPoints: driver.demeritPoints,
+    ratingScore: driver.ratingScore,
     status: driver.licenseStatus,
     demeritLevel: driver.demeritLevel,
     deducted: offense.demeritValue,
@@ -57,7 +76,7 @@ exports.applyDemeritPoints = async (licenseNumber, offenseId) => {
 exports.getDriverStatus = async (req, res) => {
   try {
     const driver = await Driver.findOne({ licenseNumber: req.params.licenseNumber })
-      .select('demeritPoints licenseStatus demeritLevel suspendedAt');
+      .select('demeritPoints ratingScore licenseStatus demeritLevel suspendedAt');
 
     if (!driver) {
       return res.status(HTTP.NOT_FOUND).json({ message: 'Driver not found' });
@@ -65,6 +84,7 @@ exports.getDriverStatus = async (req, res) => {
 
     res.json({
       demeritPoints: driver.demeritPoints,
+      ratingScore: driver.ratingScore,
       licenseStatus: driver.licenseStatus,
       demeritLevel: driver.demeritLevel,
       suspendedAt: driver.suspendedAt,
