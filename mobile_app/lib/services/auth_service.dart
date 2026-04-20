@@ -125,6 +125,8 @@ class AuthService {
 
       if ((user['role'] as String?) == UserRoles.driver && user['licenseNumber'] != null) {
         await _storage.write(key: PrefKeys.licenseNum, value: user['licenseNumber'] as String);
+      } else if (((user['role'] as String?) == UserRoles.officer || (user['role'] as String?) == UserRoles.admin) && user['badgeNumber'] != null) {
+        await _storage.write(key: PrefKeys.badgeNumber, value: user['badgeNumber'] as String);
       }
 
       debugPrint('[AuthService] Login successful — role: ${user["role"]}');

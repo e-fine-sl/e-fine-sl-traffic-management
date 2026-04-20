@@ -7,7 +7,7 @@ const { HTTP, DEMERIT, LICENSE_STATUS } = require('../config/constants');
  * @param {number} points - Current demerit points (0–24)
  * @returns {string} EXCELLENT | GOOD | FAIR | WARNING | DANGER | SUSPENDED
  */
-function calculateLevel(points) {
+const calculateLevel = (points) => {
   if (points <= DEMERIT.SUSPENSION_THRESHOLD) return LICENSE_STATUS.SUSPENDED;
   
   const max = DEMERIT.DEFAULT_POINTS;
@@ -25,7 +25,7 @@ function calculateLevel(points) {
  * @param {number} points 
  * @returns {number}
  */
-function calculateRating(points) {
+const calculateRating = (points) => {
   const max = DEMERIT.DEFAULT_POINTS;
   const rawRating = (points / max) * 5;
   return Math.round(rawRating * 10) / 10; // Round to 1 decimal place
@@ -92,4 +92,10 @@ exports.getDriverStatus = async (req, res) => {
   } catch (err) {
     res.status(HTTP.SERVER_ERROR).json({ message: err.message });
   }
+};
+module.exports = {
+  applyDemeritPoints: exports.applyDemeritPoints,
+  getDriverStatus: exports.getDriverStatus,
+  calculateLevel,
+  calculateRating
 };
