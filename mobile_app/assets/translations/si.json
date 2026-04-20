@@ -52,4 +52,69 @@
   "demerit_suspended_on": "{} සිට",
   "demerit_reinstate_info": "ඔබේ බලපත්‍රය නැවත සක්‍රීය කිරීමට කරුණාකර රථවාහන අංශය හෝ පරිපාලකවරයෙකු හමුවන්න."
 
+
+  "police": {
+    "app_name": "e-Fine SL පොලිස්",
+
+    "home_appbar_title": "교통 පාලන ඒකකය",
+    "home_welcome": "නැවත සාදරයෙන් පිළිගනිමු,",
+    "home_quick_actions": "ඉක්මන් ක්‍රියා",
+    "home_new_fine": "නව දඩය",
+    "home_check_license": "බලපත්‍රය පරීක්ෂා කරන්න",
+    "home_fine_history": "දඩ ඉතිහාසය",
+    "home_profile": "ගිණුම",
+
+    "home_driver_details_title": "රියදුරු විස්තර හමු විය",
+    "home_nic_label": "ජා.හැ.:",
+    "home_license_label": "බලපත්‍ර අංකය:",
+    "home_verify_hint": "භෞතික බලපත්‍රය සමඟ ගැළපෙන බව තහවුරු කරන්න.",
+    "home_close": "වසන්න",
+    "home_issue_fine": "දඩය නිකුත් කරන්න",
+    "home_error_title": "දෝෂය",
+    "home_invalid_qr": "වලංගු නොවන QR කේතය: මෙය රියදුරු බලපත්‍රයක් නොවේ.",
+    "home_qr_error": "QR දත්ත කියවීමේ දෝෂයකි.",
+
+    "new_fine_appbar_title": "නව දඩය නිකුත් කරන්න",
+    "new_fine_details_section": "විස්තර",
+    "new_fine_offense_section": "වරද",
+    "new_fine_license_label": "බලපත්‍ර අංකය",
+    "new_fine_vehicle_label": "වාහන අංකය",
+    "new_fine_vehicle_hint": "වාහන අංකය ඇතුළත් කරන්න",
+    "new_fine_offense_label": "වරද තෝරන්න",
+    "new_fine_amount_label": "දඩ මුදල (රු.)",
+    "new_fine_location_label": "වරද සිදු වූ ස්ථානය",
+    "new_fine_date_label": "දිනය සහ වේලාව (ස්වයංක්‍රීය)",
+    "new_fine_required": "අවශ්‍යයි",
+    "new_fine_select_offense_error": "කරුණාකර වරදක් තෝරන්න",
+    "new_fine_officer_missing": "නිලධාරී ID නැත. කරුණාකර නැවත පිවිසෙන්න.",
+    "new_fine_success": "දඩය සාර්ථකව නිකුත් කරන ලදි!",
+    "new_fine_failed_title": "දඩය නිකුත් කිරීම අසාර්ථකයි",
+    "new_fine_ok": "හරි",
+    "new_fine_submit": "දඩය නිකුත් කරන්න",
+    "new_fine_submitting": "යවමින්...",
+
+    "history_appbar_title": "දඩ ඉතිහාසය",
+    "history_empty": "තවම දඩ නිකුත් කර නොමැත.",
+    "history_failed_title": "ඉතිහාසය පූරණය නොවිනි",
+    "history_retry": "නැවත උත්සාහ කරන්න",
+    "history_status_paid": "ගෙවා ඇත",
+    "history_status_unpaid": "ගෙවා නැත",
+    "history_status_pending": "අපේක්ෂිතයි",
+    "history_lic_prefix": "බලප.:",
+    "history_unknown_date": "දිනය නොදනී",
+    "history_unknown_location": "ස්ථානය නොදනී",
+    "history_violation": "교통 위반 (ගමනාගමන උල්ලංඝනය)",
+    "history_amount_prefix": "රු. ",
+
+    "profile_appbar_title": "මගේ ගිණුම",
+    "profile_badge": "බෑජ් අංකය",
+    "profile_station": "පොලිස් ස්ථානය",
+    "profile_email": "විද්‍යුත් ලිපිනය",
+    "profile_logout": "ඉවත් වන්න",
+    "profile_loading": "පූරණය වෙමින්...",
+    "profile_error": "දත්ත පූරණය කිරීමේ දෝෂය",
+    "profile_photo_updated": "පැතිකඩ රූපය යාවත්කාලීන කරන ලදි!",
+    "profile_photo_failed": "රූපය යාවත්කාලීන කිරීම අසාර්ථකයි"
+  }
+
 }

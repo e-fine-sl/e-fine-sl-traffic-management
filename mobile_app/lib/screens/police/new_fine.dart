@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -25,7 +26,6 @@ class _NewFineScreenState extends State<NewFineScreen> {
   late TextEditingController _dateController;
   final DateTime _selectedDate = DateTime.now();
 
-  // Variables to hold Offense Data
   Map<String, dynamic>? _selectedOffenseData;
   List<Map<String, dynamic>> _offenseList = [];
 
@@ -39,21 +39,22 @@ class _NewFineScreenState extends State<NewFineScreen> {
     super.initState();
     _licenseController =
         TextEditingController(text: widget.scannedLicenseNumber ?? "");
-    _dateController = TextEditingController(text: _formatDateTime(_selectedDate));
+    _dateController =
+        TextEditingController(text: _formatDateTime(_selectedDate));
     _loadInitialData();
   }
 
   String _formatDateTime(DateTime dt) {
-     return "${dt.year}-${dt.month.toString().padLeft(2,'0')}-${dt.day.toString().padLeft(2,'0')} ${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}";
+    return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} "
+        "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
   }
 
   Future<void> _loadInitialData() async {
     await _loadOfficerDetails();
     await _getCurrentLocation();
-    await _fetchOffenses(); // Get the list of offenses
+    await _fetchOffenses();
   }
 
-  // Loading Offenses from the Backend
   Future<void> _fetchOffenses() async {
     try {
       final offenses = await FineService().getOffenses();
@@ -64,7 +65,6 @@ class _NewFineScreenState extends State<NewFineScreen> {
         });
       }
     } catch (e) {
-      // print("Error loading offenses: $e");
       if (mounted) setState(() => _isLoadingOffenses = false);
     }
   }
@@ -110,17 +110,15 @@ class _NewFineScreenState extends State<NewFineScreen> {
   Future<void> _submitFine() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Error validation if no Offense is selected
     if (_selectedOffenseData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please select an offense")));
+          SnackBar(content: Text('police.new_fine_select_offense_error'.tr())));
       return;
     }
 
-    // Validation if Officer Badge Number is missing (e.g. Logged out)
     if (_officerBadgeNumber == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Officer ID missing. Please Logout & Login.")));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('police.new_fine_officer_missing'.tr())));
       return;
     }
 
@@ -130,12 +128,9 @@ class _NewFineScreenState extends State<NewFineScreen> {
       Map<String, dynamic> fineData = {
         "licenseNumber": _licenseController.text,
         "vehicleNumber": _vehicleController.text,
-
-        // --- CRITICAL PART: Sending ID and Name to the Backend ---
-        "offenseId": _selectedOffenseData!['_id'], // Database ID
-        "offenseName": _selectedOffenseData!['offenseName'] ??
-            _selectedOffenseData!['name'],
-
+        "offenseId": _selectedOffenseData!['_id'],
+        "offenseName":
+            _selectedOffenseData!['offenseName'] ?? _selectedOffenseData!['name'],
         "amount": double.parse(_amountController.text),
         "place": _locationController.text.isEmpty
             ? "Unknown Location"
@@ -148,8 +143,8 @@ class _NewFineScreenState extends State<NewFineScreen> {
       await FineService().issueFine(fineData);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("Fine Issued Successfully!"),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('police.new_fine_success'.tr()),
             backgroundColor: AppColors.successGreen));
         Navigator.pop(context);
       }
@@ -159,13 +154,13 @@ class _NewFineScreenState extends State<NewFineScreen> {
         showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
-                  title: const Text("Failed to Issue Fine",
-                      style: TextStyle(color: AppColors.errorRed)),
+                  title: Text('police.new_fine_failed_title'.tr(),
+                      style: const TextStyle(color: AppColors.errorRed)),
                   content: Text(errorMessage),
                   actions: [
                     TextButton(
                         onPressed: () => Navigator.pop(ctx),
-                        child: const Text("OK"))
+                        child: Text('police.new_fine_ok'.tr()))
                   ],
                 ));
       }
@@ -178,7 +173,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: const Text("Issue New Fine"),
+          title: Text('police.new_fine_appbar_title'.tr()),
           backgroundColor: AppColors.primaryBlue,
           foregroundColor: Colors.white),
       body: SingleChildScrollView(
@@ -188,38 +183,40 @@ class _NewFineScreenState extends State<NewFineScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Details",
-                  style: TextStyle(
-                      fontSize: 18,
-                      color: AppColors.primaryBlue)),
+              Text(
+                'police.new_fine_details_section'.tr(),
+                style: const TextStyle(
+                    fontSize: 18, color: AppColors.primaryBlue),
+              ),
               const SizedBox(height: 15),
               TextFormField(
                 controller: _licenseController,
-                decoration: const InputDecoration(
-                    labelText: "License Number",
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.card_membership)),
-                validator: (val) => val!.isEmpty ? "Required" : null,
+                decoration: InputDecoration(
+                    labelText: 'police.new_fine_license_label'.tr(),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.card_membership)),
+                validator: (val) =>
+                    val!.isEmpty ? 'police.new_fine_required'.tr() : null,
               ),
               const SizedBox(height: 15),
               TextFormField(
                 controller: _vehicleController,
-                decoration: const InputDecoration(
-                    labelText: "Vehicle Number",
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.directions_car)),
+                decoration: InputDecoration(
+                    labelText: 'police.new_fine_vehicle_label'.tr(),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.directions_car)),
                 validator: (val) =>
-                    val!.isEmpty ? "Enter Vehicle Number" : null,
+                    val!.isEmpty ? 'police.new_fine_vehicle_hint'.tr() : null,
               ),
               const SizedBox(height: 25),
 
-              const Text("Offense",
-                  style: TextStyle(
-                      fontSize: 18,
-                      color: AppColors.primaryBlue)),
+              Text(
+                'police.new_fine_offense_section'.tr(),
+                style: const TextStyle(
+                    fontSize: 18, color: AppColors.primaryBlue),
+              ),
               const SizedBox(height: 15),
 
-              // --- Dynamic Dropdown ---
               _isLoadingOffenses
                   ? const Center(child: CircularProgressIndicator())
                   : DropdownSearch<Map<String, dynamic>>(
@@ -237,11 +234,11 @@ class _NewFineScreenState extends State<NewFineScreen> {
                       },
                       selectedItem: _selectedOffenseData,
                       popupProps: const PopupProps.menu(showSearchBox: true),
-                      decoratorProps: const DropDownDecoratorProps(
+                      decoratorProps: DropDownDecoratorProps(
                         decoration: InputDecoration(
-                            labelText: "Select Offense",
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.gavel)),
+                            labelText: 'police.new_fine_offense_label'.tr(),
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.gavel)),
                       ),
                     ),
 
@@ -249,10 +246,10 @@ class _NewFineScreenState extends State<NewFineScreen> {
               TextFormField(
                 controller: _amountController,
                 readOnly: true,
-                decoration: const InputDecoration(
-                    labelText: "Fine Amount (LKR)",
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.money),
+                decoration: InputDecoration(
+                    labelText: 'police.new_fine_amount_label'.tr(),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.money),
                     filled: true,
                     fillColor: Colors.white70),
               ),
@@ -261,7 +258,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
                 controller: _locationController,
                 readOnly: true,
                 decoration: InputDecoration(
-                  labelText: "Place of Offense",
+                  labelText: 'police.new_fine_location_label'.tr(),
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.location_on),
                   suffixIcon: IconButton(
@@ -269,28 +266,28 @@ class _NewFineScreenState extends State<NewFineScreen> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2))
+                            child:
+                                CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.my_location, color: Colors.blue),
                     onPressed: _getCurrentLocation,
                   ),
                 ),
               ),
               const SizedBox(height: 15),
-              
+
               TextFormField(
                 controller: _dateController,
-                readOnly: true, // User cannot edit
-                // onTap: _pickDateTime, // Removed: Picker disabled
-                decoration: const InputDecoration(
-                  labelText: "Date & Time (Auto)",
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.calendar_today, color: Colors.grey),
-                  // suffixIcon: Icon(Icons.lock, size: 16, color: Colors.grey), // Optional Lock Icon
+                readOnly: true,
+                decoration: InputDecoration(
+                  labelText: 'police.new_fine_date_label'.tr(),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.calendar_today,
+                      color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.black12 // Greyed out slightly
+                  fillColor: Colors.black12,
                 ),
               ),
-              
+
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,
@@ -300,7 +297,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
                   icon: const Icon(Icons.send),
                   label: _isSubmitting
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("ISSUE FINE"),
+                      : Text('police.new_fine_submit'.tr()),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.errorRed,
                       foregroundColor: Colors.white),

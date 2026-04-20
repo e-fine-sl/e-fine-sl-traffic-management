@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/auth_service.dart';
@@ -20,26 +21,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
 
   String _userId = "";
-  String _officerName = "Loading...";
-  String _badgeNumber = "Loading...";
-  String _email = "Loading...";
-  String _station = "Loading...";
-  String _position = "Loading..."; // Rank
+  String _officerName = "";
+  String _badgeNumber = "";
+  String _email = "";
+  String _station = "";
+  String _position = "";
 
   String? _profileImageBase64;
   bool _isUploading = false;
-  bool _isLoadingData = true; // Show loading until data is fetched
+  bool _isLoadingData = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchLatestUserData(); // New method: Fetch data directly from the Server
+    _fetchLatestUserData();
   }
 
-  // --- NEW FUNCTION: Fetch Data from Server ---
   Future<void> _fetchLatestUserData() async {
     try {
-      // 1. Show basic data from Storage first (for speed)
       String? savedId = await _storage.read(key: PrefKeys.userId);
       String? savedName = await _storage.read(key: PrefKeys.userName);
 
@@ -50,7 +49,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
 
-      // 2. Call the server to get the latest details
       final userData = await _authService.getUserProfile();
 
       if (mounted) {
@@ -59,33 +57,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _officerName = userData['name'] ?? "Unknown";
           _badgeNumber = userData['badgeNumber'] ?? "Not Assigned";
           _email = userData['email'] ?? "No Email";
-
-          // Rank / Position
           _position = userData['position'] ?? "Officer";
 
-          // Station (sometimes an Object, sometimes a String)
           if (userData['policeStation'] is Map) {
-            _station = userData['policeStation']['name'] ?? "Unknown Station";
+            _station =
+                userData['policeStation']['name'] ?? "Unknown Station";
           } else {
             _station = userData['policeStation'] ?? "Unknown Station";
           }
 
-          // Profile Image
           _profileImageBase64 = userData['profileImage'];
-
           _isLoadingData = false;
         });
 
-        // 3. Save the new Data in Storage (for next time)
         await _storage.write(key: PrefKeys.userName, value: _officerName);
         await _storage.write(key: 'badgeNumber', value: _badgeNumber);
         await _storage.write(key: 'position', value: _position);
       }
     } catch (e) {
-      // print("Error fetching profile: $e");
       if (mounted) {
         setState(() {
-          _officerName = "Error Loading Data";
           _isLoadingData = false;
         });
       }
@@ -104,7 +95,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         String base64String =
             'data:image/jpeg;base64,${base64Encode(imageBytes)}';
 
-        // Backend Update
         await _authService.updateProfileImage(_userId, base64String);
 
         if (mounted) {
@@ -113,8 +103,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _isUploading = false;
           });
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Profile picture updated!'),
+            SnackBar(
+                content: Text('police.profile_photo_updated'.tr()),
                 backgroundColor: AppColors.successGreen),
           );
         }
@@ -123,7 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           setState(() => _isUploading = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text('Failed to update image: $e'),
+                content: Text('police.profile_photo_failed'.tr()),
                 backgroundColor: AppColors.errorRed),
           );
         }
@@ -154,13 +144,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text("My Profile", style: TextStyle(color: Colors.white)),
+        title: Text('police.profile_appbar_title'.tr(),
+            style: const TextStyle(color: Colors.white)),
         backgroundColor: AppColors.primaryBlue,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _isLoadingData
-          ? const Center(
-              child: CircularProgressIndicator()) // Show Loading until data arrives
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -191,7 +181,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           bottom: 0,
                           right: 0,
                           child: InkWell(
-                            onTap: _isUploading ? null : _pickAndUploadImage,
+                            onTap:
+                                _isUploading ? null : _pickAndUploadImage,
                             child: Container(
                               padding: const EdgeInsets.all(10),
                               decoration: const BoxDecoration(
@@ -226,12 +217,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   const SizedBox(height: 30),
 
-                  _buildInfoCard(Icons.badge, "Badge Number", _badgeNumber),
+                  _buildInfoCard(
+                      Icons.badge,
+                      'police.profile_badge'.tr(),
+                      _badgeNumber),
                   const SizedBox(height: 15),
                   _buildInfoCard(
-                      Icons.local_police, "Police Station", _station),
+                      Icons.local_police,
+                      'police.profile_station'.tr(),
+                      _station),
                   const SizedBox(height: 15),
-                  _buildInfoCard(Icons.email, "Email Address", _email),
+                  _buildInfoCard(
+                      Icons.email,
+                      'police.profile_email'.tr(),
+                      _email),
 
                   const SizedBox(height: 40),
 
@@ -251,8 +250,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         }
                       },
                       icon: const Icon(Icons.logout, color: Colors.white),
-                      label: const Text("Logout",
-                          style: TextStyle(fontSize: 16, color: Colors.white)),
+                      label: Text(
+                        'police.profile_logout'.tr(),
+                        style: const TextStyle(
+                            fontSize: 16, color: Colors.white),
+                      ),
                       style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.errorRed,
                           shape: RoundedRectangleBorder(
@@ -292,7 +294,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                 Text(title,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey[600])),
                 const SizedBox(height: 5),
                 Text(value,
                     style: const TextStyle(
