@@ -39,7 +39,7 @@ const calculateRating = (points) => {
 exports.applyDemeritPoints = async (licenseNumber, offenseId) => {
   const [offense, driver] = await Promise.all([
     Offense.findById(offenseId),
-    Driver.findOne({ licenseNumber }),
+    Driver.findOne({ licenseNumber: { $regex: new RegExp(`^${licenseNumber}$`, 'i') } }),
   ]);
 
   if (!offense) throw new Error(`Offense not found: ${offenseId}`);
@@ -75,7 +75,7 @@ exports.applyDemeritPoints = async (licenseNumber, offenseId) => {
  */
 exports.getDriverStatus = async (req, res) => {
   try {
-    const driver = await Driver.findOne({ licenseNumber: req.params.licenseNumber })
+    const driver = await Driver.findOne({ licenseNumber: { $regex: new RegExp(`^${req.params.licenseNumber}$`, 'i') } })
       .select('demeritPoints ratingScore licenseStatus demeritLevel suspendedAt');
 
     if (!driver) {

@@ -42,15 +42,21 @@ const issueFine = async (req, res) => {
   }
 
   try {
+    const offense = await Offense.findById(offenseId);
+    if (!offense) {
+      return res.status(HTTP.NOT_FOUND).json({ message: 'Offense type not found' });
+    }
+
     const fine = await IssuedFine.create({
       licenseNumber,
       vehicleNumber,
       offenseId,
-      offenseName,
-      amount,
+      offenseName: offense.offenseName, // Always use names from the master offense record
+      amount: offense.amount, // Use amount from master record to prevent price tampering
       place,
       policeOfficerId,
-      date: date || Date.now() // Use provided date or default to now
+      demeritPoints: offense.demeritValue || 0, // Save points into the fine record
+      date: date || Date.now()
     });
 
     let demeritResult = null;

@@ -43,12 +43,15 @@
 
   "demerit_title": "රියදුරු විනය තත්ත්වය",
   "demerit_points_label": "ලකුණු",
+  "demerit_excellent": "ඉතා යහපත් මට්ටමකි",
   "demerit_good": "යහපත් මට්ටමකි",
+  "demerit_fair": "සාමාන්‍ය මට්ටමකි",
   "demerit_warning": "අවවාදාත්මක මට්ටමකි",
   "demerit_danger": "අන්තරායකාරී මට්ටමකි",
   "demerit_suspended": "අත්හිටුවා ඇත",
   "demerit_suspended_on": "{} සිට",
-  "demerit_reinstate_info": "ඔබේ බලපත්‍රය ලබන මාසයේ 1 වනදා යළි ක්‍රියාත්මක වේ.",
+  "demerit_reinstate_info": "ඔබේ බලපත්‍රය නැවත සක්‍රීය කිරීමට කරුණාකර රථවාහන අංශය හෝ පරිපාලකවරයෙකු හමුවන්න."
+
 
   "police": {
     "app_name": "e-Fine SL පොලිස්",
