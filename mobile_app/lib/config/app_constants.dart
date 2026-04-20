@@ -49,13 +49,13 @@ class AppStatus {
 
 // ── DEMERIT POINTS ────────────────────────────────────
 class DemeritConstants {
-  static const int    defaultPoints         = 100;
+  static const int    defaultPoints         = 24;
   static const int    suspensionThreshold   = 0;
-  static const int    monthlyRestorePoints  = 50;
-  static const int    minorOffensePoints    = 10;
-  static const int    moderateOffensePoints = 20;
-  static const int    seriousOffensePoints  = 40;
-  static const int    criticalOffensePoints = 100;
+  static const int    monthlyRestorePoints  = 2;
+  static const int    minorOffensePoints    = 1;
+  static const int    moderateOffensePoints = 3;
+  static const int    seriousOffensePoints  = 6;
+  static const int    criticalOffensePoints = 24;
 }
 
 // ── APP COLORS ────────────────────────────────────────
@@ -162,15 +162,23 @@ class AppLocale {
 // ── DEMERIT LEVEL HELPER ──────────────────────────────
 class DemeritLevel {
   static String getLabel(int points) {
-    if (points >= 70) return 'demerit_good';
-    if (points >= 40) return 'demerit_warning';
-    if (points >= 1)  return 'demerit_danger';
+    const max = DemeritConstants.defaultPoints;
+    final ratio = points / max;
+
+    if (ratio >= 1.0) return 'demerit_excellent';
+    if (ratio >= 0.8) return 'demerit_good';
+    if (ratio >= 0.6) return 'demerit_fair';
+    if (ratio >= 0.4) return 'demerit_warning';
+    if (ratio >  0.0) return 'demerit_danger';
     return 'demerit_suspended';
   }
 
   static Color getColor(int points) {
-    if (points >= 70) return AppColors.goodStanding;
-    if (points >= 40) return AppColors.warningLevel;
+    const max = DemeritConstants.defaultPoints;
+    final ratio = points / max;
+
+    if (ratio >= 0.8) return AppColors.goodStanding;
+    if (ratio >= 0.4) return AppColors.warningLevel;
     return AppColors.dangerLevel;
   }
 }

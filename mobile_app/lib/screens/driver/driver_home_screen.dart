@@ -28,7 +28,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   
 
   String driverName = "Loading..."; 
-  int _demeritPoints = 100;
+  int _demeritPoints = DemeritConstants.defaultPoints;
   String _licenseStatus = 'ACTIVE';
   DateTime? _suspendedAt;
   bool _loadingStatus = true;
@@ -38,7 +38,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       final response = await FineService().getDriverStatus();
       if (mounted) {
         setState(() {
-          _demeritPoints = response['demeritPoints'] ?? 100;
+          _demeritPoints = response['demeritPoints'] ?? DemeritConstants.defaultPoints;
           _licenseStatus = response['licenseStatus'] ?? 'ACTIVE';
           _suspendedAt = response['suspendedAt'] != null
               ? DateTime.parse(response['suspendedAt'])
