@@ -11,7 +11,7 @@ const Police = require('../models/policeModel');
 const IssuedFine = require('../models/issuedFineModel');
 const Offense = require('../models/offenseModel');
 const { sendLicenseStatusEmail } = require('../services/emailService');
-const { HTTP, ROLES, PAYMENT, AUTH, PAGINATION } = require('../config/constants');
+const { HTTP, ROLES, PAYMENT, AUTH, PAGINATION, DEMERIT, LICENSE_STATUS } = require('../config/constants');
 const PdfReportService = require('../services/pdfReportService');
 
 // Helper: Get or create Admin token configuration from DB
@@ -652,9 +652,10 @@ const activateDriver = async (req, res) => {
         }
 
         // Update license status
-        driver.licenseStatus = 'ACTIVE';
-        driver.demeritPoints = 50;
-        driver.demeritLevel = 'WARNING';
+        driver.licenseStatus = LICENSE_STATUS.ACTIVE;
+        driver.demeritPoints = DEMERIT.DEFAULT_POINTS; // Reset to max (24)
+        driver.demeritLevel = 'EXCELLENT';
+        driver.ratingScore = 5.0;
         driver.suspendedAt = null;
         await driver.save();
 

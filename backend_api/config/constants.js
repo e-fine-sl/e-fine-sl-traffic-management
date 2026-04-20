@@ -38,6 +38,7 @@ const DEMERIT = {
     P3_SERIOUS:  6,
     P4_CRITICAL: 8,
   },
+  MONTHLY_RECOVERY: 2, // Points added to active drivers monthly
 };
 
 // ── AUTH & SECURITY ───────────────────────────
