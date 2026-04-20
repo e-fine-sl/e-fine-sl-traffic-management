@@ -17,9 +17,15 @@ const getOffenses = async (req, res) => {
 // @desc    Add a new offense (For Admin Testing)
 // @route   POST /api/fines/add
 const addOffense = async (req, res) => {
-  const { offenseName, amount, description } = req.body;
+  const { offenseName, amount, description, sectionOfAct, demeritValue } = req.body;
   try {
-    const offense = await Offense.create({ offenseName, amount, description });
+    const offense = await Offense.create({ 
+      offenseName, 
+      amount, 
+      description, 
+      sectionOfAct, 
+      demeritValue 
+    });
     res.status(HTTP.CREATED).json(offense);
   } catch (error) {
     res.status(HTTP.SERVER_ERROR).json({ message: 'Failed to add offense', error: error.message });
