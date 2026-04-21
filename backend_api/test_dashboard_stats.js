@@ -19,7 +19,7 @@ const API_BASE = process.env.API_URL || 'http://localhost:5000';
 const TEST_BADGE = process.argv[2] || 'OP-001';
 const TEST_TOKEN = process.argv[3] || 'test-token';
 
-console.log('\n🚀 Starting Dashboard Stats API Test...\n');
+console.log('\n[TEST] Starting Dashboard Stats API Test...\n');
 console.log('Config:');
 console.log(`  API Base URL: ${API_BASE}`);
 console.log(`  Badge Number: ${TEST_BADGE}`);
@@ -56,15 +56,15 @@ const makeRequest = (url, options) => {
 
 // Test database connection
 const testDatabaseConnection = async () => {
-  console.log('📊 Testing Database Connection...');
+  console.log('Testing Database Connection...');
   try {
     if (mongoose.connection.readyState !== 1) {
       await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/efine');
     }
-    console.log('  ✅ Connected to MongoDB\n');
+    console.log('  [OK] Connected to MongoDB\n');
     return true;
   } catch (error) {
-    console.log(`  ❌ Failed to connect: ${error.message}\n`);
+    console.log(`  [ERROR] Failed to connect: ${error.message}\n`);
     return false;
   }
 };
@@ -74,7 +74,7 @@ const testDatabaseData = async () => {
   try {
     const IssuedFine = require('./models/issuedFineModel');
     
-    console.log('📋 Database Statistics:');
+    console.log('Database Statistics:');
     const totalFines = await IssuedFine.countDocuments();
     console.log(`  Total fines: ${totalFines}`);
     
@@ -97,14 +97,14 @@ const testDatabaseData = async () => {
     
     return true;
   } catch (error) {
-    console.log(`  ❌ Error: ${error.message}\n`);
+    console.log(`  [ERROR] Error: ${error.message}\n`);
     return false;
   }
 };
 
 // Test API endpoint
 const testAPIEndpoint = async () => {
-  console.log('🌐 Testing API Endpoint:');
+  console.log('Testing API Endpoint:');
   const apiUrl = `${API_BASE}/api/fines/dashboard-stats?policeOfficerId=${TEST_BADGE}`;
   console.log(`  URL: ${apiUrl}`);
   
@@ -120,7 +120,7 @@ const testAPIEndpoint = async () => {
     console.log(`  Status Code: ${response.statusCode}`);
     
     if (response.statusCode === 200) {
-      console.log('  ✅ Response received successfully\n');
+      console.log('  [OK] Response received successfully\n');
       console.log('  Response Data:');
       console.log(`    Daily Fines Count: ${response.body.dailyFinesCount || 0}`);
       console.log(`    Daily Total Amount: Rs.${response.body.dailyTotalAmount || 0}`);
@@ -136,26 +136,26 @@ const testAPIEndpoint = async () => {
       console.log('');
       return true;
     } else if (response.statusCode === 404) {
-      console.log('  ❌ Endpoint not found (404)');
-      console.log('  ⚠️  Make sure the route is registered in fineRoutes.js\n');
+      console.log('  [ERROR] Endpoint not found (404)');
+      console.log('  [INFO] Make sure the route is registered in fineRoutes.js\n');
       return false;
     } else if (response.statusCode === 400) {
-      console.log(`  ❌ Bad Request: ${response.body?.message}\n`);
+      console.log(`  [ERROR] Bad Request: ${response.body?.message}\n`);
       return false;
     } else if (response.statusCode === 500) {
-      console.log(`  ❌ Server Error: ${response.body?.message}\n`);
+      console.log(`  [ERROR] Server Error: ${response.body?.message}\n`);
       console.log('  Backend Error Details:', response.body?.error || 'N/A');
       console.log('');
       return false;
     } else {
-      console.log(`  ❌ Unexpected status code: ${response.statusCode}`);
+      console.log(`  [ERROR] Unexpected status code: ${response.statusCode}`);
       console.log('  Response:', response.rawBody || response.body);
       console.log('');
       return false;
     }
   } catch (error) {
-    console.log(`  ❌ Connection failed: ${error.message}`);
-    console.log('  ⚠️  Make sure the backend server is running on', API_BASE, '\n');
+    console.log(`  [ERROR] Connection failed: ${error.message}`);
+    console.log('  [INFO] Make sure the backend server is running on', API_BASE, '\n');
     return false;
   }
 };
@@ -171,13 +171,13 @@ const runTests = async () => {
   const apiWorking = await testAPIEndpoint();
   
   // Summary
-  console.log('📝 Test Summary:');
-  console.log(`  Database: ${dbConnected ? '✅ OK' : '❌ Failed'}`);
-  console.log(`  API Endpoint: ${apiWorking ? '✅ OK' : '❌ Failed'}`);
+  console.log('Test Summary:');
+  console.log(`  Database: ${dbConnected ? '[OK]' : '[FAILED]'}`);
+  console.log(`  API Endpoint: ${apiWorking ? '[OK]' : '[FAILED]'}`);
   console.log('');
   
   if (!apiWorking) {
-    console.log('💡 Troubleshooting Tips:');
+    console.log('Troubleshooting Tips:');
     console.log('  1. Ensure backend server is running: npm start');
     console.log('  2. Check if API_BASE_URL is correct');
     console.log('  3. Verify fines exist in database for this officer');
