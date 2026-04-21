@@ -1,18 +1,31 @@
-import 'dart:convert'; // For JSON decode
-import 'package:flutter/material.dart';
-import '../../services/police_locale_service.dart';
+// ─────────────────────────────────────────────────────────────────────────────
+// lib/screens/police/police_home_screen.dart
+// e-Fine SL — Police Home Screen
+//
+// Dashboard stats are computed LOCALLY from FineService.getOfficerFineHistory():
+//   • _dailyFinesCount  → fines where fine['date'] matches today (Y/M/D)
+//   • _dailyTotalAmount → sum of fine['amount'] for those today-fines
+//   • _recentFines      → first 3 items of the full history list
+//
+// This bypasses the dashboard-stats API entirely, using the proven
+// /fines/history endpoint that already works in FineHistoryScreen.
+// ─────────────────────────────────────────────────────────────────────────────
 
+import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import '../../services/auth_service.dart';
+import '../../services/fine_service.dart';
+import '../../services/police_dashboard_service.dart'; // kept only for SOS & HQ alerts
+import '../../services/police_locale_service.dart';
+import '../../config/app_constants.dart';
+import '../../models/police_dashboard_model.dart';
 
 import 'new_fine.dart';
 import 'fine_history_screen.dart';
 import 'profile_screen.dart';
 import 'qr_scanner_screen.dart';
-
-import '../../config/app_constants.dart';
-import '../../models/police_dashboard_model.dart';
-import '../../services/police_dashboard_service.dart';
 
 class PoliceHomeScreen extends StatefulWidget {
   const PoliceHomeScreen({super.key});
@@ -24,123 +37,198 @@ class PoliceHomeScreen extends StatefulWidget {
 class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
   final _storage = const FlutterSecureStorage();
   final AuthService _authService = AuthService();
+
+  // FineService drives all dashboard stats now
+  final FineService _fineService = FineService();
+
+  // PoliceDashboardService is kept only for SOS and HQ alerts
   final PoliceDashboardService _dashboardService = PoliceDashboardService();
 
-  String officerName = "Loading...";
-  String badgeNumber = "";
-  String officerRank = "";
+  // ── Officer Profile State ──────────────────────────────────────────────────
+  String officerName = 'Loading...';
+  String badgeNumber = '';
+  String officerRank = '';
   String? profileImageString;
 
+  // ── Dashboard State (computed locally from fine history) ───────────────────
   int _dailyFinesCount = 0;
   double _dailyTotalAmount = 0.0;
-  List<Map<String, dynamic>>? _recentFines;
+  List<Map<String, dynamic>> _recentFines = [];
   List<HqAlertModel> _hqAlerts = [];
+
+  // ── Loading Flags ──────────────────────────────────────────────────────────
+  bool _isLoadingProfile = true;
   bool _isLoadingDashboard = true;
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // LIFECYCLE
+  // ─────────────────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
-    _loadUserData();
-    _loadDashboardData();
+    _initScreen();
   }
 
-
-
-  Future<void> _loadDashboardData() async {
-    setState(() => _isLoadingDashboard = true);
-
-    // Added try-catch-finally block to prevent infinite loading state
-    try {
-      debugPrint('[PoliceHomeScreen] Starting to load dashboard data...');
-
-      final hqAlertsFuture = _dashboardService.getHqAlerts();
-      final dashboardDataFuture = _dashboardService.getPoliceDashboardData();
-
-      final alerts = await hqAlertsFuture;
-      final dashboardData = await dashboardDataFuture;
-
-      debugPrint('[PoliceHomeScreen] Dashboard Data Response: $dashboardData');
-
-      if (mounted) {
-        setState(() {
-          _hqAlerts = alerts;
-
-          if (dashboardData != null) {
-            _recentFines = List<Map<String, dynamic>>.from(
-                dashboardData['recentFines'] ?? []);
-            debugPrint(
-                '[PoliceHomeScreen] Recent Fines Loaded: ${_recentFines?.length ?? 0} fines');
-            debugPrint('[PoliceHomeScreen] Recent Fines Data: $_recentFines');
-
-            final statsMap = dashboardData['dailyStats'] ?? {};
-            _dailyFinesCount = statsMap['count'] ?? 0;
-            _dailyTotalAmount = (statsMap['totalAmount'] ?? 0).toDouble();
-
-            debugPrint(
-                '[PoliceHomeScreen] Daily Stats - Count: $_dailyFinesCount, Amount: $_dailyTotalAmount');
-          } else {
-            debugPrint('[PoliceHomeScreen] Dashboard data is NULL');
-            _recentFines = null;
-            _dailyFinesCount = 0;
-            _dailyTotalAmount = 0.0;
-          }
-        });
-      }
-    } catch (e) {
-      // Log the specific API error for debugging
-      debugPrint('[PoliceHomeScreen] ERROR loading dashboard data: $e');
-    } finally {
-      // Ensure loading state is ALWAYS resolved, even on API failure
-      if (mounted) {
-        setState(() => _isLoadingDashboard = false);
-      }
-    }
+  /// Loads profile first (so badge is in storage), then dashboard.
+  Future<void> _initScreen() async {
+    await _loadUserData();
+    await _loadDashboardData();
   }
 
-  // --- Data Fetching Section ---
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 1 — Load officer profile
+  // ─────────────────────────────────────────────────────────────────────────
   Future<void> _loadUserData() async {
-    String? storedName = await _storage.read(key: PrefKeys.userName);
-    String? storedBadge = await _storage.read(key: 'badgeNumber');
-    String? storedRank = await _storage.read(key: 'position');
-    String? serverImg = await _storage.read(key: 'serverProfileImage');
+    debugPrint('[PoliceHomeScreen] _loadUserData() START');
+
+    // Show cached values instantly
+    final storedName  = await _storage.read(key: PrefKeys.userName);
+    final storedBadge = await _storage.read(key: 'badgeNumber');
+    final storedRank  = await _storage.read(key: 'position');
+    final storedImg   = await _storage.read(key: 'serverProfileImage');
 
     if (mounted) {
       setState(() {
-        officerName = storedName ?? "Officer";
-        badgeNumber = storedBadge ?? "";
-        officerRank = storedRank ?? "Officer";
-        profileImageString = serverImg;
+        officerName        = storedName  ?? 'Officer';
+        badgeNumber        = storedBadge ?? '';
+        officerRank        = storedRank  ?? 'Officer';
+        profileImageString = storedImg;
+        _isLoadingProfile  = false;
       });
     }
 
+    // Refresh from API in the background
     try {
-      final userData = await _authService.getUserProfile();
+      final userData  = await _authService.getUserProfile();
+      final freshBadge = userData['badgeNumber']?.toString() ?? '';
+      final freshName  = userData['name']?.toString()        ?? officerName;
+      final freshRank  = userData['position']?.toString()    ?? officerRank;
+      final freshImg   = userData['profileImage']?.toString();
+
+      if (freshBadge.isNotEmpty) {
+        await _storage.write(key: 'badgeNumber',          value: freshBadge);
+        await _storage.write(key: PrefKeys.badgeNumber,   value: freshBadge);
+        debugPrint('[PoliceHomeScreen] Badge refreshed: "$freshBadge"');
+      }
+      if (freshImg != null && freshImg.isNotEmpty) {
+        await _storage.write(key: 'serverProfileImage', value: freshImg);
+      }
 
       if (mounted) {
         setState(() {
-          officerName = userData['name'] ?? officerName;
-          badgeNumber = userData['badgeNumber'] ?? badgeNumber;
-          officerRank = userData['position'] ?? officerRank;
-          profileImageString = userData['profileImage'];
+          officerName        = freshName;
+          badgeNumber        = freshBadge.isNotEmpty ? freshBadge : badgeNumber;
+          officerRank        = freshRank;
+          profileImageString = freshImg;
         });
-
-        if (userData['badgeNumber'] != null &&
-            userData['badgeNumber'].toString().isNotEmpty) {
-          await _storage.write(
-              key: 'badgeNumber', value: userData['badgeNumber'].toString());
-        }
-
-        if (profileImageString != null) {
-          await _storage.write(
-              key: 'serverProfileImage', value: profileImageString);
-        }
       }
     } catch (e) {
-      // Silently handle — cached data is sufficient.
+      debugPrint('[PoliceHomeScreen] getUserProfile() failed (using cache): $e');
+    }
+
+    debugPrint('[PoliceHomeScreen] _loadUserData() END. badge="$badgeNumber"');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 2 — Load dashboard by computing stats from fine history locally
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<void> _loadDashboardData() async {
+    debugPrint('[PoliceHomeScreen] _loadDashboardData() START');
+    if (mounted) setState(() => _isLoadingDashboard = true);
+
+    // HQ Alerts are non-critical — run in background, never block the main call
+    _dashboardService.getHqAlerts().then((alerts) {
+      if (mounted) setState(() => _hqAlerts = alerts);
+    }).catchError((e) {
+      debugPrint('[PoliceHomeScreen] getHqAlerts() skipped: $e');
+    });
+
+    try {
+      // ── Fetch the full fine history (the proven, working endpoint) ─────────
+      debugPrint('[PoliceHomeScreen] Calling FineService.getOfficerFineHistory()...');
+      final List<Map<String, dynamic>> history =
+          await _fineService.getOfficerFineHistory();
+
+      debugPrint('[PoliceHomeScreen] History fetched: ${history.length} records');
+
+      // ── Compute "Today" filter ─────────────────────────────────────────────
+      final now   = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day); // midnight, local
+
+      int    todayCount  = 0;
+      double todayAmount = 0.0;
+
+      for (final fine in history) {
+        // The 'date' field is an ISO-8601 string, e.g. "2026-04-21T09:12:00.000Z"
+        final rawDate = fine['date']?.toString() ?? fine['createdAt']?.toString();
+
+        if (rawDate != null && rawDate.isNotEmpty) {
+          try {
+            final fineDate = DateTime.parse(rawDate).toLocal();
+            final fineDateOnly =
+                DateTime(fineDate.year, fineDate.month, fineDate.day);
+
+            if (fineDateOnly == today) {
+              todayCount++;
+
+              // Safely parse amount — may come as int, double, or string
+              final rawAmount = fine['amount'];
+              final parsedAmount = rawAmount is num
+                  ? rawAmount.toDouble()
+                  : double.tryParse(rawAmount?.toString() ?? '0') ?? 0.0;
+
+              todayAmount += parsedAmount;
+
+              debugPrint(
+                  '[PoliceHomeScreen]   + Today fine: amount=$parsedAmount, date=$rawDate');
+            }
+          } catch (e) {
+            debugPrint('[PoliceHomeScreen]   ⚠ Could not parse date "$rawDate": $e');
+          }
+        }
+      }
+
+      // ── Recent fines = first 3 items of full history ───────────────────────
+      final recentFines = history.take(3).toList();
+
+      debugPrint('[PoliceHomeScreen] ✅ Computed stats:');
+      debugPrint('   _dailyFinesCount  = $todayCount');
+      debugPrint('   _dailyTotalAmount = $todayAmount');
+      debugPrint('   _recentFines.length = ${recentFines.length}');
+
+      if (mounted) {
+        setState(() {
+          _dailyFinesCount  = todayCount;
+          _dailyTotalAmount = todayAmount;
+          _recentFines      = recentFines;
+        });
+      }
+    } catch (e) {
+      debugPrint('[PoliceHomeScreen] ❌ _loadDashboardData() EXCEPTION: $e');
+      if (mounted) {
+        setState(() {
+          _dailyFinesCount  = 0;
+          _dailyTotalAmount = 0.0;
+          _recentFines      = [];
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingDashboard = false);
+      debugPrint('[PoliceHomeScreen] _loadDashboardData() END');
     }
   }
 
-  // --- QR Scan Logic ---
+  // ─────────────────────────────────────────────────────────────────────────
+  // Pull-to-refresh
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<void> _refresh() async {
+    await _loadUserData();
+    await _loadDashboardData();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // QR SCAN HANDLER
+  // ─────────────────────────────────────────────────────────────────────────
   Future<void> _handleQRScan() async {
     final result = await Navigator.push(
       context,
@@ -149,8 +237,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
 
     if (result != null && mounted) {
       try {
-        Map<String, dynamic> data = jsonDecode(result);
-
+        final Map<String, dynamic> data = jsonDecode(result);
         if (data['type'] == 'driver_identity') {
           _showDriverDetailsDialog(data);
         } else {
@@ -164,12 +251,15 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
     }
   }
 
-  // --- Driver Details Dialog ---
+  // ─────────────────────────────────────────────────────────────────────────
+  // DIALOGS
+  // ─────────────────────────────────────────────────────────────────────────
   void _showDriverDetailsDialog(Map<String, dynamic> data) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(PoliceLocaleService.instance.translate('police.home_driver_details_title')),
+        title: Text(PoliceLocaleService.instance
+            .translate('police.home_driver_details_title')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,7 +275,8 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
             const SizedBox(height: 20),
             Center(
               child: Text(
-                PoliceLocaleService.instance.translate('police.home_verify_hint'),
+                PoliceLocaleService.instance
+                    .translate('police.home_verify_hint'),
                 style: const TextStyle(color: Colors.grey, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
@@ -195,7 +286,8 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(PoliceLocaleService.instance.translate('police.home_close')),
+            child: Text(
+                PoliceLocaleService.instance.translate('police.home_close')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -206,7 +298,8 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                       builder: (context) => NewFineScreen(
                           scannedLicenseNumber: data['license'])));
             },
-            child: Text(PoliceLocaleService.instance.translate('police.home_issue_fine')),
+            child: Text(PoliceLocaleService.instance
+                .translate('police.home_issue_fine')),
           )
         ],
       ),
@@ -218,7 +311,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
       children: [
         Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(width: 10),
-        Text(value),
+        Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
       ],
     );
   }
@@ -227,53 +320,86 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(PoliceLocaleService.instance.translate('police.home_error_title')),
+        title: Text(
+            PoliceLocaleService.instance.translate('police.home_error_title')),
         content: Text(message),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(PoliceLocaleService.instance.translate('police.home_close')))
+              child: Text(
+                  PoliceLocaleService.instance.translate('police.home_close')))
         ],
       ),
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // PROFILE IMAGE
+  // ─────────────────────────────────────────────────────────────────────────
   ImageProvider _getProfileImage() {
     if (profileImageString != null && profileImageString!.isNotEmpty) {
       if (profileImageString!.startsWith('data:image')) {
         try {
           final base64Data = profileImageString!.split(',').last;
           return MemoryImage(base64Decode(base64Data));
-        } catch (e) {
-          // Changed default fallback image to a local asset to prevent network dependency
+        } catch (_) {
           return const AssetImage('assets/images/default_avatar.png');
         }
       } else if (profileImageString!.startsWith('http')) {
         return NetworkImage(profileImageString!);
       }
     }
-    // Changed default fallback image to a local asset to prevent network dependency
     return const AssetImage('assets/images/default_avatar.png');
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // STATUS COLOR HELPER
+  // ─────────────────────────────────────────────────────────────────────────
+  Color _getStatusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'PAID':
+        return Colors.green;
+      case 'PENDING':
+        return Colors.orange;
+      case 'UNPAID':
+      default:
+        return Colors.red;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: Text(PoliceLocaleService.instance.translate('police.home_appbar_title')),
+        title: Text(
+            PoliceLocaleService.instance.translate('police.home_appbar_title')),
         backgroundColor: AppColors.primaryBlue,
         foregroundColor: Colors.white,
         centerTitle: true,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Dashboard',
+            onPressed: _refresh,
+          ),
+        ],
       ),
       drawer: const Drawer(),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final success = await _dashboardService.registerSosAlert('Current Location', officerName);
+          final success = await _dashboardService.registerSosAlert(
+              'Current Location', officerName);
           if (success && mounted) {
+            // ignore: use_build_context_synchronously
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('SOS Alert Sent!'), backgroundColor: AppColors.errorRed),
+              const SnackBar(
+                  content: Text('SOS Alert Sent!'),
+                  backgroundColor: AppColors.errorRed),
             );
           }
         },
@@ -281,18 +407,13 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
         child: const Icon(Icons.sos, color: Colors.white),
       ),
       body: RefreshIndicator(
-        // Trigger both user data and dashboard data refresh
-        onRefresh: () async {
-          await _loadUserData();
-          await _loadDashboardData();
-        },
+        onRefresh: _refresh,
         child: SingleChildScrollView(
-          // Ensure it can be scrolled and dragged even if content is short
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── 1. HEADER SECTION (Profile & Greeting) ───────────────
+              // ── 1. HEADER SECTION ──────────────────────────────────────
               Container(
                 padding: const EdgeInsets.only(
                     left: 20, right: 20, bottom: 30, top: 10),
@@ -322,9 +443,10 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            PoliceLocaleService.instance.translate('police.home_welcome'),
-                            style: TextStyle(
-                                color: Colors.blue[100], fontSize: 14),
+                            PoliceLocaleService.instance
+                                .translate('police.home_welcome'),
+                            style:
+                                TextStyle(color: Colors.blue[100], fontSize: 14),
                           ),
                           Text(
                             officerName,
@@ -335,7 +457,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            "$officerRank | $badgeNumber",
+                            '$officerRank${badgeNumber.isNotEmpty ? ' | $badgeNumber' : ''}',
                             style: const TextStyle(
                                 color: Colors.white70, fontSize: 13),
                           ),
@@ -348,13 +470,13 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
 
               const SizedBox(height: 20),
 
-              // ── 2. DASHBOARD BODY ────────────────────────────────────
+              // ── 2. DASHBOARD BODY ──────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // HQ Alerts Replacement
+                    // HQ Alerts (only shown when data is available)
                     if (_hqAlerts.isNotEmpty)
                       Container(
                         margin: const EdgeInsets.only(bottom: 20),
@@ -369,21 +491,27 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                                const Icon(Icons.warning_amber_rounded,
+                                    color: Colors.orange),
                                 const SizedBox(width: 10),
-                                Text(
-                                  _hqAlerts.first.title,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                                Expanded(
+                                  child: Text(
+                                    _hqAlerts.first.title,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange),
+                                  ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 5),
-                            Text(_hqAlerts.first.message, style: const TextStyle(fontSize: 13)),
+                            Text(_hqAlerts.first.message,
+                                style: const TextStyle(fontSize: 13)),
                           ],
                         ),
                       ),
 
-                    // Daily Stats Replacement
+                    // ── STAT CARDS ──────────────────────────────────────
                     Row(
                       children: [
                         Expanded(
@@ -399,7 +527,8 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                         Expanded(
                           child: _buildStatCard(
                             label: 'Total Amount',
-                            value: 'LKR ${_dailyTotalAmount.toStringAsFixed(0)}',
+                            value:
+                                'LKR ${_dailyTotalAmount.toStringAsFixed(0)}',
                             icon: Icons.account_balance_wallet_outlined,
                             color: Colors.green,
                             isLoading: _isLoadingDashboard,
@@ -407,11 +536,13 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 30),
 
-                    // Section 2: Quick Actions Grid
+                    // ── QUICK ACTIONS ───────────────────────────────────
                     Text(
-                      PoliceLocaleService.instance.translate('police.home_quick_actions'),
+                      PoliceLocaleService.instance
+                          .translate('police.home_quick_actions'),
                       style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -426,87 +557,217 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                       mainAxisSpacing: 15,
                       children: [
                         _buildMenuCard(
-                            title: 'police.home_new_fine',
-                            icon: Icons.note_add_outlined,
-                            iconColor: AppColors.errorRed,
-                            bgColor: AppColors.pastelRed,
-                            onTap: () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          const NewFineScreen()));
-                            }),
+                          title: 'police.home_new_fine',
+                          icon: Icons.note_add_outlined,
+                          iconColor: AppColors.errorRed,
+                          bgColor: AppColors.pastelRed,
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const NewFineScreen())),
+                        ),
                         _buildMenuCard(
-                            title: 'police.home_check_license',
-                            icon: Icons.qr_code_scanner,
-                            iconColor: AppColors.primaryBlue,
-                            bgColor: AppColors.pastelBlue,
-                            onTap: _handleQRScan),
+                          title: 'police.home_check_license',
+                          icon: Icons.qr_code_scanner,
+                          iconColor: AppColors.primaryBlue,
+                          bgColor: AppColors.pastelBlue,
+                          onTap: _handleQRScan,
+                        ),
                         _buildMenuCard(
-                            title: 'police.home_fine_history',
-                            icon: Icons.history,
-                            iconColor: AppColors.warningOrange,
-                            bgColor: AppColors.pastelOrange,
-                            onTap: () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          const FineHistoryScreen()));
-                            }),
+                          title: 'police.home_fine_history',
+                          icon: Icons.history,
+                          iconColor: AppColors.warningOrange,
+                          bgColor: AppColors.pastelOrange,
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const FineHistoryScreen())),
+                        ),
                         _buildMenuCard(
                           title: 'police.home_profile',
                           icon: Icons.person_outline,
                           iconColor: AppColors.primaryGreen,
                           bgColor: AppColors.pastelGreen,
-                          onTap: () {
-                            Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const ProfileScreen())).then((_) {
-                              _loadUserData();
-                            });
-                          },
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const ProfileScreen()))
+                              .then((_) => _loadUserData()),
                         ),
                       ],
                     ),
 
                     const SizedBox(height: 30),
 
-                    // Section 3: Recent Fines at the bottom
-                    // Recent Fines Replacement
-                    Text(
-                      'Recent Fines',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    // ── RECENT FINES ────────────────────────────────────
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Recent Fines',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        if (!_isLoadingDashboard && _recentFines.isNotEmpty)
+                          Text(
+                            'Showing ${_recentFines.length} of latest',
+                            style: TextStyle(
+                                color: Colors.grey[500], fontSize: 12),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 15),
+
+                    // Loading state
                     if (_isLoadingDashboard)
-                      const Center(child: CircularProgressIndicator())
-                    else if (_recentFines == null || _recentFines!.isEmpty)
-                      const Text('No recent fines found')
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(30.0),
+                          child: Column(
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: 12),
+                              Text('Loading dashboard...',
+                                  style: TextStyle(color: Colors.grey)),
+                            ],
+                          ),
+                        ),
+                      )
+                    // Empty state
+                    else if (_recentFines.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(30),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.inbox_outlined,
+                                color: Colors.grey[400], size: 48),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No recent fines found',
+                              style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Fines you issue will appear here',
+                              style: TextStyle(
+                                  color: Colors.grey[400], fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      )
+                    // Data state
                     else
                       ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _recentFines!.length,
+                        itemCount: _recentFines.length,
                         itemBuilder: (context, index) {
-                          final fine = _recentFines![index];
+                          final fine = _recentFines[index];
+
+                          // Field names match the /fines/history API response
+                          final amount =
+                              fine['amount']?.toString() ?? '0';
+                          final offenseName =
+                              fine['offenseName']?.toString() ?? 'Offense';
+                          final vehicleNumber =
+                              fine['vehicleNumber']?.toString() ?? 'N/A';
+                          final status =
+                              fine['status']?.toString() ?? 'UNPAID';
+                          final statusColor = _getStatusColor(status);
+
+                          // Format the date if present
+                          String dateLabel = '';
+                          final rawDate = fine['date']?.toString() ??
+                              fine['createdAt']?.toString();
+                          if (rawDate != null && rawDate.isNotEmpty) {
+                            try {
+                              final dt = DateTime.parse(rawDate).toLocal();
+                              dateLabel =
+                                  '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+                            } catch (_) {
+                              dateLabel = rawDate;
+                            }
+                          }
+
                           return Card(
                             margin: const EdgeInsets.only(bottom: 10),
+                            elevation: 1,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             child: ListTile(
-                              leading: const CircleAvatar(child: Icon(Icons.description_outlined)),
-                              title: Text(fine['offenseName'] ?? 'Offense'),
-                              subtitle: Text(fine['licenseNumber'] ?? 'N/A'),
-                              trailing: Text('LKR ${fine['amount']}'),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              leading: CircleAvatar(
+                                backgroundColor:
+                                    statusColor.withValues(alpha: 0.15),
+                                child: Icon(Icons.description_outlined,
+                                    color: statusColor, size: 20),
+                              ),
+                              title: Text(
+                                offenseName,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(vehicleNumber,
+                                      style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 12)),
+                                  if (dateLabel.isNotEmpty)
+                                    Text(dateLabel,
+                                        style: TextStyle(
+                                            color: Colors.grey[400],
+                                            fontSize: 11)),
+                                ],
+                              ),
+                              trailing: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'LKR $amount',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      status,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: statusColor,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },
                       ),
 
-                    const SizedBox(
-                        height: 100), // Padding to prevent SOS FAB overlap
+                    const SizedBox(height: 100), // FAB clearance
                   ],
                 ),
               ),
@@ -517,12 +778,17 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
     );
   }
 
-  Widget _buildMenuCard(
-      {required String title,
-      required IconData icon,
-      required Color iconColor,
-      required Color bgColor,
-      required VoidCallback onTap}) {
+  // ─────────────────────────────────────────────────────────────────────────
+  // REUSABLE WIDGETS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _buildMenuCard({
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
@@ -539,13 +805,13 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
                 color: bgColor,
-                shape: BoxShape.rectangle,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(icon, size: 35, color: iconColor),
             ),
             const SizedBox(height: 15),
-                Text(PoliceLocaleService.instance.translate(title),
+            Text(
+                PoliceLocaleService.instance.translate(title),
                 style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -576,16 +842,25 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(height: 15),
           if (isLoading)
-            const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+            const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
           else
-            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(value,
+                style: const TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 5),
-          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+          Text(label,
+              style: TextStyle(color: Colors.grey[600], fontSize: 12)),
         ],
       ),
     );
