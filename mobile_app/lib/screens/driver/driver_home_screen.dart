@@ -647,6 +647,17 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     },
                   ),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              "v1.2.0-beta | Integrated Milestone",
+              style: TextStyle(
+                color: isDark ? Colors.grey[600] : Colors.grey[400],
+                fontSize: 11,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
         ],
       ),
     );
