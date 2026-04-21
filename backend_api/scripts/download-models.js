@@ -87,19 +87,19 @@ function downloadFile(url, destPath) {
     const destPath = path.join(MODELS_DIR, fileName);
 
     if (fs.existsSync(destPath)) {
-      console.log(`[models] ✔  Already present: ${fileName}`);
+      console.log(`[models] [OK] Already present: ${fileName}`);
       continue;
     }
 
     allPresent = false;
     const url = BASE_URL + fileName;
-    process.stdout.write(`[models] ↓  Downloading: ${fileName} ... `);
+    process.stdout.write(`[models] [INFO] Downloading: ${fileName} ... `);
 
     try {
       await downloadFile(url, destPath);
       console.log('done');
     } catch (err) {
-      console.error(`\n[models] ✘  Failed: ${fileName} — ${err.message}`);
+      console.error(`\n[models] [ERROR] Failed: ${fileName} — ${err.message}`);
       process.exit(1); // Stop server from starting with missing models
     }
   }

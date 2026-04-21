@@ -18,10 +18,10 @@ class ApiLogger extends http.BaseClient {
     }
 
     print('\n════════════════════════════════════════════════');
-    print('🚀 [API SENT] ${request.method} ${request.url}');
-    print('⏰ Time Sent: $startTime');
-    print('📂 Headers: ${request.headers}');
-    print('📦 Request Body: $requestBody');
+    print('[API SENT] ${request.method} ${request.url}');
+    print(' Time Sent: $startTime');
+    print(' Headers: ${request.headers}');
+    print(' Request Body: $requestBody');
     print('────────────────────────────────────────────────');
 
     try {
@@ -33,14 +33,11 @@ class ApiLogger extends http.BaseClient {
       final responseBytes = await response.stream.toBytes();
       final responseBodyString = utf8.decode(responseBytes, allowMalformed: true);
       
-      final isSuccess = response.statusCode >= 200 && response.statusCode < 300;
-      final icon = isSuccess ? '✅' : '⚠️';
-      
-      print('$icon [API RECEIVED] ${request.method} ${request.url}');
-      print('🚥 Status: ${response.statusCode}');
-      print('⏰ Time Received: $receiveTime');
-      print('⏱️ Duration: ${duration}ms');
-      print('📦 Response Body: $responseBodyString');
+      print('[API RECEIVED] ${request.method} ${request.url}');
+      print(' Status: ${response.statusCode}');
+      print(' Time Received: $receiveTime');
+      print(' Duration: ${duration}ms');
+      print(' Response Body: $responseBodyString');
       print('════════════════════════════════════════════════\n');
       
       // Recreate and return the StreamedResponse since the original stream was consumed
@@ -58,10 +55,10 @@ class ApiLogger extends http.BaseClient {
       final failTime = DateTime.now();
       final duration = failTime.difference(startTime).inMilliseconds;
       
-      print('❌ [API FAILED] ${request.method} ${request.url}');
-      print('🚨 Error: $e');
-      print('⏰ Time Failed: $failTime');
-      print('⏱️ Duration until failure: ${duration}ms');
+      print('[API FAILED] ${request.method} ${request.url}');
+      print(' Error: $e');
+      print(' Time Failed: $failTime');
+      print(' Duration until failure: ${duration}ms');
       print('════════════════════════════════════════════════\n');
       
       rethrow;

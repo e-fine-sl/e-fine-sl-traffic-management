@@ -585,8 +585,8 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
         ),
       );
 
-      debugPrint('🚀 [KYC] POST ${uri.toString()}');
-      debugPrint('📦 Files: license=${_licenseFile?.lengthSync()}B, selfie=${_selfieFile?.lengthSync()}B');
+      debugPrint('[KYC] POST ${uri.toString()}');
+      debugPrint('Files: license=${_licenseFile?.lengthSync()}B, selfie=${_selfieFile?.lengthSync()}B');
 
       // Send with timeout
       final streamedResponse = await request.send().timeout(
@@ -596,13 +596,13 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
 
       final response = await http.Response.fromStream(streamedResponse);
       
-      debugPrint('📥 [KYC] Response Status: ${response.statusCode}');
-      debugPrint('📥 [KYC] Content-Type: ${response.headers['content-type']}');
+      debugPrint('[KYC] Response Status: ${response.statusCode}');
+      debugPrint('[KYC] Content-Type: ${response.headers['content-type']}');
       
       // Prevent parsing HTML error pages
       if (!(response.headers['content-type']?.contains('application/json') ?? false)) {
         final sample = response.body.length > 50 ? '${response.body.substring(0, 50)}...' : response.body;
-        debugPrint('❌ [KYC] Non-JSON Response: $sample');
+        debugPrint('[KYC] Non-JSON Response: $sample');
         
         setState(() {
           _step = _KycStep.failure;
@@ -634,13 +634,13 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
         _errorMsg = 'No internet connection. Please check your network and retry.';
       });
     } on FormatException catch (e) {
-      debugPrint('❌ [KYC] FormatException Parse Error: $e');
+      debugPrint('[KYC] FormatException Parse Error: $e');
       setState(() {
         _step     = _KycStep.failure;
         _errorMsg = 'Bad response from server. Please try again.';
       });
     } catch (e) {
-      debugPrint('❌ [KYC] Unexpected Error: $e');
+      debugPrint('[KYC] Unexpected Error: $e');
       setState(() {
         _step     = _KycStep.failure;
         _errorMsg = e.toString().replaceFirst('Exception: ', '');

@@ -5,7 +5,7 @@ const IssuedFine = require('./models/issuedFineModel');
 async function checkOfficers() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log('✅ Connected to MongoDB\n');
+    console.log('Connected to MongoDB\n');
 
     const officers = await IssuedFine.distinct('policeOfficerId');
     const totalCount = await IssuedFine.countDocuments();
@@ -27,7 +27,7 @@ async function checkOfficers() {
 
     await mongoose.disconnect();
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    console.error('Error:', error.message);
     process.exit(1);
   }
 }
