@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'screens/splash/splash_screen.dart';
 import 'services/theme_manager.dart';
 import 'services/notification_service.dart';
+import 'services/police_locale_service.dart';
 import 'config/app_constants.dart';
 
 void main() async {
@@ -10,6 +11,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
   await NotificationService().init();
+  await PoliceLocaleService.instance.init();
 
   runApp(
     

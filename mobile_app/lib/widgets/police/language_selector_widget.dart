@@ -64,11 +64,9 @@ class LanguageSelectorWidget extends StatelessWidget {
               );
             }).toList();
           },
-          // On selection: delegate to the service (async, safe with mounted check).
+          // On selection: delegate to the service
           onSelected: (Locale selected) async {
-            if (context.mounted) {
-              await PoliceLocaleService.instance.setLocale(context, selected);
-            }
+            await PoliceLocaleService.instance.setLocale(selected);
           },
         );
       },
