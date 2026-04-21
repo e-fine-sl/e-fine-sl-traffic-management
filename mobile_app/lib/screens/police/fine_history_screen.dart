@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
+import '../../services/police_locale_service.dart';
+
+import 'package:intl/intl.dart';
 import '../../services/fine_service.dart';
 import '../../config/app_constants.dart';
 
@@ -48,7 +50,8 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
 
   String _formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) {
-      return 'police.history_unknown_date'.tr();
+      return PoliceLocaleService.instance
+          .translate('police.history_unknown_date');
     }
     try {
       return DateFormat('yyyy-MM-dd – hh:mm a').format(DateTime.parse(dateStr));
@@ -61,11 +64,14 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
   String _localizedStatus(String raw) {
     switch (raw.toLowerCase()) {
       case 'paid':
-        return 'police.history_status_paid'.tr();
+        return PoliceLocaleService.instance
+            .translate('police.history_status_paid');
       case 'unpaid':
-        return 'police.history_status_unpaid'.tr();
+        return PoliceLocaleService.instance
+            .translate('police.history_status_unpaid');
       default:
-        return 'police.history_status_pending'.tr();
+        return PoliceLocaleService.instance
+            .translate('police.history_status_pending');
     }
   }
 
@@ -74,7 +80,7 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: Text('police.history_appbar_title'.tr()),
+        title: Text(PoliceLocaleService.instance.translate('police.history_appbar_title')),
         backgroundColor: AppColors.primaryBlue,
         foregroundColor: Colors.white,
         actions: [
@@ -97,7 +103,7 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
                             color: AppColors.errorRed, size: 60),
                         const SizedBox(height: 10),
                         Text(
-                          'police.history_failed_title'.tr(),
+                          PoliceLocaleService.instance.translate('police.history_failed_title'),
                           style: const TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold),
                         ),
@@ -109,14 +115,14 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
                         ElevatedButton.icon(
                           onPressed: _fetchHistory,
                           icon: const Icon(Icons.refresh),
-                          label: Text('police.history_retry'.tr()),
+                          label: Text(PoliceLocaleService.instance.translate('police.history_retry')),
                         )
                       ],
                     ),
                   ),
                 )
               : _fines.isEmpty
-                  ? Center(child: Text('police.history_empty'.tr()))
+                  ? Center(child: Text(PoliceLocaleService.instance.translate('police.history_empty')))
                   : ListView.builder(
                       padding: const EdgeInsets.all(15),
                       itemCount: _fines.length,
@@ -126,9 +132,11 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
                         final license = fine['licenseNumber'] ?? "N/A";
                         final vehicle = fine['vehicleNumber'] ?? "N/A";
                         final offense = fine['offenseName'] ??
-                            'police.history_violation'.tr();
+                            PoliceLocaleService.instance
+                                .translate('police.history_violation');
                         final place = fine['place'] ??
-                            'police.history_unknown_location'.tr();
+                            PoliceLocaleService.instance
+                                .translate('police.history_unknown_location');
                         final amount = fine['amount']?.toString() ?? "0";
                         final rawStatus = fine['status'] ?? "pending";
                         final localizedStatus = _localizedStatus(rawStatus);
@@ -168,8 +176,7 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
                                         color: isPaid
                                             ? Colors.green[100]
                                             : Colors.orange[100],
-                                        borderRadius:
-                                            BorderRadius.circular(20),
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
                                         localizedStatus,
@@ -185,14 +192,13 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 10),
-
                                 Row(
                                   children: [
                                     const Icon(Icons.credit_card,
                                         size: 16, color: Colors.grey),
                                     const SizedBox(width: 5),
                                     Text(
-                                      "${'police.history_lic_prefix'.tr()} $license",
+                                      "${PoliceLocaleService.instance.translate('police.history_lic_prefix')} $license",
                                       style: const TextStyle(
                                           fontWeight: FontWeight.w500),
                                     ),
@@ -205,7 +211,6 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
                                             fontWeight: FontWeight.w500)),
                                   ],
                                 ),
-
                                 const SizedBox(height: 5),
                                 Row(
                                   children: [
@@ -218,7 +223,6 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
                                                 color: Colors.grey))),
                                   ],
                                 ),
-
                                 const SizedBox(height: 5),
                                 Row(
                                   children: [
@@ -230,12 +234,11 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
                                             color: Colors.grey, fontSize: 12)),
                                   ],
                                 ),
-
                                 const Divider(),
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: Text(
-                                    "${'police.history_amount_prefix'.tr()}$amount",
+                                    "${PoliceLocaleService.instance.translate('police.history_amount_prefix')}$amount",
                                     style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18,

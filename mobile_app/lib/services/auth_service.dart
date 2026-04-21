@@ -129,6 +129,15 @@ class AuthService {
         await _storage.write(key: PrefKeys.badgeNumber, value: user['badgeNumber'] as String);
       }
 
+      if ((user['role'] as String?) == UserRoles.officer || user['role'] == 'police') {
+        if (user['badgeNumber'] != null) {
+          await _storage.write(key: 'badgeNumber', value: user['badgeNumber'] as String);
+        }
+        if (user['_id'] != null || user['officerId'] != null) {
+          await _storage.write(key: 'officerId', value: (user['officerId'] ?? user['_id']) as String);
+        }
+      }
+
       debugPrint('[AuthService] Login successful — role: ${user["role"]}');
 
       // Step 5: Store idle timeout minutes (non-sensitive setting)

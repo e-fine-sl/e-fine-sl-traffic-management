@@ -1,7 +1,6 @@
 {
   "police": {
     "app_name": "e-Fine SL காவல்துறை",
-
     "home_appbar_title": "போக்குவரத்து கட்டுப்பாட்டு பிரிவு",
     "home_welcome": "மீண்டும் வரவேற்கிறோம்,",
     "home_quick_actions": "விரைவு செயல்கள்",
@@ -9,7 +8,6 @@
     "home_check_license": "உரிமம் சரிபார்க்கவும்",
     "home_fine_history": "அபராத வரலாறு",
     "home_profile": "சுயவிவரம்",
-
     "home_driver_details_title": "ஓட்டுனர் விவரங்கள் கிடைத்தன",
     "home_nic_label": "தேசிய அடையாள எண்:",
     "home_license_label": "உரிம எண்:",
@@ -19,7 +17,6 @@
     "home_error_title": "பிழை",
     "home_invalid_qr": "தவறான QR குறியீடு: இது ஓட்டுனர் உரிமம் அல்ல.",
     "home_qr_error": "QR தரவு படிக்கும் பிழை.",
-
     "new_fine_appbar_title": "புதிய அபராதம் வழங்கு",
     "new_fine_details_section": "விவரங்கள்",
     "new_fine_offense_section": "குற்றம்",
@@ -38,7 +35,6 @@
     "new_fine_ok": "சரி",
     "new_fine_submit": "அபராதம் வழங்கு",
     "new_fine_submitting": "சமர்ப்பிக்கிறது...",
-
     "history_appbar_title": "அபராத வரலாறு",
     "history_empty": "இன்னும் அபராதங்கள் வழங்கப்படவில்லை.",
     "history_failed_title": "வரலாற்றை ஏற்ற முடியவில்லை",
@@ -51,7 +47,6 @@
     "history_unknown_location": "இடம் தெரியவில்லை",
     "history_violation": "போக்குவரத்து மீறல்",
     "history_amount_prefix": "ரூ. ",
-
     "profile_appbar_title": "என் சுயவிவரம்",
     "profile_badge": "பேட்ஜ் எண்",
     "profile_station": "காவல் நிலையம்",
@@ -60,6 +55,12 @@
     "profile_loading": "ஏற்றுகிறது...",
     "profile_error": "தரவு ஏற்றுவதில் பிழை",
     "profile_photo_updated": "சுயவிவர படம் புதுப்பிக்கப்பட்டது!",
-    "profile_photo_failed": "படம் புதுப்பிக்க முடியவில்லை"
+    "profile_photo_failed": "படம் புதுப்பிக்க முடியவில்லை",
+    "dashboard_fines_today": "இன்று வழங்கப்பட்ட அபராதங்கள்",
+    "dashboard_vehicles_checked": "சோதிக்கப்பட்ட வாகனங்கள்",
+    "dashboard_recent_fines": "சமீபத்திய அபராதச் செயல்பாடுகள்",
+    "dashboard_sos_title": "அவசர SOS",
+    "dashboard_sos_confirm": "இவ்விடத்திற்கு உடனடியாக கூடுதல் காவல்துறை உதவி தேவையா?",
+    "dashboard_sos_send": "உதவி கோரு"
   }
 }

@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
+import '../../services/police_locale_service.dart';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/auth_service.dart';
@@ -104,7 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text('police.profile_photo_updated'.tr()),
+                content: Text(PoliceLocaleService.instance.translate('police.profile_photo_updated')),
                 backgroundColor: AppColors.successGreen),
           );
         }
@@ -113,7 +114,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           setState(() => _isUploading = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text('police.profile_photo_failed'.tr()),
+                content: Text(PoliceLocaleService.instance.translate('police.profile_photo_failed')),
                 backgroundColor: AppColors.errorRed),
           );
         }
@@ -144,7 +145,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: Text('police.profile_appbar_title'.tr(),
+        title: Text(PoliceLocaleService.instance.translate('police.profile_appbar_title'),
             style: const TextStyle(color: Colors.white)),
         backgroundColor: AppColors.primaryBlue,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -219,17 +220,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   _buildInfoCard(
                       Icons.badge,
-                      'police.profile_badge'.tr(),
+                      PoliceLocaleService.instance.translate('police.profile_badge'),
                       _badgeNumber),
                   const SizedBox(height: 15),
                   _buildInfoCard(
                       Icons.local_police,
-                      'police.profile_station'.tr(),
+                      PoliceLocaleService.instance.translate('police.profile_station'),
                       _station),
                   const SizedBox(height: 15),
                   _buildInfoCard(
                       Icons.email,
-                      'police.profile_email'.tr(),
+                      PoliceLocaleService.instance.translate('police.profile_email'),
                       _email),
 
                   const SizedBox(height: 40),
@@ -250,8 +251,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         }
                       },
                       icon: const Icon(Icons.logout, color: Colors.white),
-                      label: Text(
-                        'police.profile_logout'.tr(),
+                      label: Text(PoliceLocaleService.instance.translate('police.profile_logout'),
                         style: const TextStyle(
                             fontSize: 16, color: Colors.white),
                       ),

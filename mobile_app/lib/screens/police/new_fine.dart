@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
+import '../../services/police_locale_service.dart';
+
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -111,14 +112,14 @@ class _NewFineScreenState extends State<NewFineScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedOffenseData == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('police.new_fine_select_offense_error'.tr())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(PoliceLocaleService.instance.translate('police.new_fine_select_offense_error'))));
       return;
     }
 
     if (_officerBadgeNumber == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('police.new_fine_officer_missing'.tr())));
+          SnackBar(content: Text(PoliceLocaleService.instance.translate('police.new_fine_officer_missing'))));
       return;
     }
 
@@ -129,8 +130,8 @@ class _NewFineScreenState extends State<NewFineScreen> {
         "licenseNumber": _licenseController.text,
         "vehicleNumber": _vehicleController.text,
         "offenseId": _selectedOffenseData!['_id'],
-        "offenseName":
-            _selectedOffenseData!['offenseName'] ?? _selectedOffenseData!['name'],
+        "offenseName": _selectedOffenseData!['offenseName'] ??
+            _selectedOffenseData!['name'],
         "amount": double.parse(_amountController.text),
         "place": _locationController.text.isEmpty
             ? "Unknown Location"
@@ -144,7 +145,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('police.new_fine_success'.tr()),
+            content: Text(PoliceLocaleService.instance.translate('police.new_fine_success')),
             backgroundColor: AppColors.successGreen));
         Navigator.pop(context);
       }
@@ -154,13 +155,13 @@ class _NewFineScreenState extends State<NewFineScreen> {
         showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
-                  title: Text('police.new_fine_failed_title'.tr(),
+                  title: Text(PoliceLocaleService.instance.translate('police.new_fine_failed_title'),
                       style: const TextStyle(color: AppColors.errorRed)),
                   content: Text(errorMessage),
                   actions: [
                     TextButton(
                         onPressed: () => Navigator.pop(ctx),
-                        child: Text('police.new_fine_ok'.tr()))
+                        child: Text(PoliceLocaleService.instance.translate('police.new_fine_ok')))
                   ],
                 ));
       }
@@ -173,7 +174,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: Text('police.new_fine_appbar_title'.tr()),
+          title: Text(PoliceLocaleService.instance.translate('police.new_fine_appbar_title')),
           backgroundColor: AppColors.primaryBlue,
           foregroundColor: Colors.white),
       body: SingleChildScrollView(
@@ -184,39 +185,43 @@ class _NewFineScreenState extends State<NewFineScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'police.new_fine_details_section'.tr(),
-                style: const TextStyle(
-                    fontSize: 18, color: AppColors.primaryBlue),
+                PoliceLocaleService.instance.translate('police.new_fine_details_section'),
+                style:
+                    const TextStyle(fontSize: 18, color: AppColors.primaryBlue),
               ),
               const SizedBox(height: 15),
               TextFormField(
                 controller: _licenseController,
                 decoration: InputDecoration(
-                    labelText: 'police.new_fine_license_label'.tr(),
+                    labelText: PoliceLocaleService.instance
+                        .translate('police.new_fine_license_label'),
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.card_membership)),
-                validator: (val) =>
-                    val!.isEmpty ? 'police.new_fine_required'.tr() : null,
+                validator: (val) => val!.isEmpty
+                    ? PoliceLocaleService.instance
+                        .translate('police.new_fine_required')
+                    : null,
               ),
               const SizedBox(height: 15),
               TextFormField(
                 controller: _vehicleController,
                 decoration: InputDecoration(
-                    labelText: 'police.new_fine_vehicle_label'.tr(),
+                    labelText: PoliceLocaleService.instance
+                        .translate('police.new_fine_vehicle_label'),
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.directions_car)),
-                validator: (val) =>
-                    val!.isEmpty ? 'police.new_fine_vehicle_hint'.tr() : null,
+                validator: (val) => val!.isEmpty
+                    ? PoliceLocaleService.instance
+                        .translate('police.new_fine_vehicle_hint')
+                    : null,
               ),
               const SizedBox(height: 25),
-
               Text(
-                'police.new_fine_offense_section'.tr(),
-                style: const TextStyle(
-                    fontSize: 18, color: AppColors.primaryBlue),
+                PoliceLocaleService.instance.translate('police.new_fine_offense_section'),
+                style:
+                    const TextStyle(fontSize: 18, color: AppColors.primaryBlue),
               ),
               const SizedBox(height: 15),
-
               _isLoadingOffenses
                   ? const Center(child: CircularProgressIndicator())
                   : DropdownSearch<Map<String, dynamic>>(
@@ -236,18 +241,19 @@ class _NewFineScreenState extends State<NewFineScreen> {
                       popupProps: const PopupProps.menu(showSearchBox: true),
                       decoratorProps: DropDownDecoratorProps(
                         decoration: InputDecoration(
-                            labelText: 'police.new_fine_offense_label'.tr(),
+                            labelText: PoliceLocaleService.instance
+                                .translate('police.new_fine_offense_label'),
                             border: const OutlineInputBorder(),
                             prefixIcon: const Icon(Icons.gavel)),
                       ),
                     ),
-
               const SizedBox(height: 15),
               TextFormField(
                 controller: _amountController,
                 readOnly: true,
                 decoration: InputDecoration(
-                    labelText: 'police.new_fine_amount_label'.tr(),
+                    labelText: PoliceLocaleService.instance
+                        .translate('police.new_fine_amount_label'),
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.money),
                     filled: true,
@@ -258,7 +264,8 @@ class _NewFineScreenState extends State<NewFineScreen> {
                 controller: _locationController,
                 readOnly: true,
                 decoration: InputDecoration(
-                  labelText: 'police.new_fine_location_label'.tr(),
+                  labelText: PoliceLocaleService.instance
+                      .translate('police.new_fine_location_label'),
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.location_on),
                   suffixIcon: IconButton(
@@ -266,28 +273,26 @@ class _NewFineScreenState extends State<NewFineScreen> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child:
-                                CircularProgressIndicator(strokeWidth: 2))
+                            child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.my_location, color: Colors.blue),
                     onPressed: _getCurrentLocation,
                   ),
                 ),
               ),
               const SizedBox(height: 15),
-
               TextFormField(
                 controller: _dateController,
                 readOnly: true,
                 decoration: InputDecoration(
-                  labelText: 'police.new_fine_date_label'.tr(),
+                  labelText: PoliceLocaleService.instance
+                      .translate('police.new_fine_date_label'),
                   border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.calendar_today,
-                      color: Colors.grey),
+                  prefixIcon:
+                      const Icon(Icons.calendar_today, color: Colors.grey),
                   filled: true,
                   fillColor: Colors.black12,
                 ),
               ),
-
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,
@@ -297,7 +302,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
                   icon: const Icon(Icons.send),
                   label: _isSubmitting
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : Text('police.new_fine_submit'.tr()),
+                      : Text(PoliceLocaleService.instance.translate('police.new_fine_submit')),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.errorRed,
                       foregroundColor: Colors.white),
