@@ -2,6 +2,9 @@
 
 # e-Fine SL Traffic Management System
 
+[![Status](https://img.shields.io/badge/Status-Liveness%20%26%20OCR%20Integrated-success)](https://github.com/your-repo)
+[![Version](https://img.shields.io/badge/Version-1.2.0--beta-blue)](https://github.com/your-repo)
+
 This repository contains the complete source code for the e-Fine SL Traffic Management System, including the **Node.js** backend API and **Flutter** mobile application.
 
 ## Project Structure
@@ -13,20 +16,19 @@ This repository contains the complete source code for the e-Fine SL Traffic Mana
 
 ### ✅ Mobile App (Flutter)
 
+- **Liveness Detection (KYC):** Robust "blink and smile" sequence using Google ML Kit to verify live human presence during registration.
+- **Enhanced OCR:** High-precision Sri Lankan Driving License scanning (Anchor-based extraction for Column 11 Expiry and 4a Issue dates).
 - **Role-Based Access:** Distinct features for Drivers and Traffic Police.
 - **Online Payments:** Full integration with **PayHere** Sandbox for paying fines.
 - **Real-time Notifications:** Alerts for new fines with Officer ID and timestamps.
-- **Demerit Status Card:** Real-time driver demerit points and license suspension status visualization.
-- **Payment History:** Detailed history screen with Reference ID copy feature.
-- **License Scanning:** Google ML Kit OCR for Driver License scanning.
-- **Localization:** English & Sinhala support.
+- **Demerit Status Card:** Real-time visualization of demerit points and suspension status.
 
 ### ✅ Backend API (Node.js/Express)
 
-- **Secure Authentication:** JWT-based auth with OTP verification.
-- **Payment Security:** Secure MD5 hash generation for PayHere.
-- **Fine Management:** Endpoints for issuing, fetching, and paying fines.
-- **Automated Demerit System:** Auto-deduction of points on fine issuance and monthly cron job reinstatement.
+- **Admin Management Dashboard:** Advanced filtering by payment status/date and searching by Location or Officer Badge ID.
+- **Driver Rating System:** Star-based rating calculation (0-5) based on demerit point deductions.
+- **Secure Authentication:** JWT-based auth with OTP verification and 2FA for Admins.
+- **Automated Demerit System:** Auto-deduction of points on fine issuance and monthly reinstatement.
 - **Database:** MongoDB (Mongoose) schema for Users, Fines, and Offenses.
 
 ## How to Run
