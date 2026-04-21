@@ -8,10 +8,11 @@
 //  - Single Responsibility: only manages Police locale state.
 //  - Open/Closed: add a new language by adding one entry to [availableLocales].
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// A simple data class describing a supported locale with a human-readable label.
 class PoliceLocaleOption {
   final Locale locale;
   final String displayName;
@@ -24,60 +25,67 @@ class PoliceLocaleOption {
   });
 }
 
-/// Singleton service that holds the active [Locale] for Police screens.
-/// Screens listen via [ValueListenableBuilder] or simply call [setLocale].
 class PoliceLocaleService {
-  // ── Singleton ──────────────────────────────────────────────────────────────
   PoliceLocaleService._();
   static final PoliceLocaleService instance = PoliceLocaleService._();
 
-  // ── State ───────────────────────────────────────────────────────────────────
-  /// Reactive locale notifier — wrap in [ValueListenableBuilder] if needed.
+  static const String _prefKey = 'police_locale';
+  late SharedPreferences _prefs;
+
   final ValueNotifier<Locale> localeNotifier =
       ValueNotifier<Locale>(const Locale('en'));
 
+  Map<String, dynamic> _translations = {};
+
   Locale get currentLocale => localeNotifier.value;
 
-  // ── Supported locales ───────────────────────────────────────────────────────
-  /// The authoritative list of locales available to Police officers.
-  /// To add a new language: add a JSON file in assets/translations/ and
-  /// append an entry here — no other changes required.
   static const List<PoliceLocaleOption> availableLocales = [
-    PoliceLocaleOption(
-      locale: Locale('en'),
-      displayName: 'English',
-      flagEmoji: '🇬🇧',
-    ),
-    PoliceLocaleOption(
-      locale: Locale('si'),
-      displayName: 'සිංහල',
-      flagEmoji: '🇱🇰',
-    ),
-    PoliceLocaleOption(
-      locale: Locale('ta'),
-      displayName: 'தமிழ்',
-      flagEmoji: '🇮🇳',
-    ),
+    PoliceLocaleOption(locale: Locale('en'), displayName: 'English', flagEmoji: '🇬🇧'),
+    PoliceLocaleOption(locale: Locale('si'), displayName: 'සිංහල', flagEmoji: '🇱🇰'),
+    PoliceLocaleOption(locale: Locale('ta'), displayName: 'தமிழ்', flagEmoji: '🇮🇳'),
   ];
 
-  // ── API ─────────────────────────────────────────────────────────────────────
-  /// Switch the app locale and update the internal notifier.
-  ///
-  /// Calls [context.setLocale] from easy_localization — this triggers a full
-  /// widget tree rebuild for all Text widgets using .tr(), so there is no
-  /// need for additional setState calls in the callers.
-  Future<void> setLocale(BuildContext context, Locale locale) async {
-    if (currentLocale == locale) return; // No-op: already active.
-    await context.setLocale(locale);
-    localeNotifier.value = locale;
+  Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
+    final savedCode = _prefs.getString(_prefKey) ?? 'en';
+    localeNotifier.value = Locale(savedCode);
+    await _loadAsset(savedCode);
   }
 
-  /// Convenience getter: the [PoliceLocaleOption] matching the current locale,
-  /// or the first entry as a safe fallback (enforces non-null).
+  Future<void> _loadAsset(String langCode) async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/translations/$langCode.json');
+      _translations = json.decode(jsonString);
+    } catch (e) {
+      debugPrint("Failed to load translation for $langCode: $e");
+      _translations = {};
+    }
+  }
+
+  Future<void> setLocale(Locale locale) async {
+    if (currentLocale == locale) return;
+    await _loadAsset(locale.languageCode);
+    await _prefs.setString(_prefKey, locale.languageCode);
+    localeNotifier.value = locale; // Triggers ValueListenableBuilder
+  }
+
   PoliceLocaleOption get currentOption {
     return availableLocales.firstWhere(
       (opt) => opt.locale.languageCode == currentLocale.languageCode,
       orElse: () => availableLocales.first,
     );
+  }
+
+  String translate(String key) {
+    List<String> keys = key.split('.');
+    dynamic current = _translations;
+    for (String k in keys) {
+      if (current is Map<String, dynamic> && current.containsKey(k)) {
+        current = current[k];
+      } else {
+        return key; // Fallback to key itself
+      }
+    }
+    return current?.toString() ?? key;
   }
 }

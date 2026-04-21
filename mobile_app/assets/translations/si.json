@@ -3,30 +3,24 @@
   "greeting_afternoon": "සුභ දහවලක්",
   "greeting_evening": "සුභ සන්ධ්‍යාවක්",
   "rating_status": "රියදුරු විනය තත්ත්වය",
-
   "points": "ලකුණු",
   "pay_fines": "දඩ ගෙවීම්",
   "history": "ඉතිහාසය",
   "wallet": "පසුම්බිය",
   "report": "පැමිණිලි",
-
   "unpaid_title": "ගෙවා නොමැති දඩ ඇත!",
   "unpaid_msg": "ඔබට ගෙවීමට ඇති දඩ පවතී. දඩ ලකුණු කැපීම වළක්වා ගැනීමට දැන්ම ගෙවන්න.",
-  
   "status_excellent": "ඉතා යහපත් මට්ටමකි",
   "status_warning": "අවවාදාත්මක මට්ටමකි",
   "status_risk": "බලපත්‍රය අත්හිටුවීමේ අවදානම!",
-
   "home": "මුල් පිටුව",
   "profile": "ගිණුම",
- 
   "my_profile": "මගේ ගිණුම",
   "nic_label": "ජා.හැ. අංකය",
   "license_label": "බලපත්‍ර අංකය",
   "mobile_label": "දුරකථන අංකය",
   "demerits_label": "දඩ ලකුණු",
   "points_display": "ලකුණු {}",
-
   "verified_driver": "තහවුරු කළ රියදුරු",
   "not_verified": "තහවුරු කර නොමැත",
   "personal_details": "පුද්ගලික තොරතුරු",
@@ -34,13 +28,11 @@
   "issue_date": "නිකුත් කළ දිනය",
   "expiry_date": "කල් ඉකුත් වන දිනය",
   "allowed_vehicles": "අවසර ලත් වාහන",
-
   "no_classes": "වාහන පන්ති හමු නොවීය",
   "active_license": "සක්‍රිය බලපත්‍රයකි",
   "suspended_license": "බලපත්‍රය අත්හිටුවා ඇත",
   "residential_address": "පදිංචි ලිපිනය",
   "postal": "තැපැල්",
-
   "demerit_title": "රියදුරු විනය තත්ත්වය",
   "demerit_points_label": "ලකුණු",
   "demerit_good": "යහපත් මට්ටමකි",
@@ -49,10 +41,8 @@
   "demerit_suspended": "අත්හිටුවා ඇත",
   "demerit_suspended_on": "{} සිට",
   "demerit_reinstate_info": "ඔබේ බලපත්‍රය ලබන මාසයේ 1 වනදා යළි ක්‍රියාත්මක වේ.",
-
   "police": {
     "app_name": "e-Fine SL පොලිස්",
-
     "home_appbar_title": "교통 පාලන ඒකකය",
     "home_welcome": "නැවත සාදරයෙන් පිළිගනිමු,",
     "home_quick_actions": "ඉක්මන් ක්‍රියා",
@@ -60,7 +50,6 @@
     "home_check_license": "බලපත්‍රය පරීක්ෂා කරන්න",
     "home_fine_history": "දඩ ඉතිහාසය",
     "home_profile": "ගිණුම",
-
     "home_driver_details_title": "රියදුරු විස්තර හමු විය",
     "home_nic_label": "ජා.හැ.:",
     "home_license_label": "බලපත්‍ර අංකය:",
@@ -70,7 +59,6 @@
     "home_error_title": "දෝෂය",
     "home_invalid_qr": "වලංගු නොවන QR කේතය: මෙය රියදුරු බලපත්‍රයක් නොවේ.",
     "home_qr_error": "QR දත්ත කියවීමේ දෝෂයකි.",
-
     "new_fine_appbar_title": "නව දඩය නිකුත් කරන්න",
     "new_fine_details_section": "විස්තර",
     "new_fine_offense_section": "වරද",
@@ -89,7 +77,6 @@
     "new_fine_ok": "හරි",
     "new_fine_submit": "දඩය නිකුත් කරන්න",
     "new_fine_submitting": "යවමින්...",
-
     "history_appbar_title": "දඩ ඉතිහාසය",
     "history_empty": "තවම දඩ නිකුත් කර නොමැත.",
     "history_failed_title": "ඉතිහාසය පූරණය නොවිනි",
@@ -102,7 +89,6 @@
     "history_unknown_location": "ස්ථානය නොදනී",
     "history_violation": "교통 위반 (ගමනාගමන උල්ලංඝනය)",
     "history_amount_prefix": "රු. ",
-
     "profile_appbar_title": "මගේ ගිණුම",
     "profile_badge": "බෑජ් අංකය",
     "profile_station": "පොලිස් ස්ථානය",
@@ -111,7 +97,12 @@
     "profile_loading": "පූරණය වෙමින්...",
     "profile_error": "දත්ත පූරණය කිරීමේ දෝෂය",
     "profile_photo_updated": "පැතිකඩ රූපය යාවත්කාලීන කරන ලදි!",
-    "profile_photo_failed": "රූපය යාවත්කාලීන කිරීම අසාර්ථකයි"
+    "profile_photo_failed": "රූපය යාවත්කාලීන කිරීම අසාර්ථකයි",
+    "dashboard_fines_today": "අද දිනයේ නිකුත් කළ දඩ",
+    "dashboard_vehicles_checked": "පරීක්‍ෂා කළ වාහන",
+    "dashboard_recent_fines": "මෑතකාලීන දඩ ක්‍රියාකාරකම්",
+    "dashboard_sos_title": "හදිසි SOS",
+    "dashboard_sos_confirm": "මෙම ස්ථානයට වහාම අමතර පොලිස් සහාය අවශ්‍යද?",
+    "dashboard_sos_send": "සහාය ඉල්ලන්න"
   }
-
 }

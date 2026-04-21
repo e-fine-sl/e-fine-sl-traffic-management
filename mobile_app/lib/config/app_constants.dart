@@ -93,6 +93,27 @@ class AppColors {
   static const Color warningBg      = Color(0xFFFFF8E1);
   static const Color errorBg        = Color(0xFFFFEBEE);
   static const Color successBg      = Color(0xFFE8F5E9);
+
+  // --- NEW POLICE DASHBOARD PREMIUM THEME ---
+  static const LinearGradient policeGradient = LinearGradient(
+    colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static final List<BoxShadow> softShadow = [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.05),
+      spreadRadius: 2,
+      blurRadius: 16,
+      offset: const Offset(0, 4),
+    ),
+  ];
+
+  static const Color pastelRed = Color(0xFFFFEBEE);
+  static const Color pastelBlue = Color(0xFFE3F2FD);
+  static const Color pastelOrange = Color(0xFFFFF3E0);
+  static const Color pastelGreen = Color(0xFFE8F5E9);
 }
 
 // ── TEXT STYLES / SIZES ───────────────────────────────

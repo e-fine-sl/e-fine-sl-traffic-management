@@ -127,6 +127,15 @@ class AuthService {
         await _storage.write(key: PrefKeys.licenseNum, value: user['licenseNumber'] as String);
       }
 
+      if ((user['role'] as String?) == UserRoles.officer || user['role'] == 'police') {
+        if (user['badgeNumber'] != null) {
+          await _storage.write(key: 'badgeNumber', value: user['badgeNumber'] as String);
+        }
+        if (user['_id'] != null || user['officerId'] != null) {
+          await _storage.write(key: 'officerId', value: (user['officerId'] ?? user['_id']) as String);
+        }
+      }
+
       debugPrint('[AuthService] Login successful — role: ${user["role"]}');
 
       // Return the user map — login_screen.dart reads userData['role'] to navigate

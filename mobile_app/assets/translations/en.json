@@ -2,31 +2,25 @@
   "greeting_morning": "Good Morning",
   "greeting_afternoon": "Good Afternoon",
   "greeting_evening": "Good Evening",
-
   "rating_status": "Driver Rating Status",
   "points": "Points",
   "pay_fines": "Pay Fines",
   "history": "History",
   "wallet": "Wallet",
   "report": "Report",
-
   "unpaid_title": "Unpaid Fines Detected!",
   "unpaid_msg": "You have pending fines. Pay now to avoid demerit points.",
-
   "status_excellent": "Excellent Standing",
   "status_warning": "Warning Level",
   "status_risk": "High Risk of Suspension!",
-
   "home": "Home",
   "profile": "Profile",
-
   "my_profile": "My Profile",
   "nic_label": "NIC Number",
   "license_label": "License No",
   "mobile_label": "Mobile No",
   "demerits_label": "Demerit Points",
   "points_display": "{} Points",
-
   "verified_driver": "Verified Driver",
   "not_verified": "Not Verified",
   "personal_details": "Personal Details",
@@ -34,13 +28,11 @@
   "issue_date": "Issue Date",
   "expiry_date": "Expiry Date",
   "allowed_vehicles": "Allowed Vehicles",
-
   "no_classes": "No classes found",
   "active_license": "Active License",
   "suspended_license": "LICENSE SUSPENDED",
   "residential_address": "Residential Address",
   "postal": "Postal",
-
   "demerit_title": "Driver Rating Status",
   "demerit_points_label": "Points",
   "demerit_good": "Good Standing",
@@ -49,10 +41,8 @@
   "demerit_suspended": "SUSPENDED",
   "demerit_suspended_on": "Since {}",
   "demerit_reinstate_info": "Your license will be reinstated on the 1st of next month.",
-
   "police": {
     "app_name": "e-Fine SL Police",
-
     "home_appbar_title": "Traffic Control Unit",
     "home_welcome": "Welcome Back,",
     "home_quick_actions": "Quick Actions",
@@ -60,7 +50,6 @@
     "home_check_license": "Check License",
     "home_fine_history": "Fine History",
     "home_profile": "Profile",
-
     "home_driver_details_title": "Driver Details Found",
     "home_nic_label": "NIC:",
     "home_license_label": "License No:",
@@ -70,7 +59,6 @@
     "home_error_title": "Error",
     "home_invalid_qr": "Invalid QR Code: This is not a driver license.",
     "home_qr_error": "Error reading QR Data.",
-
     "new_fine_appbar_title": "Issue New Fine",
     "new_fine_details_section": "Details",
     "new_fine_offense_section": "Offense",
@@ -89,7 +77,6 @@
     "new_fine_ok": "OK",
     "new_fine_submit": "ISSUE FINE",
     "new_fine_submitting": "Submitting...",
-
     "history_appbar_title": "Fine History",
     "history_empty": "No fines issued yet.",
     "history_failed_title": "Failed to Load History",
@@ -102,7 +89,6 @@
     "history_unknown_location": "Unknown Location",
     "history_violation": "Traffic Violation",
     "history_amount_prefix": "LKR ",
-
     "profile_appbar_title": "My Profile",
     "profile_badge": "Badge Number",
     "profile_station": "Police Station",
@@ -111,7 +97,12 @@
     "profile_loading": "Loading...",
     "profile_error": "Error Loading Data",
     "profile_photo_updated": "Profile picture updated!",
-    "profile_photo_failed": "Failed to update image"
+    "profile_photo_failed": "Failed to update image",
+    "dashboard_fines_today": "Fines Issued Today",
+    "dashboard_vehicles_checked": "Vehicles Checked",
+    "dashboard_recent_fines": "Recent Fines Activity",
+    "dashboard_sos_title": "Emergency SOS",
+    "dashboard_sos_confirm": "Call for immediate backup at your current location?",
+    "dashboard_sos_send": "Dispatch Backup"
   }
-
 }

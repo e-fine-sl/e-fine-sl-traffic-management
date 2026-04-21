@@ -1,0 +1,4 @@
+﻿Analyzing mobile_app...                                         
+
+  error - The method 'DateFormat' isn't defined for the type '_FineHistoryScreenState' - lib\screens\police\fine_history_screen.dart:55:14 - undefined_method
+

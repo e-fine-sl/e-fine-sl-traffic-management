@@ -1,15 +1,22 @@
 import 'dart:convert'; // For JSON decode
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
+import '../../services/police_locale_service.dart';
+import 'package:mobile_app/widgets/police/police_text.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../services/auth_service.dart';
-import '../../widgets/police/language_selector_widget.dart';
 
 import 'new_fine.dart';
 import 'fine_history_screen.dart';
 import 'profile_screen.dart';
 import 'qr_scanner_screen.dart';
+import 'package:mobile_app/widgets/police/police_app_bar.dart';
 import '../../config/app_constants.dart';
+import '../../models/police_dashboard_model.dart';
+import '../../services/police_dashboard_service.dart';
+import 'package:mobile_app/widgets/police/daily_stats_widget.dart';
+import 'package:mobile_app/widgets/police/hq_alerts_widget.dart';
+import 'package:mobile_app/widgets/police/recent_fines_widget.dart';
+import 'package:mobile_app/widgets/police/sos_fab.dart';
 
 class PoliceHomeScreen extends StatefulWidget {
   const PoliceHomeScreen({super.key});
@@ -21,16 +28,63 @@ class PoliceHomeScreen extends StatefulWidget {
 class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
   final _storage = const FlutterSecureStorage();
   final AuthService _authService = AuthService();
+  final PoliceDashboardService _dashboardService = PoliceDashboardService();
 
   String officerName = "Loading...";
   String badgeNumber = "";
   String officerRank = "";
   String? profileImageString;
 
+  int _dailyFinesCount = 0;
+  double _dailyTotalAmount = 0.0;
+  List<Map<String, dynamic>>? _recentFines;
+  List<HqAlertModel> _hqAlerts = [];
+  bool _isLoadingDashboard = true;
+
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() => _isLoadingDashboard = true);
+
+    // Added try-catch-finally block to prevent infinite loading state
+    try {
+      final hqAlertsFuture = _dashboardService.getHqAlerts();
+      final dashboardDataFuture = _dashboardService.getPoliceDashboardData();
+      
+      final alerts = await hqAlertsFuture;
+      final dashboardData = await dashboardDataFuture;
+
+      if (mounted) {
+        setState(() {
+          _hqAlerts = alerts;
+          
+          if (dashboardData != null) {
+            _recentFines = List<Map<String, dynamic>>.from(dashboardData['recentFines'] ?? []);
+            
+            final statsMap = dashboardData['dailyStats'] ?? {};
+            _dailyFinesCount = statsMap['count'] ?? 0;
+            _dailyTotalAmount = (statsMap['totalAmount'] ?? 0).toDouble();
+          } else {
+            _recentFines = null;
+            _dailyFinesCount = 0;
+            _dailyTotalAmount = 0.0;
+          }
+        });
+      }
+    } catch (e) {
+      // Log the specific API error for debugging
+      debugPrint('Error loading dashboard data: $e');
+    } finally {
+      // Ensure loading state is ALWAYS resolved, even on API failure
+      if (mounted) {
+        setState(() => _isLoadingDashboard = false);
+      }
+    }
   }
 
   // --- Data Fetching Section ---
@@ -60,6 +114,12 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
           profileImageString = userData['profileImage'];
         });
 
+        if (userData['badgeNumber'] != null &&
+            userData['badgeNumber'].toString().isNotEmpty) {
+          await _storage.write(
+              key: 'badgeNumber', value: userData['badgeNumber'].toString());
+        }
+
         if (profileImageString != null) {
           await _storage.write(
               key: 'serverProfileImage', value: profileImageString);
@@ -84,10 +144,12 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
         if (data['type'] == 'driver_identity') {
           _showDriverDetailsDialog(data);
         } else {
-          _showErrorDialog('police.home_invalid_qr'.tr());
+          _showErrorDialog(
+              PoliceLocaleService.instance.translate('police.home_invalid_qr'));
         }
       } catch (e) {
-        _showErrorDialog('police.home_qr_error'.tr());
+        _showErrorDialog(
+            PoliceLocaleService.instance.translate('police.home_qr_error'));
       }
     }
   }
@@ -97,19 +159,23 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('police.home_driver_details_title'.tr()),
+        title: PoliceText('police.home_driver_details_title'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _detailRow('police.home_nic_label'.tr(), data['nic'] ?? 'N/A'),
+            _detailRow(
+                PoliceLocaleService.instance.translate('police.home_nic_label'),
+                data['nic'] ?? 'N/A'),
             const SizedBox(height: 10),
             _detailRow(
-                'police.home_license_label'.tr(), data['license'] ?? 'N/A'),
+                PoliceLocaleService.instance
+                    .translate('police.home_license_label'),
+                data['license'] ?? 'N/A'),
             const SizedBox(height: 20),
             Center(
-              child: Text(
-                'police.home_verify_hint'.tr(),
+              child: PoliceText(
+                'police.home_verify_hint',
                 style: const TextStyle(color: Colors.grey, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
@@ -119,7 +185,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('police.home_close'.tr()),
+            child: PoliceText('police.home_close'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -130,7 +196,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                       builder: (context) => NewFineScreen(
                           scannedLicenseNumber: data['license'])));
             },
-            child: Text('police.home_issue_fine'.tr()),
+            child: PoliceText('police.home_issue_fine'),
           )
         ],
       ),
@@ -151,19 +217,15 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('police.home_error_title'.tr()),
+        title: PoliceText('police.home_error_title'),
         content: Text(message),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('police.home_close'.tr()))
+              child: PoliceText('police.home_close'))
         ],
       ),
     );
-  }
-
-  Future<void> _handleRefresh() async {
-    await _loadUserData();
   }
 
   ImageProvider _getProfileImage() {
@@ -173,49 +235,43 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
           final base64Data = profileImageString!.split(',').last;
           return MemoryImage(base64Decode(base64Data));
         } catch (e) {
-          return const NetworkImage(
-              'https://cdn-icons-png.flaticon.com/512/206/206853.png');
+          // Changed default fallback image to a local asset to prevent network dependency
+          return const AssetImage('assets/images/default_avatar.png');
         }
       } else if (profileImageString!.startsWith('http')) {
         return NetworkImage(profileImageString!);
       }
     }
-    return const NetworkImage(
-        'https://cdn-icons-png.flaticon.com/512/206/206853.png');
+    // Changed default fallback image to a local asset to prevent network dependency
+    return const AssetImage('assets/images/default_avatar.png');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryBlue,
-        elevation: 0,
-        title: Text(
-          'police.home_appbar_title'.tr(),
-          style:
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          const LanguageSelectorWidget(),
-          IconButton(
-            icon:
-                const Icon(Icons.notifications_outlined, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
-      ),
+      appBar: const PoliceAppBar(titleKey: 'police.home_appbar_title'),
       drawer: const Drawer(),
+      floatingActionButton: SosFab(
+        location: 'Current Location',
+        officerName: officerName,
+      ),
       body: RefreshIndicator(
-        onRefresh: _handleRefresh,
+        // Trigger both user data and dashboard data refresh
+        onRefresh: () async {
+          await _loadUserData();
+          await _loadDashboardData();
+        },
         child: SingleChildScrollView(
+          // Ensure it can be scrolled and dragged even if content is short
+          physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── HEADER SECTION ───────────────────────────────────────────
+              // ── 1. HEADER SECTION (Profile & Greeting) ───────────────
               Container(
-                padding:
-                    const EdgeInsets.only(left: 20, right: 20, bottom: 30),
+                padding: const EdgeInsets.only(
+                    left: 20, right: 20, bottom: 30, top: 10),
                 decoration: const BoxDecoration(
                   color: AppColors.primaryBlue,
                   borderRadius: BorderRadius.only(
@@ -223,50 +279,44 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                     bottomRight: Radius.circular(30),
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: CircleAvatar(
+                        radius: 30,
+                        backgroundColor: Colors.white,
+                        backgroundImage: _getProfileImage(),
+                      ),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          PoliceText(
+                            'police.home_welcome',
+                            style: TextStyle(
+                                color: Colors.blue[100], fontSize: 14),
                           ),
-                          child: CircleAvatar(
-                            radius: 30,
-                            backgroundColor: Colors.white,
-                            backgroundImage: _getProfileImage(),
+                          Text(
+                            officerName,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        const SizedBox(width: 15),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'police.home_welcome'.tr(),
-                                style: TextStyle(
-                                    color: Colors.blue[100], fontSize: 14),
-                              ),
-                              Text(
-                                officerName,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                "$officerRank | $badgeNumber",
-                                style: const TextStyle(
-                                    color: Colors.white70, fontSize: 13),
-                              ),
-                            ],
+                          Text(
+                            "$officerRank | $badgeNumber",
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 13),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -274,14 +324,28 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
 
               const SizedBox(height: 20),
 
-              // ── DASHBOARD GRID ───────────────────────────────────────────
+              // ── 2. DASHBOARD BODY ────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'police.home_quick_actions'.tr(),
+                    // Top: HQ Alerts
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: HQAlertsWidget(alerts: _hqAlerts),
+                    ),
+
+                    // Section 1: Daily Stats
+                    DailyStatsWidget(
+                        dailyFinesCount: _dailyFinesCount,
+                        dailyTotalAmount: _dailyTotalAmount,
+                        isLoading: _isLoadingDashboard),
+                    const SizedBox(height: 30),
+
+                    // Section 2: Quick Actions Grid
+                    PoliceText(
+                      'police.home_quick_actions',
                       style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -296,9 +360,10 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                       mainAxisSpacing: 15,
                       children: [
                         _buildMenuCard(
-                            title: 'police.home_new_fine'.tr(),
+                            title: 'police.home_new_fine',
                             icon: Icons.note_add_outlined,
-                            color: AppColors.errorRed,
+                            iconColor: AppColors.errorRed,
+                            bgColor: AppColors.pastelRed,
                             onTap: () {
                               Navigator.push(
                                   context,
@@ -306,17 +371,17 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                                       builder: (context) =>
                                           const NewFineScreen()));
                             }),
-
                         _buildMenuCard(
-                            title: 'police.home_check_license'.tr(),
+                            title: 'police.home_check_license',
                             icon: Icons.qr_code_scanner,
-                            color: AppColors.primaryBlue,
+                            iconColor: AppColors.primaryBlue,
+                            bgColor: AppColors.pastelBlue,
                             onTap: _handleQRScan),
-
                         _buildMenuCard(
-                            title: 'police.home_fine_history'.tr(),
+                            title: 'police.home_fine_history',
                             icon: Icons.history,
-                            color: AppColors.warningOrange,
+                            iconColor: AppColors.warningOrange,
+                            bgColor: AppColors.pastelOrange,
                             onTap: () {
                               Navigator.push(
                                   context,
@@ -324,11 +389,11 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                                       builder: (context) =>
                                           const FineHistoryScreen()));
                             }),
-
                         _buildMenuCard(
-                          title: 'police.home_profile'.tr(),
+                          title: 'police.home_profile',
                           icon: Icons.person_outline,
-                          color: AppColors.primaryGreen,
+                          iconColor: AppColors.primaryGreen,
+                          bgColor: AppColors.pastelGreen,
                           onTap: () {
                             Navigator.push(
                                 context,
@@ -341,6 +406,15 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                         ),
                       ],
                     ),
+
+                    const SizedBox(height: 30),
+
+                    // Section 3: Recent Fines at the bottom
+                    RecentFinesWidget(
+                        fines: _recentFines, isLoading: _isLoadingDashboard),
+
+                    const SizedBox(
+                        height: 100), // Padding to prevent SOS FAB overlap
                   ],
                 ),
               ),
@@ -354,23 +428,17 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
   Widget _buildMenuCard(
       {required String title,
       required IconData icon,
-      required Color color,
+      required Color iconColor,
+      required Color bgColor,
       required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.1),
-              spreadRadius: 2,
-              blurRadius: 5,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: AppColors.softShadow,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -378,13 +446,14 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
             Container(
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+                color: bgColor,
+                shape: BoxShape.rectangle,
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, size: 35, color: color),
+              child: Icon(icon, size: 35, color: iconColor),
             ),
             const SizedBox(height: 15),
-            Text(title,
+            PoliceText(title,
                 style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
