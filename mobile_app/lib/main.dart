@@ -4,6 +4,10 @@ import 'screens/splash/splash_screen.dart';
 import 'services/theme_manager.dart';
 import 'services/notification_service.dart';
 import 'config/app_constants.dart';
+import 'widgets/interaction_listener.dart';
+import 'screens/auth/login_screen.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   
@@ -42,6 +46,10 @@ class EFineApp extends StatelessWidget {
           locale: context.locale, 
           
           themeMode: mode,
+          navigatorKey: navigatorKey, // Added for global navigation support
+          routes: {
+            '/login': (context) => const LoginScreen(),
+          },
           theme: ThemeData(
             primaryColor: AppColors.primaryGreenDark,
             colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primaryGreen, primary: AppColors.primaryGreenDark),
@@ -108,6 +116,12 @@ class EFineApp extends StatelessWidget {
              textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Poppins'),
           ),
           home: const SplashScreen(),
+          builder: (context, child) {
+            return InteractionListener(
+              navigatorKey: navigatorKey,
+              child: child!,
+            );
+          },
         );
       }
     );

@@ -14,6 +14,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:pointycastle/asymmetric/api.dart';
 import 'package:pointycastle/asymmetric/oaep.dart';
@@ -26,7 +27,6 @@ import 'package:pointycastle/api.dart';
 
 import 'api_logger.dart' as http;
 import '../config/app_constants.dart';
-import 'secure_storage_service.dart';
 
 class AuthService {
   final String _mainUrl  = ApiConstants.baseUrl;         // main backend
@@ -131,6 +131,12 @@ class AuthService {
 
       debugPrint('[AuthService] Login successful — role: ${user["role"]}');
 
+      // Step 5: Store idle timeout minutes (non-sensitive setting)
+      final prefs = await SharedPreferences.getInstance();
+      final timeout = data['idleTimeoutMinutes'] ?? 5;
+      await prefs.setInt(PrefKeys.idleTimeoutMinutes, timeout);
+      debugPrint('[AuthService] Idle timeout set to: $timeout minutes');
+
       // Return the user map — login_screen.dart reads userData['role'] to navigate
       return user;
     } else {
@@ -158,14 +164,19 @@ class AuthService {
           body: jsonEncode({'sessionToken': sessionToken}),
         );
       } catch (e) {
-        debugPrint('[AuthService] Warning: could not revoke session on server: $e');
+        debugPrint('[AuthService] Session revocation failed (clean logout): $e');
       }
     }
 
-    // Always clear local storage regardless of server response
-    await SecureStorageService().clearAllAuth();
+    // Step 2: Clear local secure storage
+    await _storage.deleteAll();
+
+    // Step 3: Clear shared preferences (timeout, etc)
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+
     _cachedPublicKey = null;
-    debugPrint('[AuthService] All session data cleared');
+    debugPrint('[AuthService] Local storage cleared — logged out successfully');
   }
 
   // ─────────────────────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'api_logger.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
 import 'auth_service.dart';
 
@@ -193,6 +194,33 @@ class FineService {
     }
   }
 
+  // ----------------------------------------------------------------
+  // 6. Caching Helpers
+  // ----------------------------------------------------------------
+  
+  Future<void> _cachePaidFines(List<Map<String, dynamic>> fines) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(PrefKeys.historyCache, jsonEncode(fines));
+    } catch (e) {
+      debugPrint("Error caching history: $e");
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPaidFinesFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getString(PrefKeys.historyCache);
+      if (cached != null) {
+        final decoded = jsonDecode(cached) as List<dynamic>;
+        return List<Map<String, dynamic>>.from(decoded);
+      }
+    } catch (e) {
+      debugPrint("Error reading from cache: $e");
+    }
+    return [];
+  }
+
   Future<List<Map<String, dynamic>>> getDriverPaidFines() async {
     try {
       String? token = await _authService.getToken();
@@ -200,7 +228,7 @@ class FineService {
       
       if (token == null || licenseNumber == null) return [];
 
-      // Try with 'licenseNumber' first
+      // Fetch from network
       List<Map<String, dynamic>> results = await _fetchFinesInternal(
         endpoint: 'driver-history',
         token: token,
@@ -216,6 +244,11 @@ class FineService {
           queryKey: 'licenseNo',
           queryValue: licenseNumber,
         );
+      }
+
+      // If we got results, update cache
+      if (results.isNotEmpty) {
+        await _cachePaidFines(results);
       }
 
       return results;
