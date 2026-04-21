@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/police_locale_service.dart';
-import '../../widgets/police/police_text.dart';
+
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -113,13 +113,13 @@ class _NewFineScreenState extends State<NewFineScreen> {
 
     if (_selectedOffenseData == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: PoliceText('police.new_fine_select_offense_error')));
+          content: Text(PoliceLocaleService.instance.translate('police.new_fine_select_offense_error'))));
       return;
     }
 
     if (_officerBadgeNumber == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: PoliceText('police.new_fine_officer_missing')));
+          SnackBar(content: Text(PoliceLocaleService.instance.translate('police.new_fine_officer_missing'))));
       return;
     }
 
@@ -145,7 +145,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: PoliceText('police.new_fine_success'),
+            content: Text(PoliceLocaleService.instance.translate('police.new_fine_success')),
             backgroundColor: AppColors.successGreen));
         Navigator.pop(context);
       }
@@ -155,13 +155,13 @@ class _NewFineScreenState extends State<NewFineScreen> {
         showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
-                  title: PoliceText('police.new_fine_failed_title',
+                  title: Text(PoliceLocaleService.instance.translate('police.new_fine_failed_title'),
                       style: const TextStyle(color: AppColors.errorRed)),
                   content: Text(errorMessage),
                   actions: [
                     TextButton(
                         onPressed: () => Navigator.pop(ctx),
-                        child: PoliceText('police.new_fine_ok'))
+                        child: Text(PoliceLocaleService.instance.translate('police.new_fine_ok')))
                   ],
                 ));
       }
@@ -174,7 +174,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: PoliceText('police.new_fine_appbar_title'),
+          title: Text(PoliceLocaleService.instance.translate('police.new_fine_appbar_title')),
           backgroundColor: AppColors.primaryBlue,
           foregroundColor: Colors.white),
       body: SingleChildScrollView(
@@ -184,8 +184,8 @@ class _NewFineScreenState extends State<NewFineScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PoliceText(
-                'police.new_fine_details_section',
+              Text(
+                PoliceLocaleService.instance.translate('police.new_fine_details_section'),
                 style:
                     const TextStyle(fontSize: 18, color: AppColors.primaryBlue),
               ),
@@ -216,8 +216,8 @@ class _NewFineScreenState extends State<NewFineScreen> {
                     : null,
               ),
               const SizedBox(height: 25),
-              PoliceText(
-                'police.new_fine_offense_section',
+              Text(
+                PoliceLocaleService.instance.translate('police.new_fine_offense_section'),
                 style:
                     const TextStyle(fontSize: 18, color: AppColors.primaryBlue),
               ),
@@ -302,7 +302,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
                   icon: const Icon(Icons.send),
                   label: _isSubmitting
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : PoliceText('police.new_fine_submit'),
+                      : Text(PoliceLocaleService.instance.translate('police.new_fine_submit')),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.errorRed,
                       foregroundColor: Colors.white),

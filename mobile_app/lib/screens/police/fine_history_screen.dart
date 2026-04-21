@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/police_locale_service.dart';
-import '../../widgets/police/police_text.dart';
+
 import 'package:intl/intl.dart';
 import '../../services/fine_service.dart';
 import '../../config/app_constants.dart';
@@ -80,7 +80,7 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: PoliceText('police.history_appbar_title'),
+        title: Text(PoliceLocaleService.instance.translate('police.history_appbar_title')),
         backgroundColor: AppColors.primaryBlue,
         foregroundColor: Colors.white,
         actions: [
@@ -102,8 +102,8 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
                         const Icon(Icons.error_outline,
                             color: AppColors.errorRed, size: 60),
                         const SizedBox(height: 10),
-                        PoliceText(
-                          'police.history_failed_title',
+                        Text(
+                          PoliceLocaleService.instance.translate('police.history_failed_title'),
                           style: const TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold),
                         ),
@@ -115,14 +115,14 @@ class _FineHistoryScreenState extends State<FineHistoryScreen> {
                         ElevatedButton.icon(
                           onPressed: _fetchHistory,
                           icon: const Icon(Icons.refresh),
-                          label: PoliceText('police.history_retry'),
+                          label: Text(PoliceLocaleService.instance.translate('police.history_retry')),
                         )
                       ],
                     ),
                   ),
                 )
               : _fines.isEmpty
-                  ? Center(child: PoliceText('police.history_empty'))
+                  ? Center(child: Text(PoliceLocaleService.instance.translate('police.history_empty')))
                   : ListView.builder(
                       padding: const EdgeInsets.all(15),
                       itemCount: _fines.length,

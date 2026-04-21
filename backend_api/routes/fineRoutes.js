@@ -8,7 +8,8 @@ const {
     getFineHistory,
     getDriverPendingFines,
     payFine,
-    getDriverPaidHistory
+    getDriverPaidHistory,
+    getDashboardStats
 } = require('../controllers/fineController');
 
 // URL: /api/fines/offenses (දඩ වර්ග ටික ගන්න)
@@ -21,6 +22,9 @@ router.post('/add', addOffense);
 
 // URL: /api/fines/issue (අලුත් දඩයක් ගහන්න - Data Save කරන්න)
 router.post('/issue', issueFine);
+
+// URL: /api/fines/dashboard-stats (Dashboard stats - Police Officer ID අවශ්‍ය)
+router.get('/dashboard-stats', getDashboardStats);
 
 // URL: /api/fines/history (ගහපු දඩ වල හිස්ට්‍රි එක ගන්න - Police Only)
 router.get('/history', getFineHistory);
