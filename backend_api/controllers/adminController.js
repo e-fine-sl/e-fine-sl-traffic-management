@@ -884,11 +884,13 @@ const getAllIssuedFines = async (req, res) => {
             }
         }
 
-        // Search by license or vehicle number
+        // Search by license, vehicle number, place, or officer ID
         if (req.query.search) {
             query.$or = [
                 { licenseNumber: { $regex: req.query.search, $options: 'i' } },
-                { vehicleNumber: { $regex: req.query.search, $options: 'i' } }
+                { vehicleNumber: { $regex: req.query.search, $options: 'i' } },
+                { place: { $regex: req.query.search, $options: 'i' } },
+                { policeOfficerId: { $regex: req.query.search, $options: 'i' } }
             ];
         }
 
