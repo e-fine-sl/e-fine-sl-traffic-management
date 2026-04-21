@@ -928,11 +928,12 @@ const updateOffense = async (req, res) => {
             return res.status(HTTP.NOT_FOUND).json({ message: 'Offense not found' });
         }
 
-        const { offenseName, amount, description, sectionOfAct } = req.body;
+        const { offenseName, amount, description, sectionOfAct, demeritValue } = req.body;
 
         // Update fields
         if (offenseName) offense.offenseName = offenseName;
-        if (amount) offense.amount = amount;
+        if (amount !== undefined) offense.amount = amount;
+        if (demeritValue !== undefined) offense.demeritValue = demeritValue;
         if (description !== undefined) offense.description = description;
         if (sectionOfAct !== undefined) offense.sectionOfAct = sectionOfAct;
 
