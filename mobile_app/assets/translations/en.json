@@ -42,7 +42,8 @@
   "demerit_danger": "Danger Level",
   "demerit_suspended": "SUSPENDED",
   "demerit_suspended_on": "Since {}",
-  "demerit_reinstate_info": "Your license will be reinstated on the 1st of next month.",
+  "demerit_reinstate_info": "Please contact the traffic department or an administrator to reinstate your license.",
+
 
   "police": {
     "app_name": "e-Fine SL Police",

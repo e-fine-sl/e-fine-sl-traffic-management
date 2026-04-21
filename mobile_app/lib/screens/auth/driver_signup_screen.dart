@@ -510,8 +510,8 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'License Validity',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                'License Validity (Check BACK side Columns 10 & 11)',
+                style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryGreenDark),
               ),
             ),
             const SizedBox(height: 10),
@@ -531,8 +531,9 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
                       }),
                     ),
                     decoration: InputDecoration(
-                      labelText: 'Issue Date',
+                      labelText: 'Issue Date (Col. 10)',
                       hintText: 'dd/MM/yyyy',
+                      helperText: 'From back of license',
                       prefixIcon: const Icon(Icons.calendar_today, size: 18),
                       border: const OutlineInputBorder(),
                       errorText: _issueDateErrorText,
@@ -554,9 +555,9 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
                       }),
                     ),
                     decoration: InputDecoration(
-                      labelText: 'Earliest Expiry Date (Col. 11)',
+                      labelText: 'Expiry Date (Col. 11)',
                       hintText: 'dd/MM/yyyy',
-                      helperText: 'select the Earliest License Expiry Date.',
+                      helperText: 'Earliest from back',
                       prefixIcon: const Icon(Icons.event_available, size: 18),
                       border: const OutlineInputBorder(),
                       errorText: _expiryDateErrorText,

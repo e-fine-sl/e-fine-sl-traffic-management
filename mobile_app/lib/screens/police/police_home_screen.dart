@@ -271,7 +271,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final success = await _dashboardService.registerSosAlert('Current Location', officerName);
-          if (success && mounted) {
+          if (success && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('SOS Alert Sent!'), backgroundColor: AppColors.errorRed),
             );
@@ -576,7 +576,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(height: 15),
