@@ -167,7 +167,7 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
       }
 
       // Check DB
-      final isTaken = await _authService.checkFieldExists(field, value.trim());
+      final isTaken = await _authService.checkFieldExists(field, value.trim(), role: 'driver');
       
       if (mounted) {
         setState(() {
@@ -295,8 +295,8 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
       return false;
     }
     if (_expiryDate.isEmpty) {
-      setState(() => _expiryDateErrorText = 'Please select the expiry date');
-      _showError('Please select the License Expiry Date.');
+      setState(() => _expiryDateErrorText = 'Please select the earliest expiry date');
+      _showError('Please select the Earliest License Expiry Date.');
       return false;
     }
     if (!_isValidNIC(_nicController.text)) {
@@ -554,8 +554,9 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
                       }),
                     ),
                     decoration: InputDecoration(
-                      labelText: 'Expiry Date',
+                      labelText: 'Earliest Expiry Date (Col. 11)',
                       hintText: 'dd/MM/yyyy',
+                      helperText: 'select the Earliest License Expiry Date.',
                       prefixIcon: const Icon(Icons.event_available, size: 18),
                       border: const OutlineInputBorder(),
                       errorText: _expiryDateErrorText,

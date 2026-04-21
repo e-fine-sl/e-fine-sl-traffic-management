@@ -90,8 +90,10 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    _animation = Tween<double>(begin: 0.0, end: widget.points / 100)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _animation = Tween<double>(
+      begin: 0.0, 
+      end: (widget.points / DemeritConstants.defaultPoints).clamp(0.0, 1.0)
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _controller.forward();
   }
 
@@ -101,7 +103,7 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
     if (oldWidget.points != widget.points) {
       _animation = Tween<double>(
         begin: _animation.value,
-        end: widget.points / 100,
+        end: (widget.points / DemeritConstants.defaultPoints).clamp(0.0, 1.0),
       ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
       _controller
         ..reset()
@@ -166,7 +168,7 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
             AnimatedBuilder(
               animation: _animation,
               builder: (context, _) {
-                final displayPts = (_animation.value * 100).round();
+                final displayPts = (_animation.value * DemeritConstants.defaultPoints).round();
                 final animColor = _getStatusColor(displayPts);
                 return SizedBox(
                   width: 180,
@@ -186,7 +188,7 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            '$displayPts / 100',
+                            '${widget.points} / ${DemeritConstants.defaultPoints}',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 24,

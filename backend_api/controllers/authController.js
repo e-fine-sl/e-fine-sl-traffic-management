@@ -110,9 +110,22 @@ const registerPolice = async (req, res) => {
       return res.status(HTTP.UNAUTHORIZED).json({ message: 'Unauthorized: Please verify OTP first' });
     }
 
-    const officerExists = await Police.findOne({ badgeNumber });
+    const officerExists = await Police.findOne({ 
+      $or: [
+        { badgeNumber },
+        { nic },
+        { email },
+        { phone }
+      ]
+    });
     if (officerExists) {
-      return res.status(HTTP.BAD_REQUEST).json({ message: 'Officer already registered' });
+      let duplicateField = 'Officer';
+      if (officerExists.badgeNumber === badgeNumber) duplicateField = 'Badge Number';
+      else if (officerExists.nic === nic) duplicateField = 'NIC';
+      else if (officerExists.email === email) duplicateField = 'Email';
+      else if (officerExists.phone === phone) duplicateField = 'Phone Number';
+      
+      return res.status(HTTP.BAD_REQUEST).json({ message: `${duplicateField} already registered for an officer` });
     }
 
     // Decrypt RSA-encrypted password sent from Flutter
@@ -173,10 +186,23 @@ const registerDriver = async (req, res) => {
   console.log(`[AUTH/REGISTER-DRIVER] Incoming request for email: ${email}, nic: ${nic}, kycVerified: ${kycVerified}, isVerified: ${isVerified}`);
 
   try {
-    const driverExists = await Driver.findOne({ email });
+    const driverExists = await Driver.findOne({ 
+      $or: [
+        { email },
+        { nic },
+        { licenseNumber },
+        { phone }
+      ]
+    });
     if (driverExists) {
-      console.warn(`[AUTH/REGISTER-DRIVER] Duplicate email attempted: ${email}`);
-      return res.status(HTTP.BAD_REQUEST).json({ message: 'Driver already registered' });
+      let duplicateField = 'Driver';
+      if (driverExists.email === email) duplicateField = 'Email';
+      else if (driverExists.nic === nic) duplicateField = 'NIC';
+      else if (driverExists.licenseNumber === licenseNumber) duplicateField = 'License Number';
+      else if (driverExists.phone === phone) duplicateField = 'Phone Number';
+
+      console.warn(`[AUTH/REGISTER-DRIVER] Duplicate field attempted: ${duplicateField}`);
+      return res.status(HTTP.BAD_REQUEST).json({ message: `${duplicateField} already registered for a driver` });
     }
 
     // Decrypt RSA-encrypted password sent from Flutter
@@ -473,13 +499,20 @@ const checkFieldExistence = async (req, res) => {
     let exists = false;
     let existingRecord = null;
 
-    // By default, since this is for Driver registration, check Driver.
-    // If role parameter is not strictly driver or if we want global uniqueness for nic/email/phone, we check both.
-    existingRecord = await Driver.findOne(query).select('_id');
+    // determine which models to check based on role
+    const checkDriver = !role || role === ROLES.DRIVER;
+    const checkPolice = !role || role === ROLES.POLICE || role === ROLES.OFFICER;
+
+    if (checkDriver) {
+      existingRecord = await Driver.findOne(query).select('_id');
+    }
     
-    // For NIC, email, phone, also check Police to avoid overlap, unless it's licenseNumber which is only on Driver
-    if (!existingRecord && field !== 'licenseNumber') {
-      existingRecord = await Police.findOne(query).select('_id');
+    if (!existingRecord && checkPolice) {
+      // For badgeNumber, only check Police anyway
+      // For others, if role is police or not provided, check Police
+      if (field !== 'licenseNumber') {
+        existingRecord = await Police.findOne(query).select('_id');
+      }
     }
 
     if (existingRecord) {

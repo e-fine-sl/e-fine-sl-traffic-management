@@ -125,6 +125,8 @@ class AuthService {
 
       if ((user['role'] as String?) == UserRoles.driver && user['licenseNumber'] != null) {
         await _storage.write(key: PrefKeys.licenseNum, value: user['licenseNumber'] as String);
+      } else if (((user['role'] as String?) == UserRoles.officer || (user['role'] as String?) == UserRoles.admin) && user['badgeNumber'] != null) {
+        await _storage.write(key: PrefKeys.badgeNumber, value: user['badgeNumber'] as String);
       }
 
       if ((user['role'] as String?) == UserRoles.officer || user['role'] == 'police') {
@@ -373,11 +375,13 @@ class AuthService {
   // DRIVER REGISTRATION
   // ─────────────────────────────────────────────────────────────────────────
 
-  Future<bool> checkFieldExists(String field, String value) async {
+  Future<bool> checkFieldExists(String field, String value, {String? role}) async {
     try {
-      final response = await http.get(
-        Uri.parse('$_mainUrl/auth/check-exists?field=$field&value=${Uri.encodeComponent(value)}'),
-      );
+      String url = '$_mainUrl/auth/check-exists?field=$field&value=${Uri.encodeComponent(value)}';
+      if (role != null) {
+        url += '&role=$role';
+      }
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['exists'] == true;

@@ -17,6 +17,15 @@ const policeSchema = mongoose.Schema({
         required: true, 
         unique: true 
     },
+    nic: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    phone: {
+        type: String,
+        required: true
+    },
     password: { 
         type: String, 
         required: true 

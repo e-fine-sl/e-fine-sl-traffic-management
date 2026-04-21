@@ -17,9 +17,15 @@ const getOffenses = async (req, res) => {
 // @desc    Add a new offense (For Admin Testing)
 // @route   POST /api/fines/add
 const addOffense = async (req, res) => {
-  const { offenseName, amount, description } = req.body;
+  const { offenseName, amount, description, sectionOfAct, demeritValue } = req.body;
   try {
-    const offense = await Offense.create({ offenseName, amount, description });
+    const offense = await Offense.create({ 
+      offenseName, 
+      amount, 
+      description, 
+      sectionOfAct, 
+      demeritValue 
+    });
     res.status(HTTP.CREATED).json(offense);
   } catch (error) {
     res.status(HTTP.SERVER_ERROR).json({ message: 'Failed to add offense', error: error.message });
@@ -36,15 +42,21 @@ const issueFine = async (req, res) => {
   }
 
   try {
+    const offense = await Offense.findById(offenseId);
+    if (!offense) {
+      return res.status(HTTP.NOT_FOUND).json({ message: 'Offense type not found' });
+    }
+
     const fine = await IssuedFine.create({
       licenseNumber,
       vehicleNumber,
       offenseId,
-      offenseName,
-      amount,
+      offenseName: offense.offenseName, // Always use names from the master offense record
+      amount: offense.amount, // Use amount from master record to prevent price tampering
       place,
       policeOfficerId,
-      date: date || Date.now() // Use provided date or default to now
+      demeritPoints: offense.demeritValue || 0, // Save points into the fine record
+      date: date || Date.now()
     });
 
     let demeritResult = null;

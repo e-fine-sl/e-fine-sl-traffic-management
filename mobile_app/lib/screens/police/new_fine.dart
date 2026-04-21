@@ -71,7 +71,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
   }
 
   Future<void> _loadOfficerDetails() async {
-    String? badge = await _storage.read(key: 'badgeNumber');
+    String? badge = await _storage.read(key: PrefKeys.badgeNumber);
     setState(() => _officerBadgeNumber = badge);
   }
 

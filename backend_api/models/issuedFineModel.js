@@ -12,6 +12,7 @@ const issuedFineSchema = mongoose.Schema({
     status: { type: String, default: PAYMENT.STATUS.UNPAID }, // ගෙව්වද නැද්ද කියන එක
     paymentId: { type: String }, // PayHere Payment ID
     paidAt: { type: Date }, // ගෙව්ව වෙලාව
+    demeritPoints: { type: Number, default: 0 }, // දඩයට අදාළ ලකුණු ගණන
     date: { type: Date, default: Date.now } // දඩ ගැහුව වෙලාව
 }, {
     timestamps: true

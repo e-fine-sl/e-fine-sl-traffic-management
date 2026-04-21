@@ -30,15 +30,15 @@ const LICENSE_STATUS = {
 
 // ── DEMERIT POINTS ────────────────────────────
 const DEMERIT = {
-  DEFAULT_POINTS:    100,
+  DEFAULT_POINTS:    24, // Optimized for Sri Lanka standards
   SUSPENSION_THRESHOLD: 0,
-  MONTHLY_RESTORE:   50,
   OFFENSE_LEVELS: {
-    MINOR:    10,
-    MODERATE: 20,
-    SERIOUS:  40,
-    CRITICAL: 100,
+    P1_MINOR:    2,
+    P2_MODERATE: 4,
+    P3_SERIOUS:  6,
+    P4_CRITICAL: 8,
   },
+  MONTHLY_RECOVERY: 2, // Points added to active drivers monthly
 };
 
 // ── AUTH & SECURITY ───────────────────────────
