@@ -169,6 +169,65 @@ const getDriverPaidHistory = async (req, res) => {
   }
 };
 
+// @desc    Get Dashboard Stats (Daily Fines Count, Total Amount, Recent 3 Fines)
+// @route   GET /api/fines/dashboard-stats
+const getDashboardStats = async (req, res) => {
+  try {
+    const { policeOfficerId } = req.query;
+
+    if (!policeOfficerId) {
+      return res.status(HTTP.BAD_REQUEST).json({ message: 'Police Officer ID is required' });
+    }
+
+    // === Get Today's Date Range (00:00:00 to 23:59:59) ===
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // === MongoDB Aggregation Pipeline for Daily Stats ===
+    const dailyStatsResult = await IssuedFine.aggregate([
+      {
+        $match: {
+          policeOfficerId: policeOfficerId,
+          date: {
+            $gte: today,
+            $lt: tomorrow
+          }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 },
+          totalAmount: { $sum: '$amount' }
+        }
+      }
+    ]);
+
+    const dailyStats = dailyStatsResult.length > 0
+      ? dailyStatsResult[0]
+      : { count: 0, totalAmount: 0 };
+
+    // === Get Last 3 Recent Fines ===
+    const recentFines = await IssuedFine.find({
+      policeOfficerId: policeOfficerId
+    })
+      .select('vehicleNumber offenseName amount date status -_id')
+      .sort({ date: -1 })
+      .limit(3)
+      .lean();
+
+    res.status(HTTP.OK).json({
+      dailyFinesCount: dailyStats.count || 0,
+      dailyTotalAmount: dailyStats.totalAmount || 0,
+      recentFines: recentFines || []
+    });
+  } catch (error) {
+    res.status(HTTP.SERVER_ERROR).json({ message: 'Failed to fetch dashboard stats', error: error.message });
+  }
+};
+
 module.exports = {
   getOffenses,
   addOffense,
@@ -176,5 +235,6 @@ module.exports = {
   getFineHistory,
   getDriverPendingFines,
   payFine,
-  getDriverPaidHistory
+  getDriverPaidHistory,
+  getDashboardStats
 };

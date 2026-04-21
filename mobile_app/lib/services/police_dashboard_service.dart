@@ -7,30 +7,58 @@ import '../models/police_dashboard_model.dart';
 import 'auth_service.dart';
 
 class PoliceDashboardService {
-
   static const String baseUrl = ApiConstants.baseUrl;
   final _storage = const FlutterSecureStorage();
   final _authService = AuthService();
 
   Future<Map<String, dynamic>?> getPoliceDashboardData() async {
     final creds = <String, String>{};
-    if (await _getTokenAndBadge(creds) == null) return null;
+    if (await _getTokenAndBadge(creds) == null) {
+      debugPrint('[PoliceDashboardService] ERROR: Token or Badge is null');
+      return null;
+    }
 
     try {
-      final uri = Uri.parse('$baseUrl/police/dashboard');
+      // Call the new dashboard-stats endpoint with policeOfficerId as query parameter
+      final uri = Uri.parse('$baseUrl/fines/dashboard-stats').replace(
+        queryParameters: {
+          'policeOfficerId': creds['badge']!,
+        },
+      );
+
+      debugPrint('[PoliceDashboardService] Calling API: $uri');
+
       final response = await http.get(uri, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ${creds['token']!}',
       });
 
+      debugPrint(
+          '[PoliceDashboardService] Response Status Code: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
-        if (responseData['success'] == true) {
-          return responseData['data'];
-        }
+        debugPrint('[PoliceDashboardService] Raw Response: $responseData');
+
+        // Format response to match expected structure
+        final formattedData = {
+          'recentFines': responseData['recentFines'] ?? [],
+          'dailyStats': {
+            'count': responseData['dailyFinesCount'] ?? 0,
+            'totalAmount': responseData['dailyTotalAmount'] ?? 0,
+          }
+        };
+
+        debugPrint(
+            '[PoliceDashboardService] Formatted Response: $formattedData');
+        return formattedData;
+      } else {
+        debugPrint(
+            '[PoliceDashboardService] Error: Status ${response.statusCode}, Body: ${response.body}');
       }
     } catch (e) {
-      debugPrint("Error fetching dashboard data: $e");
+      debugPrint(
+          "[PoliceDashboardService] Exception Error fetching dashboard data: $e");
     }
     return null;
   }
@@ -122,7 +150,7 @@ class PoliceDashboardService {
           'location': location,
         }),
       );
-      
+
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
       debugPrint("Error registering SOS: $e");

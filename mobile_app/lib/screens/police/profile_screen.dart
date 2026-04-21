@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/police_locale_service.dart';
-import '../../widgets/police/police_text.dart';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/auth_service.dart';
@@ -105,7 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: PoliceText('police.profile_photo_updated'),
+                content: Text(PoliceLocaleService.instance.translate('police.profile_photo_updated')),
                 backgroundColor: AppColors.successGreen),
           );
         }
@@ -114,7 +114,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           setState(() => _isUploading = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: PoliceText('police.profile_photo_failed'),
+                content: Text(PoliceLocaleService.instance.translate('police.profile_photo_failed')),
                 backgroundColor: AppColors.errorRed),
           );
         }
@@ -145,7 +145,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: PoliceText('police.profile_appbar_title',
+        title: Text(PoliceLocaleService.instance.translate('police.profile_appbar_title'),
             style: const TextStyle(color: Colors.white)),
         backgroundColor: AppColors.primaryBlue,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -251,7 +251,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         }
                       },
                       icon: const Icon(Icons.logout, color: Colors.white),
-                      label: PoliceText('police.profile_logout',
+                      label: Text(PoliceLocaleService.instance.translate('police.profile_logout'),
                         style: const TextStyle(
                             fontSize: 16, color: Colors.white),
                       ),

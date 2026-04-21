@@ -1,7 +1,7 @@
 import 'dart:convert'; // For JSON decode
 import 'package:flutter/material.dart';
 import '../../services/police_locale_service.dart';
-import 'package:mobile_app/widgets/police/police_text.dart';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../services/auth_service.dart';
 
@@ -9,14 +9,10 @@ import 'new_fine.dart';
 import 'fine_history_screen.dart';
 import 'profile_screen.dart';
 import 'qr_scanner_screen.dart';
-import 'package:mobile_app/widgets/police/police_app_bar.dart';
+
 import '../../config/app_constants.dart';
 import '../../models/police_dashboard_model.dart';
 import '../../services/police_dashboard_service.dart';
-import 'package:mobile_app/widgets/police/daily_stats_widget.dart';
-import 'package:mobile_app/widgets/police/hq_alerts_widget.dart';
-import 'package:mobile_app/widgets/police/recent_fines_widget.dart';
-import 'package:mobile_app/widgets/police/sos_fab.dart';
 
 class PoliceHomeScreen extends StatefulWidget {
   const PoliceHomeScreen({super.key});
@@ -48,28 +44,42 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
     _loadDashboardData();
   }
 
+
+
   Future<void> _loadDashboardData() async {
     setState(() => _isLoadingDashboard = true);
 
     // Added try-catch-finally block to prevent infinite loading state
     try {
+      debugPrint('[PoliceHomeScreen] Starting to load dashboard data...');
+
       final hqAlertsFuture = _dashboardService.getHqAlerts();
       final dashboardDataFuture = _dashboardService.getPoliceDashboardData();
-      
+
       final alerts = await hqAlertsFuture;
       final dashboardData = await dashboardDataFuture;
+
+      debugPrint('[PoliceHomeScreen] Dashboard Data Response: $dashboardData');
 
       if (mounted) {
         setState(() {
           _hqAlerts = alerts;
-          
+
           if (dashboardData != null) {
-            _recentFines = List<Map<String, dynamic>>.from(dashboardData['recentFines'] ?? []);
-            
+            _recentFines = List<Map<String, dynamic>>.from(
+                dashboardData['recentFines'] ?? []);
+            debugPrint(
+                '[PoliceHomeScreen] Recent Fines Loaded: ${_recentFines?.length ?? 0} fines');
+            debugPrint('[PoliceHomeScreen] Recent Fines Data: $_recentFines');
+
             final statsMap = dashboardData['dailyStats'] ?? {};
             _dailyFinesCount = statsMap['count'] ?? 0;
             _dailyTotalAmount = (statsMap['totalAmount'] ?? 0).toDouble();
+
+            debugPrint(
+                '[PoliceHomeScreen] Daily Stats - Count: $_dailyFinesCount, Amount: $_dailyTotalAmount');
           } else {
+            debugPrint('[PoliceHomeScreen] Dashboard data is NULL');
             _recentFines = null;
             _dailyFinesCount = 0;
             _dailyTotalAmount = 0.0;
@@ -78,7 +88,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
       }
     } catch (e) {
       // Log the specific API error for debugging
-      debugPrint('Error loading dashboard data: $e');
+      debugPrint('[PoliceHomeScreen] ERROR loading dashboard data: $e');
     } finally {
       // Ensure loading state is ALWAYS resolved, even on API failure
       if (mounted) {
@@ -159,7 +169,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: PoliceText('police.home_driver_details_title'),
+        title: Text(PoliceLocaleService.instance.translate('police.home_driver_details_title')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,8 +184,8 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                 data['license'] ?? 'N/A'),
             const SizedBox(height: 20),
             Center(
-              child: PoliceText(
-                'police.home_verify_hint',
+              child: Text(
+                PoliceLocaleService.instance.translate('police.home_verify_hint'),
                 style: const TextStyle(color: Colors.grey, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
@@ -185,7 +195,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: PoliceText('police.home_close'),
+            child: Text(PoliceLocaleService.instance.translate('police.home_close')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -196,7 +206,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                       builder: (context) => NewFineScreen(
                           scannedLicenseNumber: data['license'])));
             },
-            child: PoliceText('police.home_issue_fine'),
+            child: Text(PoliceLocaleService.instance.translate('police.home_issue_fine')),
           )
         ],
       ),
@@ -217,12 +227,12 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: PoliceText('police.home_error_title'),
+        title: Text(PoliceLocaleService.instance.translate('police.home_error_title')),
         content: Text(message),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: PoliceText('police.home_close'))
+              child: Text(PoliceLocaleService.instance.translate('police.home_close')))
         ],
       ),
     );
@@ -250,11 +260,25 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: const PoliceAppBar(titleKey: 'police.home_appbar_title'),
+      appBar: AppBar(
+        title: Text(PoliceLocaleService.instance.translate('police.home_appbar_title')),
+        backgroundColor: AppColors.primaryBlue,
+        foregroundColor: Colors.white,
+        centerTitle: true,
+        elevation: 0,
+      ),
       drawer: const Drawer(),
-      floatingActionButton: SosFab(
-        location: 'Current Location',
-        officerName: officerName,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final success = await _dashboardService.registerSosAlert('Current Location', officerName);
+          if (success && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('SOS Alert Sent!'), backgroundColor: AppColors.errorRed),
+            );
+          }
+        },
+        backgroundColor: AppColors.errorRed,
+        child: const Icon(Icons.sos, color: Colors.white),
       ),
       body: RefreshIndicator(
         // Trigger both user data and dashboard data refresh
@@ -297,8 +321,8 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          PoliceText(
-                            'police.home_welcome',
+                          Text(
+                            PoliceLocaleService.instance.translate('police.home_welcome'),
                             style: TextStyle(
                                 color: Colors.blue[100], fontSize: 14),
                           ),
@@ -330,22 +354,64 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Top: HQ Alerts
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 20),
-                      child: HQAlertsWidget(alerts: _hqAlerts),
-                    ),
+                    // HQ Alerts Replacement
+                    if (_hqAlerts.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 20),
+                        padding: const EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[50],
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(color: Colors.orange[200]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                                const SizedBox(width: 10),
+                                Text(
+                                  _hqAlerts.first.title,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 5),
+                            Text(_hqAlerts.first.message, style: const TextStyle(fontSize: 13)),
+                          ],
+                        ),
+                      ),
 
-                    // Section 1: Daily Stats
-                    DailyStatsWidget(
-                        dailyFinesCount: _dailyFinesCount,
-                        dailyTotalAmount: _dailyTotalAmount,
-                        isLoading: _isLoadingDashboard),
+                    // Daily Stats Replacement
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            label: 'Fines Today',
+                            value: _dailyFinesCount.toString(),
+                            icon: Icons.assignment_late_outlined,
+                            color: Colors.blue,
+                            isLoading: _isLoadingDashboard,
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: _buildStatCard(
+                            label: 'Total Amount',
+                            value: 'LKR ${_dailyTotalAmount.toStringAsFixed(0)}',
+                            icon: Icons.account_balance_wallet_outlined,
+                            color: Colors.green,
+                            isLoading: _isLoadingDashboard,
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 30),
 
                     // Section 2: Quick Actions Grid
-                    PoliceText(
-                      'police.home_quick_actions',
+                    Text(
+                      PoliceLocaleService.instance.translate('police.home_quick_actions'),
                       style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -410,8 +476,34 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                     const SizedBox(height: 30),
 
                     // Section 3: Recent Fines at the bottom
-                    RecentFinesWidget(
-                        fines: _recentFines, isLoading: _isLoadingDashboard),
+                    // Recent Fines Replacement
+                    Text(
+                      'Recent Fines',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 15),
+                    if (_isLoadingDashboard)
+                      const Center(child: CircularProgressIndicator())
+                    else if (_recentFines == null || _recentFines!.isEmpty)
+                      const Text('No recent fines found')
+                    else
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _recentFines!.length,
+                        itemBuilder: (context, index) {
+                          final fine = _recentFines![index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            child: ListTile(
+                              leading: const CircleAvatar(child: Icon(Icons.description_outlined)),
+                              title: Text(fine['offenseName'] ?? 'Offense'),
+                              subtitle: Text(fine['licenseNumber'] ?? 'N/A'),
+                              trailing: Text('LKR ${fine['amount']}'),
+                            ),
+                          );
+                        },
+                      ),
 
                     const SizedBox(
                         height: 100), // Padding to prevent SOS FAB overlap
@@ -453,7 +545,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
               child: Icon(icon, size: 35, color: iconColor),
             ),
             const SizedBox(height: 15),
-            PoliceText(title,
+                Text(PoliceLocaleService.instance.translate(title),
                 style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -461,6 +553,40 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                 textAlign: TextAlign.center),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required bool isLoading,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: AppColors.softShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 15),
+          if (isLoading)
+            const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+          else
+            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 5),
+          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+        ],
       ),
     );
   }
