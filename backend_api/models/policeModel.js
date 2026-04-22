@@ -68,7 +68,7 @@ const policeSchema = mongoose.Schema({
         },
         coordinates: {
             type: [Number], // [longitude, latitude]
-            default: undefined,
+            default: [0.0, 0.0], // Initial dummy location to satisfy 2dsphere index
         },
     },
 
