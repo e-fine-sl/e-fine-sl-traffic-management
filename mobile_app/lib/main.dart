@@ -7,15 +7,19 @@ import 'services/police_locale_service.dart';
 import 'config/app_constants.dart';
 import 'widgets/interaction_listener.dart';
 import 'screens/auth/login_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'services/sos_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(); // Initialize Firebase for FCM
   await EasyLocalization.ensureInitialized();
   await NotificationService().init();
   await PoliceLocaleService.instance.init();
+  SosService.setupFCMListeners(); // Start listening for SOS alerts
 
   runApp(
     
