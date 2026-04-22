@@ -18,6 +18,8 @@ import 'package:mobile_app/screens/police/new_fine.dart';
 import 'package:mobile_app/screens/police/fine_history_screen.dart';
 import 'package:mobile_app/screens/police/profile_screen.dart';
 import 'package:mobile_app/screens/police/qr_scanner_screen.dart';
+import 'package:mobile_app/screens/police/police_settings_screen.dart';
+import 'package:mobile_app/screens/auth/login_screen.dart';
 
 class PoliceHomeScreen extends StatefulWidget {
   const PoliceHomeScreen({super.key});
@@ -266,7 +268,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
             children: [
               Card(
                 elevation: 0,
-                color: Colors.grey[100],
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: Padding(
                   padding: const EdgeInsets.all(15.0),
@@ -288,7 +290,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
               const SizedBox(height: 15),
               Text(
                 PoliceLocaleService.instance.translate('police.home_verify_hint'),
-                style: const TextStyle(color: Colors.grey, fontSize: 13),
+                style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -330,7 +332,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                   onPressed: () => Navigator.pop(ctx),
                   child: Text(
                     PoliceLocaleService.instance.translate('police.home_close'),
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(color: Theme.of(context).disabledColor),
                   ),
                 ),
               ],
@@ -352,8 +354,8 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                Text(label, style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 11)),
+                Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Theme.of(context).colorScheme.onSurface)),
               ],
             ),
           ),
@@ -416,7 +418,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
     return Stack(
       children: [
         Scaffold(
-          backgroundColor: Colors.grey[100],
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
             title: Text(PoliceLocaleService.instance.translate('police.home_appbar_title')),
             backgroundColor: AppColors.primaryBlue,
@@ -424,7 +426,61 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
             centerTitle: true,
             elevation: 0,
           ),
-          drawer: const Drawer(),
+          drawer: Drawer(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                DrawerHeader(
+                  decoration: const BoxDecoration(color: AppColors.primaryBlue),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundColor: Colors.white,
+                        backgroundImage: _getProfileImage(),
+                        child: _getProfileImage() == null ? const Icon(Icons.person, color: AppColors.primaryBlue) : null,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(officerName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      Text(badgeNumber, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.home),
+                  title: const Text('Home'),
+                  onTap: () => Navigator.pop(context),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.settings),
+                  title: const Text('Settings'),
+                  onTap: () {
+                    Navigator.pop(context); // Close drawer
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PoliceSettingsScreen()),
+                    ).then((_) => _initScreen());
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.red),
+                  title: const Text('Logout', style: TextStyle(color: Colors.red)),
+                  onTap: () async {
+                    await _authService.logout();
+                    if (context.mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (context) => const LoginScreen()),
+                        (route) => false,
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
       
           // Pull to Refresh triggers the entire _initScreen sequence
           body: RefreshIndicator(
@@ -446,19 +502,28 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.white,
-                        backgroundImage: _getProfileImage(),
-                        // Graceful fallback: Show a person icon if the image fails to load or is null
-                        child: _getProfileImage() == null
-                            ? const Icon(Icons.person, size: 35, color: AppColors.primaryBlue)
-                            : null,
+                    InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const PoliceSettingsScreen()),
+                        ).then((_) => _initScreen());
+                      },
+                      borderRadius: BorderRadius.circular(30),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Colors.white,
+                          backgroundImage: _getProfileImage(),
+                          // Graceful fallback: Show a person icon if the image fails to load or is null
+                          child: _getProfileImage() == null
+                              ? const Icon(Icons.person, size: 35, color: AppColors.primaryBlue)
+                              : null,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 15),
@@ -648,7 +713,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                     // ── Quick Actions Grid Menu ──────────────────────────────
                     Text(
                       PoliceLocaleService.instance.translate('police.home_quick_actions'),
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
                     ),
                     const SizedBox(height: 15),
                     GridView.count(
@@ -700,9 +765,9 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                     const SizedBox(height: 30),
 
                     // --- 3. RECENT FINES LIST ---
-                    const Text(
+                    Text(
                       'Recent Fines',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
                     ),
                     const SizedBox(height: 15),
                     
@@ -718,22 +783,22 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                         padding: const EdgeInsets.all(20),
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          color: Colors.grey[50],
+                          color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[300]!),
+                          border: Border.all(color: Theme.of(context).dividerColor),
                         ),
                         child: Column(
                           children: [
-                            Icon(Icons.inbox_outlined, color: Colors.grey[400], size: 40),
+                            Icon(Icons.inbox_outlined, color: Theme.of(context).disabledColor, size: 40),
                             const SizedBox(height: 10),
                             Text(
                               'No recent fines found',
-                              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                              style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 14),
                             ),
                             const SizedBox(height: 5),
                             Text(
                               'Fines issued today will appear here',
-                              style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                              style: TextStyle(color: Theme.of(context).disabledColor, fontSize: 12),
                             ),
                           ],
                         ),
@@ -763,7 +828,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                               ),
                               subtitle: Text(
                                 vehicleNumber,
-                                style: TextStyle(color: Colors.grey[600]),
+                                style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
                               ),
                               trailing: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -887,7 +952,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
       borderRadius: BorderRadius.circular(18),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(18),
           boxShadow: AppColors.softShadow,
         ),
@@ -905,7 +970,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
             ),
             const SizedBox(height: 15),
             Text(PoliceLocaleService.instance.translate(title),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                 textAlign: TextAlign.center),
           ],
         ),
@@ -923,7 +988,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(18),
         boxShadow: AppColors.softShadow,
       ),
@@ -941,7 +1006,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
           else
             Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 5),
-          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+          Text(label, style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 12)),
         ],
       ),
     );
