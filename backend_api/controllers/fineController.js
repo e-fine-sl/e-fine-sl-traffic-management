@@ -179,11 +179,16 @@ const getDashboardStats = async (req, res) => {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'Police Officer ID is required' });
     }
 
+    console.log('[getDashboardStats] Fetching stats for officer:', policeOfficerId);
+
     // === Get Today's Date Range (00:00:00 to 23:59:59) ===
+    // Using UTC dates to avoid timezone issues
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+
+    console.log('[getDashboardStats] Date range:', { today: today.toISOString(), tomorrow: tomorrow.toISOString() });
 
     // === MongoDB Aggregation Pipeline for Daily Stats ===
     const dailyStatsResult = await IssuedFine.aggregate([
@@ -209,14 +214,18 @@ const getDashboardStats = async (req, res) => {
       ? dailyStatsResult[0]
       : { count: 0, totalAmount: 0 };
 
-    // === Get Last 3 Recent Fines ===
+    console.log('[getDashboardStats] Daily stats result:', dailyStats);
+
+    // === Get Last 3 Recent Fines (All time, not just today) ===
     const recentFines = await IssuedFine.find({
       policeOfficerId: policeOfficerId
     })
-      .select('vehicleNumber offenseName amount date status -_id')
+      .select('vehicleNumber offenseName amount date status licenseNumber')
       .sort({ date: -1 })
       .limit(3)
       .lean();
+
+    console.log('[getDashboardStats] Recent fines count:', recentFines?.length || 0);
 
     res.status(HTTP.OK).json({
       dailyFinesCount: dailyStats.count || 0,
@@ -224,7 +233,11 @@ const getDashboardStats = async (req, res) => {
       recentFines: recentFines || []
     });
   } catch (error) {
-    res.status(HTTP.SERVER_ERROR).json({ message: 'Failed to fetch dashboard stats', error: error.message });
+    console.error('[getDashboardStats] Error:', error);
+    res.status(HTTP.SERVER_ERROR).json({ 
+      message: 'Failed to fetch dashboard stats', 
+      error: error.message 
+    });
   }
 };
 
