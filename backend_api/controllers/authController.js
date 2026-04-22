@@ -150,7 +150,8 @@ const registerPolice = async (req, res) => {
       station,
       policeStation: station,
       position: position,
-      profileImage: profileImage
+      profileImage: profileImage,
+      location: { type: 'Point', coordinates: [0.0, 0.0] } // Explicitly satisfy 2dsphere index
     });
 
     await Verification.deleteMany({ badgeNumber });
@@ -168,8 +169,22 @@ const registerPolice = async (req, res) => {
     }
 
   } catch (error) {
-    console.error("Register Error:", error.message);
-    res.status(HTTP.SERVER_ERROR).json({ message: 'Server Error', error: error.message });
+    console.error("[AUTH/REGISTER-POLICE] Register Error:", error);
+
+    // Mongoose Duplicate Key Error (code 11000)
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      const message = `${field.charAt(0).toUpperCase() + field.slice(1)} already registered.`;
+      return res.status(HTTP.BAD_REQUEST).json({ success: false, message });
+    }
+
+    // Mongoose Validation Error
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(HTTP.BAD_REQUEST).json({ success: false, message: messages.join(', ') });
+    }
+
+    res.status(HTTP.SERVER_ERROR).json({ success: false, message: 'Internal Server Error', error: error.message });
   }
 };
 
@@ -264,7 +279,21 @@ const registerDriver = async (req, res) => {
       email: email,
       stack: error.stack
     });
-    res.status(HTTP.SERVER_ERROR).json({ message: 'Server Error', error: error.message });
+
+    // Mongoose Duplicate Key Error
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      const message = `${field.charAt(0).toUpperCase() + field.slice(1)} already registered.`;
+      return res.status(HTTP.BAD_REQUEST).json({ success: false, message });
+    }
+
+    // Mongoose Validation Error
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(HTTP.BAD_REQUEST).json({ success: false, message: messages.join(', ') });
+    }
+
+    res.status(HTTP.SERVER_ERROR).json({ success: false, message: 'Internal Server Error', error: error.message });
   }
 };
 
