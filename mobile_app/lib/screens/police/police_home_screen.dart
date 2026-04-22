@@ -378,20 +378,24 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
   }
 
   // Parses the profile image string based on format (base64 or network URL)
-  ImageProvider _getProfileImage() {
+  // Returns null if no valid image is found or if parsing fails.
+  ImageProvider? _getProfileImage() {
     if (profileImageString != null && profileImageString!.isNotEmpty) {
       if (profileImageString!.startsWith('data:image')) {
         try {
           final base64Data = profileImageString!.split(',').last;
           return MemoryImage(base64Decode(base64Data));
         } catch (e) {
-          return const AssetImage('assets/images/default_avatar.png');
+          debugPrint('[PoliceHomeScreen] Base64 image error: $e');
+          return null;
         }
       } else if (profileImageString!.startsWith('http')) {
         return NetworkImage(profileImageString!);
       }
     }
-    return const AssetImage('assets/images/default_avatar.png');
+    // Note: We return null here instead of a hardcoded asset path that might not exist.
+    // The UI (CircleAvatar) will then show an Icon(Icons.person) as a child.
+    return null;
   }
 
   Color _getStatusColor(String status) {
@@ -451,6 +455,10 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                         radius: 30,
                         backgroundColor: Colors.white,
                         backgroundImage: _getProfileImage(),
+                        // Graceful fallback: Show a person icon if the image fails to load or is null
+                        child: _getProfileImage() == null
+                            ? const Icon(Icons.person, size: 35, color: AppColors.primaryBlue)
+                            : null,
                       ),
                     ),
                     const SizedBox(width: 15),
