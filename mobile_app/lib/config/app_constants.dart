@@ -164,6 +164,8 @@ class PrefKeys {
   static const String profileImage = 'serverProfileImage';
   static const String user         = 'user';
   static const String profileData  = 'profile_data';
+  static const String historyCache  = 'driver_history_cache';
+  static const String idleTimeoutMinutes = 'idle_timeout_minutes';
 }
 
 // ── EXTERNAL MEDIA/ASSETS ───────────────────────────────────────

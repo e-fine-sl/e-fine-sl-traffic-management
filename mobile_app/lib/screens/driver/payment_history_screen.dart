@@ -92,11 +92,30 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen>
   // ── Data loading ─────────────────────────────────────────────────
   Future<void> _loadHistory() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
-    final data = await _fineService.getDriverPaidFines();
+
+    // 1. Try loading from cache first for immediate display
+    final cachedData = await _fineService.getPaidFinesFromCache();
+    if (cachedData.isNotEmpty && mounted) {
+      setState(() {
+        _history = cachedData;
+        _isLoading = false; // Stop shimmering since we have data
+      });
+      _applyFilters();
+    }
+
+    // 2. Fetch from network to ensure data is up to date
+    // (Only set _isLoading if cache was empty)
+    if (_history.isEmpty && mounted) {
+      setState(() => _isLoading = true);
+    }
+
+    final networkData = await _fineService.getDriverPaidFines();
+    
     if (mounted) {
       setState(() {
-        _history = data;
+        if (networkData.isNotEmpty) {
+          _history = networkData;
+        }
         _isLoading = false;
       });
       _applyFilters();

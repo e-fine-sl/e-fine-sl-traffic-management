@@ -85,7 +85,7 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
   String _scannedLicense = '';
   String _scannedIssueDate = '';        // From 4a. label on front
   String _scannedExpiryDate = '';       // Latest date from Column 11 on back
-  List<String> _allColumn11Dates = []; // All Column 11 dates found on back
+  // List<String> _allColumn11Dates = []; // All Column 11 dates found on back
   final List<Map<String, String>> _extractedClasses = [];
   bool _isScanning = false;
   String _scanStatusMessage = '';       // Progress message shown during OCR
@@ -179,7 +179,7 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
         setState(() {
           _licenseBackFile    = File(backImagePath);
           _isScanning         = true;
-          _allColumn11Dates   = [];
+          // _allColumn11Dates   = [];
           _extractedClasses.clear();
           _scanStatusMessage  = 'Processing Front Side\u2026';
         });
@@ -249,18 +249,18 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
     }
   }
 
-  /// Returns the latest date string from a list, by parsed DateTime value.
-  String _latestDate(List<String> dates) {
-    String latest = dates.first;
-    DateTime? latestDt = _parseDate(latest);
+  /// Returns the earliest date string from a list, by parsed DateTime value.
+  String _earliestDate(List<String> dates) {
+    String earliest = dates.first;
+    DateTime? earliestDt = _parseDate(earliest);
     for (final d in dates.skip(1)) {
       final dt = _parseDate(d);
-      if (dt != null && (latestDt == null || dt.isAfter(latestDt))) {
-        latest   = d;
-        latestDt = dt;
+      if (dt != null && (earliestDt == null || dt.isBefore(earliestDt))) {
+        earliest   = d;
+        earliestDt = dt;
       }
     }
-    return latest;
+    return earliest;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -378,20 +378,13 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
       final nicMatched     = scanNIC == regNIC;
       final licenseMatched = scanLicense == regLicense;
 
-      // E. Compare issue date against user-entered date
-      final bool issueDateMatches = issueDate.isNotEmpty &&
-          widget.registeredIssueDate.isNotEmpty &&
-          _normalizeDateForComparison(issueDate) ==
-              _normalizeDateForComparison(widget.registeredIssueDate);
-
+      // D. Verify NIC and License against registration data
       setState(() {
         _scannedNIC       = scannedNIC;
         _scannedLicense   = cleanLicense;
-        _scannedIssueDate = issueDate;
+        _scannedIssueDate = ''; // IGNORED: Now extracted only from back side (Col. 10)
         _ocrMatched       = nicMatched && licenseMatched;
-        // _datesMatch: will be finalised after _runBackOCR completes.
-        // Set partial: issue must match; expiry check pending.
-        _datesMatch       = issueDateMatches; // Will be ANDed with expiry below
+        _datesMatch       = false; // Will be determined after back OCR
       });
     } catch (e) {
       setState(() {
@@ -425,24 +418,27 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
         final right = block.boundingBox.right;
         if (right > maxRight) maxRight = right;
       }
+
       // midX is the horizontal centre of the scanned image.
-      // Column 11 dates are in the right half (left > midX).
+      // Column 10 (Issue) dates are in the left-centre (left < midX).
+      // Column 11 (Expiry) dates are in the right half (left > midX).
       final double midX = maxRight > 0 ? maxRight / 2 : double.infinity;
 
-      // ── Primary strategy: X-coordinate based Column 11 detection ────────
-      final List<String> col11Dates = [];
-      bool xCoordStrategyUsed = false;
+      final List<String> col10Dates = []; // Issue Dates
+      final List<String> col11Dates = []; // Expiry Dates
 
       if (midX != double.infinity) {
-        xCoordStrategyUsed = true;
         for (final block in recognizedText.blocks) {
           for (final line in block.lines) {
             for (final element in line.elements) {
               final match = dateRegExp.firstMatch(element.text);
               if (match != null) {
-                // If the element’s left edge is right-of-centre → Column 11
+                final dateStr = match.group(0)!;
+                // Heuristic: Col 10 is on the left, Col 11 is on the right
                 if (element.boundingBox.left > midX) {
-                  col11Dates.add(match.group(0)!);
+                  col11Dates.add(dateStr);
+                } else {
+                  col10Dates.add(dateStr);
                 }
               }
             }
@@ -450,9 +446,8 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
         }
       }
 
-      // ── Fallback: if x-coord strategy found nothing, use all dates minus
-      //    any that exactly match Col 10 (issue) dates seen in same blocks.
-      if (!xCoordStrategyUsed || col11Dates.isEmpty) {
+      // ── Fallback ─────────────────────────────────────────────────────────
+      if (col11Dates.isEmpty && col10Dates.isEmpty) {
         final List<String> allDates = [];
         for (final block in recognizedText.blocks) {
           for (final line in block.lines) {
@@ -462,34 +457,73 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
             }
           }
         }
-
-        // In the fallback, dates appear in pairs (col10, col11) per row.
-        // Attempt pair-detection: odd-indexed dates are Col 10, even-indexed
-        // are Col 11 (0-based: index 1, 3, 5 … are Col 11).
+        // In backup, assume pairs (Col 10, Col 11)
         if (allDates.length >= 2) {
-          for (int i = 1; i < allDates.length; i += 2) {
-            col11Dates.add(allDates[i]);
+          for (int i = 0; i < allDates.length; i++) {
+            if (i % 2 == 0) {
+              col10Dates.add(allDates[i]);
+            } else {
+              col11Dates.add(allDates[i]);
+            }
           }
         } else if (allDates.length == 1) {
-          col11Dates.addAll(allDates);
+          col11Dates.add(allDates[0]); // Default to expiry if only one found
         }
       }
 
-      // ── Deduplicate and pick the latest expiry date ──────────────────────
-      final uniqueCol11 = col11Dates.toSet().toList();
-      final latestExpiry = uniqueCol11.isNotEmpty ? _latestDate(uniqueCol11) : '';
+      // ── Select Primary Dates ──────────────────────────────────────────────
+      String earliestIssue  = col10Dates.isNotEmpty ? _earliestDate(col10Dates) : '';
+      String earliestExpiry = col11Dates.isNotEmpty ? _earliestDate(col11Dates) : '';
 
-      // ── Re-evaluate dates match with the authoritative expiry from Col 11 ─
-      final bool issueDateStillMatches = _datesMatch; // Preserved from front OCR
-      final bool expiryDateMatches = latestExpiry.isNotEmpty &&
-          widget.registeredExpiryDate.isNotEmpty &&
-          _normalizeDateForComparison(latestExpiry) ==
-              _normalizeDateForComparison(widget.registeredExpiryDate);
+      // ── Smart Heuristic Search ───────────────────────────────────────────
+      // If the extracted dates don't match or are empty, search ALL dates on 
+      // the back side for the exact dates entered by the user during signup.
+      final List<String> allBackDates = [];
+      for (final block in recognizedText.blocks) {
+        for (final line in block.lines) {
+          for (final element in line.elements) {
+            final match = dateRegExp.firstMatch(element.text);
+            if (match != null) allBackDates.add(match.group(0)!);
+          }
+        }
+      }
+
+      final regIssueVal  = _normalizeDateForComparison(widget.registeredIssueDate);
+      final regExpiryVal = _normalizeDateForComparison(widget.registeredExpiryDate);
+
+      for (final foundDate in allBackDates) {
+        final normFound = _normalizeDateForComparison(foundDate);
+        
+        // If this date matches the registered EXPIRE date, use it as earliestExpiry
+        if (normFound == regExpiryVal) {
+          earliestExpiry = foundDate;
+        }
+        // If this date matches the registered ISSUE date, use it as earliestIssue
+        else if (normFound == regIssueVal) {
+          earliestIssue = foundDate;
+        }
+      }
+
+      // ── Re-evaluate dates match with authoritative back-side data ─────────
+      final bool issueDateMatches = earliestIssue.isNotEmpty &&
+          _normalizeDateForComparison(earliestIssue) == _normalizeDateForComparison(widget.registeredIssueDate);
+          
+      final bool expiryDateMatches = earliestExpiry.isNotEmpty &&
+          _normalizeDateForComparison(earliestExpiry) == _normalizeDateForComparison(widget.registeredExpiryDate);
 
       setState(() {
-        _scannedExpiryDate = latestExpiry;
-        _allColumn11Dates  = uniqueCol11;
-        _datesMatch        = issueDateStillMatches && expiryDateMatches;
+        _scannedIssueDate  = earliestIssue;
+        _scannedExpiryDate = earliestExpiry;
+        // _allColumn11Dates  = col11Dates.toSet().toList();
+        _datesMatch        = issueDateMatches && expiryDateMatches;
+        
+        if (!_datesMatch) {
+          _errorMsg = 'Date Mismatch: The scan found different dates.\n'
+              '• Issue Date (Col. 10): ${earliestIssue.isEmpty ? "Not Found" : earliestIssue}\n'
+              '• Expiry Date (Col. 11): ${earliestExpiry.isEmpty ? "Not Found" : earliestExpiry}\n\n'
+              'Please ensure you entered the Earliest Expiry date from the BACK side.';
+        }
+
         _isScanning        = false;
         _scanStatusMessage = '';
         _step              = _KycStep.ocrResult;
@@ -551,8 +585,8 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
         ),
       );
 
-      debugPrint('🚀 [KYC] POST ${uri.toString()}');
-      debugPrint('📦 Files: license=${_licenseFile?.lengthSync()}B, selfie=${_selfieFile?.lengthSync()}B');
+      debugPrint('[KYC] POST ${uri.toString()}');
+      debugPrint('Files: license=${_licenseFile?.lengthSync()}B, selfie=${_selfieFile?.lengthSync()}B');
 
       // Send with timeout
       final streamedResponse = await request.send().timeout(
@@ -562,13 +596,13 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
 
       final response = await http.Response.fromStream(streamedResponse);
       
-      debugPrint('📥 [KYC] Response Status: ${response.statusCode}');
-      debugPrint('📥 [KYC] Content-Type: ${response.headers['content-type']}');
+      debugPrint('[KYC] Response Status: ${response.statusCode}');
+      debugPrint('[KYC] Content-Type: ${response.headers['content-type']}');
       
       // Prevent parsing HTML error pages
       if (!(response.headers['content-type']?.contains('application/json') ?? false)) {
         final sample = response.body.length > 50 ? '${response.body.substring(0, 50)}...' : response.body;
-        debugPrint('❌ [KYC] Non-JSON Response: $sample');
+        debugPrint('[KYC] Non-JSON Response: $sample');
         
         setState(() {
           _step = _KycStep.failure;
@@ -600,13 +634,13 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
         _errorMsg = 'No internet connection. Please check your network and retry.';
       });
     } on FormatException catch (e) {
-      debugPrint('❌ [KYC] FormatException Parse Error: $e');
+      debugPrint('[KYC] FormatException Parse Error: $e');
       setState(() {
         _step     = _KycStep.failure;
         _errorMsg = 'Bad response from server. Please try again.';
       });
     } catch (e) {
-      debugPrint('❌ [KYC] Unexpected Error: $e');
+      debugPrint('[KYC] Unexpected Error: $e');
       setState(() {
         _step     = _KycStep.failure;
         _errorMsg = e.toString().replaceFirst('Exception: ', '');
@@ -628,7 +662,7 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
       _scannedLicense    = '';
       _scannedIssueDate  = '';
       _scannedExpiryDate = '';
-      _allColumn11Dates  = [];
+      // _allColumn11Dates  = [];
       _scanStatusMessage = '';
       _ocrMatched        = false;
       _datesMatch        = false;
@@ -887,45 +921,45 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
                             _normalizeDateForComparison(_scannedExpiryDate) ==
                             _normalizeDateForComparison(widget.registeredExpiryDate),
                 ),
-                if (_allColumn11Dates.isNotEmpty) ...[
-                  const Divider(),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 4),
-                    child: Text(
-                      'All Column 11 Expiry Dates (Back)',
-                      style: TextStyle(
-                        fontSize: AppTextSize.bodySmall,
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: _allColumn11Dates.map((d) => Chip(
-                      label: Text(
-                        d,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: d == _scannedExpiryDate
-                              ? AppColors.successGreen
-                              : AppColors.textPrimary,
-                        ),
-                      ),
-                      backgroundColor: d == _scannedExpiryDate
-                          ? AppColors.successBg
-                          : Colors.grey.shade100,
-                      side: BorderSide(
-                        color: d == _scannedExpiryDate
-                            ? AppColors.successGreen
-                            : Colors.grey.shade300,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                    )).toList(),
-                  ),
-                ],
+                // if (_allColumn11Dates.isNotEmpty) ...[
+                //   const Divider(),
+                //   const Padding(
+                //     padding: EdgeInsets.symmetric(vertical: 4),
+                //     child: Text(
+                //       'All Column 11 Expiry Dates (Back)',
+                //       style: TextStyle(
+                //         fontSize: AppTextSize.bodySmall,
+                //         color: AppColors.textSecondary,
+                //         fontWeight: FontWeight.w600,
+                //       ),
+                //     ),
+                //   ),
+                //   Wrap(
+                //     spacing: 8,
+                //     runSpacing: 4,
+                //     children: _allColumn11Dates.map((d) => Chip(
+                //       label: Text(
+                //         d,
+                //         style: TextStyle(
+                //           fontSize: 11,
+                //           fontWeight: FontWeight.bold,
+                //           color: d == _scannedExpiryDate
+                //               ? AppColors.successGreen
+                //               : AppColors.textPrimary,
+                //         ),
+                //       ),
+                //       backgroundColor: d == _scannedExpiryDate
+                //           ? AppColors.successBg
+                //           : Colors.grey.shade100,
+                //       side: BorderSide(
+                //         color: d == _scannedExpiryDate
+                //             ? AppColors.successGreen
+                //             : Colors.grey.shade300,
+                //       ),
+                //       padding: const EdgeInsets.symmetric(horizontal: 4),
+                //     )).toList(),
+                //   ),
+                // ],
                 if (_extractedClasses.isNotEmpty) ...[
                   const Divider(),
                   const Padding(
@@ -1028,7 +1062,7 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
                 _scannedLicense    = '';
                 _scannedIssueDate  = '';
                 _scannedExpiryDate = '';
-                _allColumn11Dates  = [];
+                // _allColumn11Dates  = [];
                 _scanStatusMessage = '';
                 _ocrMatched        = false;
                 _datesMatch        = false;
