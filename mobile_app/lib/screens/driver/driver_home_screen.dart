@@ -733,8 +733,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       }
   }
 
-  void _refreshData() {
-     _checkPendingFines();
+  Future<void> _refreshData() async {
+    await Future.wait([
+      _checkPendingFines(),
+      _loadDriverStatus(),
+    ]);
   }
 
   // Modern Top Snackbar implementation (simulated with standard SnackBar but styled)

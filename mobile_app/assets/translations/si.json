@@ -41,6 +41,7 @@
   "demerit_warning": "අවවාදාත්මක මට්ටමකි",
   "demerit_danger": "අන්තරායකාරී මට්ටමකි",
   "demerit_suspended": "අත්හිටුවා ඇත",
+  "demerit_rating_points": "ශ්‍රේණි ලකුණු: {} / 5",
   "demerit_suspended_on": "{} සිට",
   "demerit_reinstate_info": "ඔබේ බලපත්‍රය නැවත සක්‍රීය කිරීමට කරුණාකර රථවාහන අංශය හෝ පරිපාලකවරයෙකු හමුවන්න.",
 
