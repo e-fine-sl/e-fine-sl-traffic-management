@@ -32,6 +32,7 @@ const driverSchema = mongoose.Schema(
     addressLine2: { type: String },
     city: { type: String },
     postalCode: { type: String },
+    vehicleNumber: { type: String },
     
 
     vehicleClasses: [{

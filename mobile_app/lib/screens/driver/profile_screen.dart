@@ -143,6 +143,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           IconButton(
             icon: const Icon(Icons.qr_code_2, size: 30),
             onPressed: () {
+              if (_userData['name'] == null || _userData['phone'] == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Some data missing. Try refreshing profile."),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
               _showMyQRCode(context);
             },
           )
@@ -380,14 +388,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showMyQRCode(BuildContext context) {
     debugPrint('$_tag _showMyQRCode() called.');
-    Map<String, String> qrData = {
+    Map<String, dynamic> qrData = {
+      "name":    _userData['name'],
       "nic":     _userData['nic'],
       "license": _userData['licenseNumber'] ?? "N/A",
+      "phone":   _userData['phone'],
+      "vehicleNumber": _userData['vehicleNumber'] ?? "N/A",
       "type":    "driver_identity",
     };
 
     String qrString = jsonEncode(qrData);
-    debugPrint('$_tag QR data prepared for NIC: ${_userData['nic']}');
+    debugPrint('$_tag QR data prepared: $qrString');
 
     showDialog(
       context: context,
@@ -439,11 +450,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final line2Controller   = TextEditingController(text: _addressLine2);
     final cityController    = TextEditingController(text: _city);
     final postalController  = TextEditingController(text: _postalCode);
+    final vehicleController = TextEditingController(text: _userData['vehicleNumber'] ?? '');
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text("edit_address".tr()),
+        title: Text("Edit Profile Details"),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -465,6 +477,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 decoration: InputDecoration(labelText: "postal_label".tr()),
                 keyboardType: TextInputType.number,
               ),
+              const Divider(),
+              TextField(
+                controller: vehicleController,
+                decoration: const InputDecoration(
+                  labelText: "Registered Vehicle Number",
+                  hintText: "e.g., WP CA-1234",
+                ),
+              ),
             ],
           ),
         ),
@@ -475,7 +495,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              debugPrint('$_tag Address update submitted.');
+              debugPrint('$_tag Profile update submitted.');
               final nav = Navigator.of(ctx);
               final scaffoldMessenger = ScaffoldMessenger.of(context);
               try {
@@ -484,21 +504,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'addressLine2': line2Controller.text.trim(),
                   'city':         cityController.text.trim(),
                   'postalCode':   postalController.text.trim(),
+                  'vehicleNumber': vehicleController.text.trim(),
                 });
 
                 if (result['success'] == true) {
-                  debugPrint('$_tag Address updated successfully. Updating local state and cache...');
+                  debugPrint('$_tag Profile updated successfully. Updating local state and cache...');
                   setState(() {
                     _addressLine1 = line1Controller.text.trim();
                     _addressLine2 = line2Controller.text.trim();
                     _city         = cityController.text.trim();
                     _postalCode   = postalController.text.trim();
 
-                    // Sync address fields back into _userData so cache stays consistent
+                    // Sync fields back into _userData so cache stays consistent
                     _userData['addressLine1'] = _addressLine1;
                     _userData['addressLine2'] = _addressLine2;
                     _userData['city']         = _city;
                     _userData['postalCode']   = _postalCode;
+                    _userData['vehicleNumber'] = vehicleController.text.trim();
                   });
 
                   // Update cache with latest address

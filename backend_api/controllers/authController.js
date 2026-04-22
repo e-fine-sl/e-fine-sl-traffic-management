@@ -238,7 +238,8 @@ const registerDriver = async (req, res) => {
       addressLine1: addressLine1 || '',
       addressLine2: addressLine2 || '',
       city: city || '',
-      postalCode: postalCode || ''
+      postalCode: postalCode || '',
+      vehicleNumber: req.body.vehicleNumber || ''
     });
 
     if (driver) {
@@ -292,23 +293,26 @@ const loginUser = async (req, res) => {
     if (user && (await bcrypt.compare(password, user.password))) {
       res.json({
         success: true,
-        _id: user.id,
-        name: user.name,
-        email: user.email,
-        role: role,
-        badgeNumber: user.badgeNumber,
-
-        // --- NEW FIELDS RETURNED FOR PROFILE ---
-        position: user.position,
-        policeStation: user.policeStation,
-        profileImage: user.profileImage,
-        licenseFrontImage: user.licenseFrontImage,
-        licenseBackImage: user.licenseBackImage,
-
-        isVerified: user.isVerified,
-        licenseNumber: user.licenseNumber,
-        nic: user.nic,
-
+        user: {
+          _id: user.id,
+          name: user.name,
+          email: user.email,
+          role: role,
+          badgeNumber: user.badgeNumber,
+  
+          // --- NEW FIELDS RETURNED FOR PROFILE ---
+          position: user.position,
+          policeStation: user.policeStation,
+          profileImage: user.profileImage,
+          licenseFrontImage: user.licenseFrontImage,
+          licenseBackImage: user.licenseBackImage,
+  
+          isVerified: user.isVerified,
+          licenseNumber: user.licenseNumber,
+          nic: user.nic,
+          phone: user.phone,
+          vehicleNumber: user.vehicleNumber,
+        },
         token: generateToken(user.id),
       });
     } else {
@@ -390,13 +394,13 @@ const updateProfileImage = async (req, res) => {
 // @route   PUT /api/auth/update-profile
 // @access  Private
 const updateProfile = async (req, res) => {
-  const { addressLine1, addressLine2, city, postalCode } = req.body;
+  const { addressLine1, addressLine2, city, postalCode, vehicleNumber } = req.body;
   const id = req.user.id; // From protect middleware
 
   try {
     const updatedDriver = await Driver.findByIdAndUpdate(
       id,
-      { addressLine1, addressLine2, city, postalCode },
+      { addressLine1, addressLine2, city, postalCode, vehicleNumber },
       { new: true, runValidators: true }
     ).select('-password');
 
