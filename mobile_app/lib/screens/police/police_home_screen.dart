@@ -6,7 +6,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mobile_app/services/police_locale_service.dart';
 import 'package:mobile_app/services/auth_service.dart';
 import 'package:mobile_app/services/police_dashboard_service.dart';
-import 'package:mobile_app/services/fine_service.dart'; // FineService is used for reliable data fetching
+import 'package:mobile_app/services/fine_service.dart';
+import 'package:mobile_app/services/sos_service.dart'; // 🚨 SOS Emergency Alert
 
 // --- Config & Models ---
 import 'package:mobile_app/config/app_constants.dart';
@@ -28,12 +29,9 @@ class PoliceHomeScreen extends StatefulWidget {
 class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
   final _storage = const FlutterSecureStorage();
   final AuthService _authService = AuthService();
-  
-  // DashboardService is kept ONLY for HQ Alerts and the SOS button functionality
   final PoliceDashboardService _dashboardService = PoliceDashboardService();
-  
-  // FineService is used to reliably calculate dashboard stats locally from history
   final FineService _fineService = FineService();
+  final SosService _sosService = SosService(); // 🚨 SOS Service
 
   // --- User State Variables ---
   String officerName = "Loading...";
@@ -47,6 +45,9 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
   List<Map<String, dynamic>>? _recentFines;
   List<HqAlertModel> _hqAlerts = [];
   bool _isLoadingDashboard = true;
+
+  // --- SOS State ---
+  bool _isSosSending = false; // Shows overlay spinner while SOS is being sent
 
   @override
   void initState() {
@@ -62,6 +63,11 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
     
     debugPrint('[PoliceHomeScreen] initState: User data loaded, now loading dashboard...');
     await _loadDashboardData();
+
+    // 🚨 REGISTER PRESENCE: Update FCM Token and GPS on backend so officer is "reachable" by nearby SOS alerts
+    if (badgeNumber.isNotEmpty) {
+      _sosService.registerPresence(badgeNumber);
+    }
     
     // Fetch HQ Alerts in a non-blocking way (doesn't hold up the UI)
     _dashboardService.getHqAlerts().then((alerts) {
@@ -178,6 +184,44 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
       }
     } catch (e) {
       debugPrint('[PoliceHomeScreen] Profile fetch fallback triggered (silently handled)');
+    }
+  }
+
+  // ── SOS HANDLER ─────────────────────────────────────────────────────────
+  // Called when any of the 4 SOS buttons is tapped.
+  // Grabs GPS, posts to /api/sos, shows result via SnackBar.
+  Future<void> _triggerSOS(String emergencyType) async {
+    debugPrint('\n[PoliceHomeScreen] 🚨 SOS button tapped: $emergencyType');
+
+    // Show loading overlay immediately (Zero-Typing — no user input needed)
+    setState(() => _isSosSending = true);
+
+    try {
+      final result = await _sosService.triggerSOS(emergencyType);
+      debugPrint('[PoliceHomeScreen] SOS result: $result');
+
+      if (!mounted) return;
+
+      final bool success = result['success'] == true;
+      final String message = result['message'] as String? ?? (success ? 'SOS Sent!' : 'SOS Failed');
+
+      // Show prominent SnackBar with result
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(success ? Icons.check_circle : Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.bold))),
+            ],
+          ),
+          backgroundColor: success ? AppColors.successGreen : AppColors.errorRed,
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSosSending = false);
     }
   }
 
@@ -365,43 +409,28 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
   // --- Main Build Method ---
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        title: Text(PoliceLocaleService.instance.translate('police.home_appbar_title')),
-        backgroundColor: AppColors.primaryBlue,
-        foregroundColor: Colors.white,
-        centerTitle: true,
-        elevation: 0,
-      ),
-      drawer: const Drawer(),
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: Colors.grey[100],
+          appBar: AppBar(
+            title: Text(PoliceLocaleService.instance.translate('police.home_appbar_title')),
+            backgroundColor: AppColors.primaryBlue,
+            foregroundColor: Colors.white,
+            centerTitle: true,
+            elevation: 0,
+          ),
+          drawer: const Drawer(),
       
-      // SOS Floating Action Button
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final success = await _dashboardService.registerSosAlert('Current Location', officerName);
-          if (!context.mounted) return;
-          if (success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text('SOS Alert Sent!'),
-                  backgroundColor: AppColors.errorRed),
-            );
-          }
-        },
-        backgroundColor: AppColors.errorRed,
-        child: const Icon(Icons.sos, color: Colors.white),
-      ),
-      
-      // Pull to Refresh triggers the entire _initScreen sequence to refresh all data
-      body: RefreshIndicator(
+          // Pull to Refresh triggers the entire _initScreen sequence
+          body: RefreshIndicator(
         onRefresh: _initScreen,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // --- 1. HEADER SECTION ---
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // --- 1. HEADER SECTION ---
               Container(
                 padding: const EdgeInsets.only(left: 20, right: 20, bottom: 30, top: 10),
                 decoration: const BoxDecoration(
@@ -513,7 +542,102 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                     ),
                     const SizedBox(height: 30),
 
-                    // Quick Actions Grid Menu
+                    // ── 🚨 SOS EMERGENCY GRID ──────────────────────────────────
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.red.shade900, Colors.red.shade700],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withValues(alpha: 0.4),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.emergency, color: Colors.white, size: 22),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'EMERGENCY SOS',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  'ZERO TYPING',
+                                  style: TextStyle(color: Colors.white70, fontSize: 10, letterSpacing: 1),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Tap once to alert all officers within 5 km',
+                            style: TextStyle(color: Colors.white60, fontSize: 11),
+                          ),
+                          const SizedBox(height: 14),
+                          // 2×2 SOS Button Grid
+                          GridView.count(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                            childAspectRatio: 2.6,
+                            children: [
+                              _buildSosButton(
+                                emoji: '🚨',
+                                label: 'Backup Needed',
+                                color: const Color(0xFFB71C1C),
+                                onTap: () => _triggerSOS('Backup Needed'),
+                              ),
+                              _buildSosButton(
+                                emoji: '🔫',
+                                label: 'Armed Threat',
+                                color: const Color(0xFF880E4F),
+                                onTap: () => _triggerSOS('Armed Threat'),
+                              ),
+                              _buildSosButton(
+                                emoji: '🚗',
+                                label: 'Major Accident',
+                                color: const Color(0xFFE65100),
+                                onTap: () => _triggerSOS('Major Accident'),
+                              ),
+                              _buildSosButton(
+                                emoji: '💊',
+                                label: 'Narcotics/Suspect',
+                                color: const Color(0xFF4A148C),
+                                onTap: () => _triggerSOS('Narcotics/Suspect'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // ── Quick Actions Grid Menu ──────────────────────────────
                     Text(
                       PoliceLocaleService.instance.translate('police.home_quick_actions'),
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
@@ -655,8 +779,84 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                           );
                         },
                       ),
-                    const SizedBox(height: 100), // Bottom padding to prevent FAB overlap
-                  ],
+                    const SizedBox(height: 40),
+                  ], // End inner Column children
+                ), // End inner Column
+              ), // End Padding
+            ], // End outer Column children
+          ), // End outer Column
+        ), // End SingleChildScrollView
+      ), // End RefreshIndicator
+    ), // End Scaffold,
+
+        // ── SOS Sending Overlay ────────────────────────────────────────────
+        if (_isSosSending)
+          Container(
+            color: Colors.black.withValues(alpha: 0.65),
+            child: const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 60,
+                    height: 60,
+                    child: CircularProgressIndicator(
+                      color: Colors.red,
+                      strokeWidth: 5,
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  Text(
+                    '🚨 Sending SOS Alert...',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Getting GPS & alerting nearby officers',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ── SOS BUTTON WIDGET ───────────────────────────────────────────────────
+  Widget _buildSosButton({
+    required String emoji,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: color,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        splashColor: Colors.white24,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
