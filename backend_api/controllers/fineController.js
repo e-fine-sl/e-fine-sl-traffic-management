@@ -1,8 +1,7 @@
 const Offense = require('../models/offenseModel');
 const IssuedFine = require('../models/issuedFineModel');
-const Driver = require('../models/driverModel');
-const { applyDemeritPoints, calculateLevel, calculateRating } = require('./demeritController');
-const { HTTP, PAYMENT, DEMERIT, LICENSE_STATUS } = require('../config/constants');
+const { applyDemeritPoints } = require('./demeritController');
+const { HTTP, PAYMENT } = require('../config/constants');
 
 // @desc    Get all fine types / offenses
 // @route   GET /api/fines/offenses
@@ -136,55 +135,13 @@ const payFine = async (req, res) => {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'Fine is already paid' });
     }
 
-    // Restore demerit points after a successful payment.
-    // A fine deducts points when issued, so payment adds back that fine's demerit value.
-    const driver = await Driver.findOne({
-      licenseNumber: { $regex: new RegExp(`^${fine.licenseNumber}$`, 'i') }
-    });
-
-    let updatedDriverStatus = null;
-    if (driver) {
-      const restorePoints = Number(fine.demeritPoints || 0);
-      if (restorePoints > 0) {
-        driver.demeritPoints = Math.min(
-          DEMERIT.DEFAULT_POINTS,
-          Number(driver.demeritPoints || 0) + restorePoints
-        );
-      }
-
-      driver.ratingScore = calculateRating(driver.demeritPoints);
-      driver.demeritLevel = calculateLevel(driver.demeritPoints);
-
-      if (
-        driver.demeritPoints > DEMERIT.SUSPENSION_THRESHOLD &&
-        driver.licenseStatus === LICENSE_STATUS.SUSPENDED
-      ) {
-        driver.licenseStatus = LICENSE_STATUS.ACTIVE;
-        driver.suspendedAt = null;
-      }
-
-      await driver.save();
-
-      updatedDriverStatus = {
-        demeritPoints: driver.demeritPoints,
-        ratingScore: driver.ratingScore,
-        licenseStatus: driver.licenseStatus,
-        demeritLevel: driver.demeritLevel,
-        suspendedAt: driver.suspendedAt,
-      };
-    }
-
     fine.status = PAYMENT.STATUS.PAID;
     fine.paymentId = paymentId;
     fine.paidAt = Date.now();
 
     await fine.save();
 
-    res.status(HTTP.OK).json({
-      message: 'Fine paid successfully',
-      fine,
-      driverStatus: updatedDriverStatus,
-    });
+    res.status(HTTP.OK).json({ message: 'Fine paid successfully', fine });
   } catch (error) {
     res.status(HTTP.SERVER_ERROR).json({ message: 'Failed to update payment', error: error.message });
   }
