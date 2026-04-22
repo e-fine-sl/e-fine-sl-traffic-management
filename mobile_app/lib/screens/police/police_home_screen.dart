@@ -57,17 +57,17 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
   // --- Initialization Sequence ---
   // Forces user data to load BEFORE dashboard data to prevent race conditions
   Future<void> _initScreen() async {
-    print('[PoliceHomeScreen] initState: Loading user data first...');
+    debugPrint('[PoliceHomeScreen] initState: Loading user data first...');
     await _loadUserData();
     
-    print('[PoliceHomeScreen] initState: User data loaded, now loading dashboard...');
+    debugPrint('[PoliceHomeScreen] initState: User data loaded, now loading dashboard...');
     await _loadDashboardData();
     
     // Fetch HQ Alerts in a non-blocking way (doesn't hold up the UI)
     _dashboardService.getHqAlerts().then((alerts) {
       if (mounted) setState(() => _hqAlerts = alerts);
     }).catchError((e) {
-      print('[PoliceHomeScreen] HQ Alerts failed: $e');
+      debugPrint('[PoliceHomeScreen] HQ Alerts failed: $e');
     });
   }
 
@@ -120,7 +120,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
           }
         } catch (e) {
           // If parsing fails for one specific record, print it and continue to the next
-          print('❌ Error Parsing Date: $e -> Value was: ${fine['date']}');
+          debugPrint('❌ Error Parsing Date: $e -> Value was: ${fine['date']}');
         }
       }
 
@@ -134,10 +134,10 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
           _dailyTotalAmount = totalAmount;
           _recentFines = recent3;
         });
-        print('[PoliceHomeScreen] ✅ FINAL STATS: Count=$count, Amount=$totalAmount');
+        debugPrint('[PoliceHomeScreen] ✅ FINAL STATS: Count=$count, Amount=$totalAmount');
       }
     } catch (e) {
-      print('[PoliceHomeScreen] ❌ ERROR calculating stats locally: $e');
+      debugPrint('[PoliceHomeScreen] ❌ ERROR calculating stats locally: $e');
     } finally {
       if (mounted) setState(() => _isLoadingDashboard = false);
     }
@@ -177,7 +177,7 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
         }
       }
     } catch (e) {
-      print('[PoliceHomeScreen] Profile fetch fallback triggered (silently handled)');
+      debugPrint('[PoliceHomeScreen] Profile fetch fallback triggered (silently handled)');
     }
   }
 
