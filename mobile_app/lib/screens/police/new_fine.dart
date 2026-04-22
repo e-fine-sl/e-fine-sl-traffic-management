@@ -10,7 +10,13 @@ import '../../config/app_constants.dart';
 
 class NewFineScreen extends StatefulWidget {
   final String? scannedLicenseNumber;
-  const NewFineScreen({super.key, this.scannedLicenseNumber});
+  final String? scannedVehicleNumber;
+
+  const NewFineScreen({
+    super.key,
+    this.scannedLicenseNumber,
+    this.scannedVehicleNumber,
+  });
 
   @override
   State<NewFineScreen> createState() => _NewFineScreenState();
@@ -21,7 +27,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
   final _storage = const FlutterSecureStorage();
 
   late TextEditingController _licenseController;
-  final TextEditingController _vehicleController = TextEditingController();
+  late TextEditingController _vehicleController;
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   late TextEditingController _dateController;
@@ -40,6 +46,8 @@ class _NewFineScreenState extends State<NewFineScreen> {
     super.initState();
     _licenseController =
         TextEditingController(text: widget.scannedLicenseNumber ?? "");
+    _vehicleController =
+        TextEditingController(text: widget.scannedVehicleNumber ?? "");
     _dateController =
         TextEditingController(text: _formatDateTime(_selectedDate));
     _loadInitialData();
