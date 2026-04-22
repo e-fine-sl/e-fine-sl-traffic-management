@@ -128,12 +128,19 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
 
   String _formatDate(DateTime d) => '${d.day}/${d.month}/${d.year}';
 
+  double _calculateRatingPoints(int points) {
+    final max = DemeritConstants.defaultPoints.toDouble();
+    final rating = (points / max) * 5.0;
+    return double.parse(rating.clamp(0.0, 5.0).toStringAsFixed(1));
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = _getStatusColor(widget.points);
     final label = widget.status == AppStatus.suspended
         ? 'demerit_suspended'.tr()
         : _getStatusLabel(widget.points);
+    final ratingPoints = _calculateRatingPoints(widget.points);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -219,6 +226,16 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
                 color: color,
+              ),
+            ),
+
+            const SizedBox(height: 4),
+            Text(
+              'demerit_rating_points'.tr(args: [ratingPoints.toStringAsFixed(1)]),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textSecondary(context),
               ),
             ),
 

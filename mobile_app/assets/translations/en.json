@@ -41,6 +41,7 @@
   "demerit_warning": "Warning Level",
   "demerit_danger": "Danger Level",
   "demerit_suspended": "SUSPENDED",
+  "demerit_rating_points": "Rating Points: {} / 5",
   "demerit_suspended_on": "Since {}",
   "demerit_reinstate_info": "Please contact the traffic department or an administrator to reinstate your license.",
 
