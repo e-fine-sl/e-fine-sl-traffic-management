@@ -26,6 +26,7 @@ app.use('/api/admin', require('./routes/adminRoutes')); // Admin Routes
 app.use('/api/drivers', require('./routes/driverRoutes')); // Driver Demerit Routes
 app.use('/api/kyc',     require('./routes/kyc'));           // KYC Face Verification
 app.use('/api/sos',     require('./routes/sosRoutes'));     // 🚨 SOS Emergency Alert System
+app.use('/api/police',  require('./routes/policeRoutes'));  // Police Operations (HQ Alerts, etc)
 
 app.get('/', (req, res) => {
   res.send('API is running successfully!');
