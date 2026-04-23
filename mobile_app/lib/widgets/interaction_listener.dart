@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/app_constants.dart';
 import '../services/auth_service.dart';
 
@@ -24,6 +25,7 @@ class _InteractionListenerState extends State<InteractionListener> with WidgetsB
   Timer? _timer;
   DateTime _lastInteraction = DateTime.now();
   final AuthService _authService = AuthService();
+  final _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
@@ -60,8 +62,10 @@ class _InteractionListenerState extends State<InteractionListener> with WidgetsB
   Future<void> _checkTimeout() async {
     final prefs = await SharedPreferences.getInstance();
     final timeoutMinutes = prefs.getInt(PrefKeys.idleTimeoutMinutes) ?? 5;
+    final token = await _storage.read(key: PrefKeys.accessToken);
     
-    if (timeoutMinutes <= 0) return; // Feature disabled or not logged in
+    // Feature disabled or not logged in
+    if (timeoutMinutes <= 0 || token == null) return; 
 
     final now = DateTime.now();
     final difference = now.difference(_lastInteraction).inMinutes;
@@ -73,13 +77,14 @@ class _InteractionListenerState extends State<InteractionListener> with WidgetsB
   }
 
   Future<void> _handleLogout() async {
-    _timer?.cancel();
+    // DO NOT cancel the timer here, as InteractionListener wraps the whole app.
+    // If we cancel it, it won't restart when the user logs back in!
     
     // 1. Perform logout (clears tokens and notifies server)
     await _authService.logout();
 
-    // 2. Clear last interaction to prevent repeat triggers
-    _lastInteraction = DateTime.now().subtract(const Duration(days: 1));
+    // 2. Reset last interaction to prevent repeat triggers
+    _lastInteraction = DateTime.now();
 
     // 3. Navigate to login screen
     if (widget.navigatorKey.currentState != null) {
