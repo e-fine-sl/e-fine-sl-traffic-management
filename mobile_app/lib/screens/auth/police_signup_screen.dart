@@ -98,14 +98,64 @@ class _PoliceSignupScreenState extends State<PoliceSignupScreen> {
   }
 
   void _showError(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: AppColors.errorRed),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.errorRed,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
     );
   }
 
   void _showSuccess(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: AppColors.successGreen),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.successGreen,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  /// Shows a prominent blocking Dialog for HQ-level security denial messages.
+  /// Use this for badge validation errors — they should not be easily missed.
+  void _showSecurityDenialDialog(String title, String message) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.shield_outlined, color: Colors.red, size: 28),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(fontSize: 15, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('UNDERSTOOD', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -138,12 +188,19 @@ class _PoliceSignupScreenState extends State<PoliceSignupScreen> {
     setState(() => _isLoading = true);
     try {
       await _authService.requestVerification(
-        _badgeController.text,
+        _badgeController.text.trim(),
         selectedStationCode!,
       );
       setState(() => _currentStep = 1);
     } catch (e) {
-      _showError(e.toString());
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      // Show prominent dialog for HQ-level badge rejections
+      if (msg.contains('not recognized by Headquarters') ||
+          msg.contains('Registration Denied')) {
+        _showSecurityDenialDialog('Access Denied by HQ', msg);
+      } else {
+        _showError(msg);
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -217,14 +274,14 @@ class _PoliceSignupScreenState extends State<PoliceSignupScreen> {
     try {
       // Sending All Data
       await _authService.registerPolice({
-        'name': _nameController.text,
-        'badgeNumber': _badgeController.text,
-        'email': _emailController.text,
-        'nic': _nicController.text,
-        'phone': _phoneController.text,
+        'name': _nameController.text.trim(),
+        'badgeNumber': _badgeController.text.trim(),
+        'email': _emailController.text.trim(),
+        'nic': _nicController.text.trim(),
+        'phone': _phoneController.text.trim(),
         'password': _passwordController.text,
         'station': selectedStationCode, 
-        'otp': _otpController.text,
+        'otp': _otpController.text.trim(),
         'position': _selectedRank,
         'profileImage': _base64Image,
       });
@@ -237,7 +294,22 @@ class _PoliceSignupScreenState extends State<PoliceSignupScreen> {
         );
       }
     } catch (e) {
-      _showError(e.toString());
+      final msg = e.toString().replaceFirst('Exception: ', '');
+
+      // Badge pre-approval denial (401) 
+      if (msg.contains('not recognized by Headquarters') ||
+          msg.contains('Registration Denied')) {
+        _showSecurityDenialDialog('Access Denied by HQ', msg);
+      }
+      // Badge already used (400) 
+      else if (msg.contains('already exists') &&
+               msg.toLowerCase().contains('badge')) {
+        _showSecurityDenialDialog('Badge Already Registered', msg);
+      }
+     
+      else {
+        _showError(msg);
+      }
     } finally {
       setState(() => _isLoading = false);
     }
