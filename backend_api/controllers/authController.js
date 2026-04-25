@@ -4,6 +4,7 @@ const sendEmail = require('../utils/sendEmail');
 const bcrypt = require('bcryptjs');
 const { randomUUID } = require('crypto');
 const Police = require('../models/policeModel');
+const PreApprovedOfficer = require('../models/preApprovedOfficerModel');
 const generateToken = require('../utils/generateToken');
 const Driver = require('../models/driverModel');
 const { HTTP, ROLES, AUTH } = require('../config/constants');
@@ -107,10 +108,35 @@ const registerPolice = async (req, res) => {
   const { name, badgeNumber, email, password, station, otp, nic, phone, position, profileImage } = req.body;
 
   try {
+    // ─────────────────────────────────────────────────────────────────────
+    // SECURITY GATE 1: Badge must exist in the HQ pre-approved list
+    // ─────────────────────────────────────────────────────────────────────
+    const approvedBadge = await PreApprovedOfficer.findOne({ badgeNumber });
+
+    if (!approvedBadge) {
+      console.warn(`[AUTH/REGISTER-POLICE] Unauthorized badge attempt: ${badgeNumber}`);
+      return res.status(HTTP.UNAUTHORIZED).json({
+        success: false,
+        message: 'Registration Denied: Badge number not recognized by Headquarters.',
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SECURITY GATE 2: Badge slot must not already be consumed
+    // ─────────────────────────────────────────────────────────────────────
+    if (approvedBadge.isRegistered) {
+      console.warn(`[AUTH/REGISTER-POLICE] Already-registered badge attempt: ${badgeNumber}`);
+      return res.status(HTTP.BAD_REQUEST).json({
+        success: false,
+        message: 'An account with this badge number already exists.',
+      });
+    }
+
     const verifiedRecord = await Verification.findOne({ badgeNumber, otp });
     if (!verifiedRecord) {
       return res.status(HTTP.UNAUTHORIZED).json({ message: 'Unauthorized: Please verify OTP first' });
     }
+
 
     const officerExists = await Police.findOne({ 
       $or: [
@@ -159,6 +185,15 @@ const registerPolice = async (req, res) => {
     await Verification.deleteMany({ badgeNumber });
 
     if (officer) {
+
+
+      await PreApprovedOfficer.findOneAndUpdate(
+        { badgeNumber },
+        { isRegistered: true, registeredAt: new Date() },
+        { new: true }
+      );
+      console.log(`[AUTH/REGISTER-POLICE] Badge ${badgeNumber} marked as registered.`);
+
       res.status(HTTP.CREATED).json({
         success: true,
         _id: officer.id,

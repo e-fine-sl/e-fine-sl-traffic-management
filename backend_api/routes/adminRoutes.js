@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protectAdmin, requireRole } = require('../middleware/adminMiddleware');
+const PreApprovedOfficer = require('../models/preApprovedOfficerModel');
 const {
     adminLogin,
     adminLogout,
@@ -40,6 +41,46 @@ const {
 router.post('/login', adminLogin);
 router.post('/logout', adminLogout);
 router.post('/refresh', adminRefreshToken);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// [DEV/SETUP ONLY] Seed pre-approved badge numbers into the database.
+// Call once: POST /api/admin/seed-badges
+// IMPORTANT: Disable or remove this route before deploying to production!
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/seed-badges', async (req, res) => {
+  try {
+    const mockBadges = [
+      { badgeNumber: '10001', notes: 'Constable - Colombo Fort' },
+      { badgeNumber: '10002', notes: 'Sergeant - Maradana' },
+      { badgeNumber: '10003', notes: 'Sub-Inspector - Kandy' },
+      { badgeNumber: '10004', notes: 'Inspector - Galle' },
+      { badgeNumber: '10005', notes: 'OIC - Kurunegala' },
+    ];
+
+    // insertMany with ordered:false so duplicates are skipped gracefully
+    const result = await PreApprovedOfficer.insertMany(mockBadges, {
+      ordered: false,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: `${result.length} badge(s) seeded successfully.`,
+      inserted: result.map((r) => r.badgeNumber),
+    });
+  } catch (error) {
+    // If some badges already exist (code 11000 bulk write), report what was inserted
+    if (error.code === 11000 || error.writeErrors) {
+      const inserted = (error.insertedDocs || []).map((d) => d.badgeNumber);
+      return res.status(200).json({
+        success: true,
+        message: 'Seeding complete. Some badges already existed and were skipped.',
+        inserted,
+      });
+    }
+    console.error('[SEED-BADGES] Error:', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 // ==========================================
 // PROTECTED ROUTES - All Admin Roles
