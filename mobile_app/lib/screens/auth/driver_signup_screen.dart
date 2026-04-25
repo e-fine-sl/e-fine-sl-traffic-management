@@ -358,8 +358,10 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
           registeredLicenseNumber: _licenseController.text,
           registeredIssueDate: _issueDate,
           registeredExpiryDate: _expiryDate,
-          onVerified: (issue, expiry, classes, profileImageBase64, frontBase64, backBase64) {
-            // Called when KYC succeeds — keep the OCR dates for the DB record
+          onVerified: (issue, expiry, classes, profileImageBase64, frontBase64, backBase64) async {
+            // Called when KYC liveness succeeds — keep the OCR dates for the DB record.
+            // This runs WHILE the KYC screen shows a loading overlay; navigation to
+            // LoginScreen happens at the end of _registerDriver(), not here.
             setState(() {
               _kycVerified = true;
               // Prefer OCR-extracted dates; fall back to user entry if OCR was empty
@@ -370,7 +372,7 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
               _licenseFrontBase64 = frontBase64;
               _licenseBackBase64  = backBase64;
             });
-            _registerDriver();
+            await _registerDriver();
           },
         ),
       ),
@@ -411,6 +413,9 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
             backgroundColor: AppColors.successGreen,
           ),
         );
+        // Navigate to LoginScreen, clearing the entire navigation stack.
+        // This is called from the KYC screen's loading overlay — the user
+        // never sees the registration form again.
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginScreen()),
           (route) => false,

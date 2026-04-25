@@ -5,10 +5,11 @@
 // Multi-step flow:
 //   Step 1 → Upload or capture driving license photo (front side)
 //            + On-device OCR scans NIC & license number
-//   Step 2 → Show scanned data — verify NIC & license number match registration
-//   Step 3 → Take a live selfie using the FRONT camera
-//   Step 4 → Preview both images & submit to POST /api/kyc/verify
-//   Result → Success (green) or Failure (red) with retry option
+//   Step 2 → Upload or capture driving license photo (back side)
+//            + On-device OCR scans expiry dates and vehicle classes
+//   Step 3 → Show scanned data — verify NIC & license number match registration
+//   Step 4 → Liveness detection: Blink → Smile → Neutral → Capture
+//   Result → Auto-complete after successful liveness (no backend API call)
 //
 // Usage:
 //   Navigator.push(
@@ -17,7 +18,7 @@
 //       builder: (_) => KycScreen(
 //         registeredNIC: '199012345678',
 //         registeredLicenseNumber: 'B1234567',
-//         onVerified: () { /* proceed with registration */ },
+//         onVerified: (issueDate, expiryDate, classes, profileImg, front, back) { },
 //       ),
 //     ),
 //   );
@@ -25,8 +26,6 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:google_mlkit_document_scanner/google_mlkit_document_scanner.dart';
 import 'dart:convert';
@@ -38,7 +37,7 @@ import '../widgets/liveness_camera_view.dart';
 class KycScreen extends StatefulWidget {
   /// Called when the KYC verification succeeds. The caller should use this
   /// callback to proceed with the next step (e.g. final registration submit).
-  final Function(String issueDate, String expiryDate, List<Map<String, String>> vehicleClasses, String profileImageBase64, String licenseFrontBase64, String licenseBackBase64) onVerified;
+  final Future<void> Function(String issueDate, String expiryDate, List<Map<String, String>> vehicleClasses, String profileImageBase64, String licenseFrontBase64, String licenseBackBase64) onVerified;
 
   /// The NIC number entered during registration (used to verify OCR result).
   final String registeredNIC;
@@ -67,7 +66,7 @@ class KycScreen extends StatefulWidget {
 
 // ─── Step enum ───────────────────────────────────────────────────────────────
 
-enum _KycStep { licenseFront, licenseBack, ocrResult, selfie, preview, loading, success, failure }
+enum _KycStep { licenseFront, licenseBack, ocrResult, selfie, loading, success, failure }
 
 // ─── State ───────────────────────────────────────────────────────────────────
 
@@ -92,9 +91,6 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
   bool _ocrMatched = false;
   bool _datesMatch = false; // true when issue date (front) & expiry date (back) match
 
-  // Result from backend
-  bool   _verified  = false;
-  int    _score     = 0;
   String _errorMsg  = '';
 
   // Liveness state
@@ -541,115 +537,8 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
   }
 
 
-  // ── MIME type helper ───────────────────────────────────────────────────────
 
-  MediaType _getMediaType(String filePath) {
-    final ext = filePath.split('.').last.toLowerCase();
-    switch (ext) {
-      case 'jpg':
-      case 'jpeg':
-        return MediaType('image', 'jpeg');
-      case 'png':
-        return MediaType('image', 'png');
-      case 'webp':
-        return MediaType('image', 'webp');
-      default:
-        return MediaType('image', 'jpeg'); // Fallback to JPEG
-    }
-  }
-
-  // ── Submission ──────────────────────────────────────────────────────────────
-
-  Future<void> _submit() async {
-    if (_licenseFile == null || _selfieFile == null) return;
-
-    setState(() => _step = _KycStep.loading);
-
-    try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/kyc/verify');
-
-      // Build multipart request
-      final request = http.MultipartRequest('POST', uri);
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'license',
-          _licenseFile!.path,
-          contentType: _getMediaType(_licenseFile!.path),
-        ),
-      );
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'selfie',
-          _selfieFile!.path,
-          contentType: _getMediaType(_selfieFile!.path),
-        ),
-      );
-
-      debugPrint('[KYC] POST ${uri.toString()}');
-      debugPrint('Files: license=${_licenseFile?.lengthSync()}B, selfie=${_selfieFile?.lengthSync()}B');
-
-      // Send with timeout
-      final streamedResponse = await request.send().timeout(
-        const Duration(seconds: 60),
-        onTimeout: () => throw Exception('Request timed out. Please check your connection.'),
-      );
-
-      final response = await http.Response.fromStream(streamedResponse);
-      
-      debugPrint('[KYC] Response Status: ${response.statusCode}');
-      debugPrint('[KYC] Content-Type: ${response.headers['content-type']}');
-      
-      // Prevent parsing HTML error pages
-      if (!(response.headers['content-type']?.contains('application/json') ?? false)) {
-        final sample = response.body.length > 50 ? '${response.body.substring(0, 50)}...' : response.body;
-        debugPrint('[KYC] Non-JSON Response: $sample');
-        
-        setState(() {
-          _step = _KycStep.failure;
-          _errorMsg = 'Server Error (${response.statusCode}): Try again later.';
-        });
-        return;
-      }
-
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
-
-      if (response.statusCode == 200 && body['success'] == true) {
-        setState(() {
-          _score    = (body['score'] as num?)?.toInt() ?? 0;
-          // Updated: Score >= 30 is now considered a successful match
-          _verified = _score >= 30;
-          _step     = _verified ? _KycStep.success : _KycStep.failure;
-          _errorMsg = _verified ? '' : 'Face match score too low ($_score%). Please retry with better lighting.';
-        });
-      } else {
-        // 422 = no face detected, 500 = server error
-        setState(() {
-          _step     = _KycStep.failure;
-          _errorMsg = body['message'] as String? ?? 'Verification failed. Please try again.';
-        });
-      }
-    } on SocketException {
-      setState(() {
-        _step     = _KycStep.failure;
-        _errorMsg = 'No internet connection. Please check your network and retry.';
-      });
-    } on FormatException catch (e) {
-      debugPrint('[KYC] FormatException Parse Error: $e');
-      setState(() {
-        _step     = _KycStep.failure;
-        _errorMsg = 'Bad response from server. Please try again.';
-      });
-    } catch (e) {
-      debugPrint('[KYC] Unexpected Error: $e');
-      setState(() {
-        _step     = _KycStep.failure;
-        _errorMsg = e.toString().replaceFirst('Exception: ', '');
-      });
-    }
-
-    // Trigger icon animation for result screens
-    _iconAnimController.forward(from: 0);
-  }
+  // ── Submission (face verification removed — liveness is sufficient) ──────────
 
   // ── Reset for retry ─────────────────────────────────────────────────────────
 
@@ -676,8 +565,6 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
     setState(() {
       _selfieFile = null;
       _errorMsg   = '';
-      _verified   = false;
-      _score      = 0;
       _step       = _KycStep.selfie;
     });
     _iconAnimController.reset();
@@ -715,8 +602,6 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
         return _buildOcrResultStep();
       case _KycStep.selfie:
         return _buildSelfieStep();
-      case _KycStep.preview:
-        return _buildPreviewStep();
       case _KycStep.loading:
         return _buildLoadingStep();
       case _KycStep.success:
@@ -1146,12 +1031,58 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
         child: Stack(
           children: [
             LivenessCameraView(
-              onCompleted: (File capturedFile) {
+              onCompleted: (File capturedFile) async {
                 setState(() {
                   _selfieFile = capturedFile;
                   _isLivenessActive = false;
-                  _step = _KycStep.preview; // Auto-advance to preview
+                  _step = _KycStep.loading;
                 });
+
+                try {
+                  // Convert captured selfie to base64
+                  final bytes = await _selfieFile!.readAsBytes();
+                  final profileImageBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+                  // Convert license images to base64
+                  final licenseFrontBytes = await _licenseFile!.readAsBytes();
+                  final licenseFrontBase64 = 'data:image/jpeg;base64,${base64Encode(licenseFrontBytes)}';
+
+                  final licenseBackBytes = await _licenseBackFile!.readAsBytes();
+                  final licenseBackBase64 = 'data:image/jpeg;base64,${base64Encode(licenseBackBytes)}';
+
+                  // Mark as success and show success animation
+                  setState(() {
+                    _step = _KycStep.success;
+                  });
+
+                  _iconAnimController.forward(from: 0);
+
+                  // Wait 2 seconds to show success animation
+                  await Future.delayed(const Duration(seconds: 2));
+
+                  // Switch to saving/loading state while DB write completes
+                  if (!mounted) return;
+                  setState(() => _step = _KycStep.loading);
+
+                  // Await the onVerified callback — it writes to the DB and
+                  // navigates to LoginScreen. The KYC screen stays frozen here
+                  // until that completes (or throws).
+                  await widget.onVerified(
+                    _scannedIssueDate,
+                    _scannedExpiryDate,
+                    _extractedClasses,
+                    profileImageBase64,
+                    licenseFrontBase64,
+                    licenseBackBase64,
+                  );
+                } catch (e) {
+                  debugPrint('[KYC] Error processing images: $e');
+                  setState(() {
+                    _step = _KycStep.failure;
+                    _errorMsg = 'Failed to process images. Please try again.';
+                  });
+                  _iconAnimController.forward(from: 0);
+                }
               },
               onError: (error) {
                 setState(() {
@@ -1190,7 +1121,7 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
             title: 'Liveness Verification',
             subtitle:
                 'To verify you are a live human, we need to perform a quick test. '
-                'You will be asked to Blink and then Smile.',
+                'You will be asked to Blink, Smile, and then return to a Neutral expression.',
           ),
 
           const SizedBox(height: 32),
@@ -1219,60 +1150,7 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Step 4: Preview ─────────────────────────────────────────────────────────
-
-  Widget _buildPreviewStep() {
-    return SingleChildScrollView(
-      key: const ValueKey('preview'),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _stepIndicator(currentStep: 4, totalSteps: 4),
-          const SizedBox(height: 24),
-
-          const Text(
-            'Review Your Photos',
-            style: TextStyle(
-              fontSize: AppTextSize.heading2,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Make sure both images are clear and your face is fully visible.',
-            style: TextStyle(fontSize: AppTextSize.bodyMedium, color: AppColors.textSecondary),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-
-          // Preview cards row
-          Row(
-            children: [
-              Expanded(child: _previewCard(label: 'License', file: _licenseFile)),
-              const SizedBox(width: 12),
-              Expanded(child: _previewCard(label: 'Selfie',  file: _selfieFile)),
-            ],
-          ),
-          const SizedBox(height: 32),
-
-          _primaryButton(
-            label:   'Verify Identity',
-            icon:    Icons.verified_user,
-            onTap:   _submit,
-          ),
-          const SizedBox(height: 12),
-          _secondaryButton(
-            label: 'Retake Photos',
-            icon:  Icons.refresh,
-            onTap: _retry,
-          ),
-        ],
-      ),
-    );
-  }
+  // ── Step 4: Preview removed — verification completes automatically after liveness ──
 
   // ── Loading ─────────────────────────────────────────────────────────────────
 
@@ -1288,7 +1166,7 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 28),
           Text(
-            'Verifying your identity…',
+            'Saving your data…',
             style: TextStyle(
               fontSize: AppTextSize.bodyLarge,
               color: Colors.grey.shade600,
@@ -1296,7 +1174,7 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 8),
           Text(
-            'This may take up to 30 seconds.',
+            'Please wait while we create your account.',
             style: TextStyle(
               fontSize: AppTextSize.bodySmall,
               color: Colors.grey.shade400,
@@ -1345,7 +1223,7 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 12),
             Text(
-              'Your face matches the license photo.\nMatch score: $_score / 100',
+              'Liveness verification completed successfully.\nYour registration is being processed.',
               style: const TextStyle(
                 fontSize: AppTextSize.bodyMedium,
                 color:    AppColors.textSecondary,
@@ -1366,35 +1244,9 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(AppRadius.medium),
                   ),
                 ),
-                onPressed: () async {
-                  String profileBase64 = '';
-                  String frontBase64 = '';
-                  String backBase64 = '';
-
-                  if (_selfieFile != null) {
-                    final bytes = await _selfieFile!.readAsBytes();
-                    profileBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-                  }
-                  if (_licenseFile != null) {
-                    final bytes = await _licenseFile!.readAsBytes();
-                    frontBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-                  }
-                  if (_licenseBackFile != null) {
-                    final bytes = await _licenseBackFile!.readAsBytes();
-                    backBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-                  }
-
-                  widget.onVerified(
-                    _scannedIssueDate, 
-                    _scannedExpiryDate, 
-                    _extractedClasses, 
-                    profileBase64,
-                    frontBase64,
-                    backBase64,
-                  ); // Notify caller
-                  if (!mounted) return;
-                  Navigator.of(context).pop();
-                },
+                // Button intentionally hidden — onVerified() is called automatically
+                // after liveness completes (2-second delay for success animation).
+                onPressed: null,
               ),
             ),
           ],
@@ -1588,46 +1440,6 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
               color:    AppColors.textSecondary,
             ),
             textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _previewCard({required String label, required File? file}) {
-    return Container(
-      decoration: BoxDecoration(
-        color:        Colors.white,
-        borderRadius: BorderRadius.circular(AppRadius.medium),
-        boxShadow: [
-          BoxShadow(
-            color:      Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.medium)),
-            child: file != null
-                ? Image.file(file, height: 150, width: double.infinity, fit: BoxFit.cover)
-                : Container(
-                    height: 150,
-                    color:  Colors.grey.shade100,
-                    child:  const Icon(Icons.image, size: 40, color: Colors.grey),
-                  ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize:   AppTextSize.bodySmall,
-                color:      AppColors.textPrimary,
-              ),
-            ),
           ),
         ],
       ),

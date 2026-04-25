@@ -83,3 +83,4 @@ mobile_app/build/
 
 # RSA Keys - never commit these
 *.pem
+.aider*

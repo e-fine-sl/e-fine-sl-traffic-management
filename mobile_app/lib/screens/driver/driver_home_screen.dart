@@ -221,7 +221,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       endDrawer: _buildNotificationDrawer(), // Notification Side Panel
       backgroundColor: Theme.of(context).scaffoldBackgroundColor, 
       appBar: AppBar(
-        // backgroundColor uses Theme
+        backgroundColor: AppColors.primaryGreen,
         elevation: 0,
         title: const Text("e-Fine SL", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
@@ -285,7 +285,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             Container(
               padding: const EdgeInsets.only(left: 20, right: 20, bottom: 30),
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
+                color: AppColors.primaryGreen,
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(30),
                   bottomRight: Radius.circular(30),

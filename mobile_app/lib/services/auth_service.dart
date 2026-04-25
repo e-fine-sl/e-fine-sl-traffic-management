@@ -315,6 +315,69 @@ class AuthService {
     if (response.statusCode != 200) throw Exception('Failed to reset password');
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // DRIVER LICENSE RECOVERY
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /// Step 1 — Look up a driver by license number.
+  /// Returns masked driver info { name, maskedEmail, licenseNumber } for confirmation.
+  Future<Map<String, dynamic>> lookupDriverByLicense(String licenseNumber) async {
+    final response = await http.post(
+      Uri.parse('$_mainUrl/auth/license-recovery/lookup'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'licenseNumber': licenseNumber}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? 'Driver not found with this license number');
+  }
+
+  /// Step 2 — Verify the scanned license number against the entered one.
+  /// Returns { recoveryToken } on success.
+  Future<String> verifyLicenseScan(String licenseNumber, String scannedLicenseNumber) async {
+    final response = await http.post(
+      Uri.parse('$_mainUrl/auth/license-recovery/verify-scan'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'licenseNumber':        licenseNumber,
+        'scannedLicenseNumber': scannedLicenseNumber,
+      }),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return data['recoveryToken'] as String;
+    }
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? 'License verification failed');
+  }
+
+  /// Step 3 — Reset driver password using the recovery token.
+  /// RSA-encrypts newPassword before sending (same pattern as [resetPassword]).
+  Future<void> resetPasswordByLicense(
+    String licenseNumber,
+    String recoveryToken,
+    String newPassword,
+  ) async {
+    final publicKey         = await _fetchPublicKey();
+    final encryptedPassword = _encryptPassword(newPassword, publicKey);
+
+    final response = await http.post(
+      Uri.parse('$_mainUrl/auth/license-recovery/reset-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'licenseNumber':  licenseNumber,
+        'recoveryToken':  recoveryToken,
+        'newPassword':    encryptedPassword,
+      }),
+    );
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? 'Failed to reset password');
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // POLICE REGISTRATION
   // ─────────────────────────────────────────────────────────────────────────

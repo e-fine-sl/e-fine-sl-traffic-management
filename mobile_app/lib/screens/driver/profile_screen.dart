@@ -135,7 +135,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text("my_profile".tr()),
-        backgroundColor: AppColors.primaryGreenDark,
+        backgroundColor: AppColors.primaryGreen,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -170,7 +170,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.only(bottom: 30),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
+                  color: AppColors.primaryGreen,
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(30),
                     bottomRight: Radius.circular(30),

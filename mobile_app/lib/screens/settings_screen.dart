@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/services/auth_service.dart';
-import 'package:mobile_app/services/theme_manager.dart';
 import 'package:mobile_app/services/notification_service.dart';
 import 'package:mobile_app/screens/auth/login_screen.dart';
 import 'package:mobile_app/screens/driver/profile_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:provider/provider.dart';
+import 'package:mobile_app/providers/theme_provider.dart';
 import '../config/app_constants.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -62,12 +63,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bool isDark = ThemeManager.isDark();
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDark = themeProvider.isDarkMode;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("Settings", style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: AppColors.primaryGreen,
         foregroundColor: Colors.white,
         centerTitle: true,
       ),
@@ -93,9 +95,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text("Dark Mode", style: TextStyle(fontWeight: FontWeight.bold)),
             value: isDark,
             onChanged: (val) {
-               setState(() {
-                 ThemeManager.toggleTheme(val);
-               });
+              context.read<ThemeProvider>().toggleTheme(val);
             },
           ),
           // Language
@@ -111,7 +111,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Section 3: General
           _buildSectionHeader("General"),
           SwitchListTile(
-            secondary: const Icon(Icons.notifications_outlined, color: Colors.amber),
+            secondary: const Icon(Icons.notifications_outlined, color: AppColors.primaryGreen),
             title: const Text("Notifications", style: TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text(
               _notificationsEnabled
@@ -121,6 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             value: _notificationsEnabled,
             onChanged: _toggleNotifications,
+            activeThumbColor: AppColors.primaryGreen,
           ),
           _buildListTile(
             icon: Icons.info_outline, 
