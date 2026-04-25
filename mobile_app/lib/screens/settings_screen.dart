@@ -121,7 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             value: _notificationsEnabled,
             onChanged: _toggleNotifications,
-            activeColor: AppColors.primaryGreen,
+            activeThumbColor: AppColors.primaryGreen,
           ),
           _buildListTile(
             icon: Icons.info_outline, 
