@@ -16,7 +16,7 @@ class AppInfo {
 class ApiConstants {
   // Main backend API (existing)
   static const String baseUrl       = 'https://e-fine-sl-traffic-management-1.onrender.com/api';
-  // static const String baseUrl    = 'http://10.231.145.6:5000/api'; // local dev
+  // static const String baseUrl    = 'http://10.60.105.81:5000/api'  ;
 
   // Auth Microservice URL (update after Render deployment)
   static const String authServiceUrl = 'https://e-fine-sl-auth-service.onrender.com';

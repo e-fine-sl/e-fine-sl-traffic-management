@@ -2,11 +2,13 @@ const Station = require('../models/stationModel');
 const Verification = require('../models/verificationModel');
 const sendEmail = require('../utils/sendEmail');
 const bcrypt = require('bcryptjs');
+const { randomUUID } = require('crypto');
 const Police = require('../models/policeModel');
 const generateToken = require('../utils/generateToken');
 const Driver = require('../models/driverModel');
 const { HTTP, ROLES, AUTH } = require('../config/constants');
 const { decryptPassword } = require('../utils/cryptoService'); // RSA decrypt from Flutter
+
 
 // @desc    Request OTP for Police Registration
 // @route   POST /api/auth/request-verification
@@ -451,6 +453,199 @@ const updateProfile = async (req, res) => {
 
 // ... Password Reset Functions ...
 
+// ─── DRIVER LICENSE RECOVERY ─────────────────────────────────────────────────
+// These 3 endpoints form a driver-only alternative account recovery flow.
+// No email/OTP is required — the physical driving license scan is the 2nd factor.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// @desc    Step 1 — Look up a driver by their license number
+// @route   POST /api/auth/license-recovery/lookup
+// @access  Public
+const lookupDriverByLicense = async (req, res) => {
+  const { licenseNumber } = req.body;
+
+  if (!licenseNumber || licenseNumber.trim() === '') {
+    return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'License number is required.' });
+  }
+
+  try {
+    // Driver-only check — police officers cannot use this flow
+    const driver = await Driver.findOne({
+      licenseNumber: { $regex: new RegExp(`^${licenseNumber.trim()}$`, 'i') }
+    }).select('name email licenseNumber');
+
+    if (!driver) {
+      return res.status(HTTP.NOT_FOUND).json({ success: false, message: 'No driver account found with this license number.' });
+    }
+
+    // Mask email: abc***@gmail.com
+    const emailParts  = driver.email.split('@');
+    const localPart   = emailParts[0];
+    const domain      = emailParts[1];
+    const maskedLocal = localPart.length <= 3
+      ? localPart[0] + '***'
+      : localPart.substring(0, 3) + '***';
+    const maskedEmail = `${maskedLocal}@${domain}`;
+
+    console.log(`[AUTH/LICENSE-RECOVERY/LOOKUP] Found driver for license: ${licenseNumber}`);
+
+    res.status(HTTP.OK).json({
+      success:      true,
+      name:         driver.name,
+      maskedEmail,
+      licenseNumber: driver.licenseNumber,
+    });
+  } catch (error) {
+    console.error('[AUTH/LICENSE-RECOVERY/LOOKUP] Error:', error.message);
+    res.status(HTTP.SERVER_ERROR).json({ success: false, message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Step 2 — Verify the scanned license number against the entered one,
+//                   then issue a 10-minute server-side recovery token.
+// @route   POST /api/auth/license-recovery/verify-scan
+// @access  Public
+const verifyLicenseScan = async (req, res) => {
+  const { licenseNumber, scannedLicenseNumber } = req.body;
+
+  if (!licenseNumber || !scannedLicenseNumber) {
+    return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'Both licenseNumber and scannedLicenseNumber are required.' });
+  }
+
+  try {
+    // Confirm the driver exists (driver-only)
+    const driver = await Driver.findOne({
+      licenseNumber: { $regex: new RegExp(`^${licenseNumber.trim()}$`, 'i') }
+    }).select('_id licenseNumber');
+
+    if (!driver) {
+      return res.status(HTTP.NOT_FOUND).json({ success: false, message: 'Driver not found.' });
+    }
+
+    // ── Fuzzy normalisation ────────────────────────────────────────────────
+    // Remove all non-alphanumeric characters, uppercase, collapse whitespace.
+    // This tolerates common OCR misreads: spaces, dashes, lower-case letters.
+    const normalise = (str) =>
+      str.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    const normEntered  = normalise(licenseNumber);
+    const normScanned  = normalise(scannedLicenseNumber);
+
+    // Allow up to 1 character difference for single OCR misreads
+    // (e.g., 'B1234567' vs 'B1234S67' — one digit misread)
+    const levenshtein = (a, b) => {
+      const m = a.length, n = b.length;
+      const dp = Array.from({ length: m + 1 }, (_, i) =>
+        Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+      );
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          dp[i][j] = a[i - 1] === b[j - 1]
+            ? dp[i - 1][j - 1]
+            : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+        }
+      }
+      return dp[m][n];
+    };
+
+    const distance = levenshtein(normEntered, normScanned);
+    const isMatch  = distance <= 1; // 0 = exact, 1 = one misread char
+
+    if (!isMatch) {
+      console.warn(`[AUTH/LICENSE-RECOVERY/VERIFY-SCAN] Mismatch: entered="${normEntered}" scanned="${normScanned}" distance=${distance}`);
+      return res.status(HTTP.BAD_REQUEST).json({
+        success: false,
+        message: 'Scanned license number does not match. Please ensure the front side of your license is clearly visible and try again.',
+      });
+    }
+
+    // ── Issue 10-minute recovery token ────────────────────────────────────
+    const recoveryToken = randomUUID();
+
+    // Reuse Verification collection — key = licenseNumber, stationCode = 'LICENSE_RECOVERY'
+    await Verification.deleteMany({ badgeNumber: licenseNumber.toUpperCase(), stationCode: 'LICENSE_RECOVERY' });
+    await Verification.create({
+      badgeNumber:  licenseNumber.toUpperCase(),
+      stationCode:  'LICENSE_RECOVERY',
+      otp:          recoveryToken,
+      expiresAt:    new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    });
+
+    console.log(`[AUTH/LICENSE-RECOVERY/VERIFY-SCAN] Recovery token issued for license: ${licenseNumber} (distance=${distance})`);
+
+    res.status(HTTP.OK).json({
+      success:       true,
+      recoveryToken,
+      message:       'License verified successfully. You may now reset your password.',
+    });
+  } catch (error) {
+    console.error('[AUTH/LICENSE-RECOVERY/VERIFY-SCAN] Error:', error.message);
+    res.status(HTTP.SERVER_ERROR).json({ success: false, message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Step 3 — Reset driver password using the recovery token
+// @route   POST /api/auth/license-recovery/reset-password
+// @access  Public
+const resetPasswordByLicense = async (req, res) => {
+  const { licenseNumber, recoveryToken, newPassword } = req.body;
+
+  if (!licenseNumber || !recoveryToken || !newPassword) {
+    return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'licenseNumber, recoveryToken and newPassword are required.' });
+  }
+
+  try {
+    // Validate the recovery token (driver-only, LICENSE_RECOVERY type)
+    const record = await Verification.findOne({
+      badgeNumber:  licenseNumber.toUpperCase(),
+      stationCode:  'LICENSE_RECOVERY',
+      otp:          recoveryToken,
+    });
+
+    if (!record) {
+      return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'Invalid or expired recovery token. Please restart the recovery process.' });
+    }
+
+    // Check expiry (10 minutes)
+    if (record.expiresAt && new Date() > new Date(record.expiresAt)) {
+      await Verification.deleteMany({ badgeNumber: licenseNumber.toUpperCase(), stationCode: 'LICENSE_RECOVERY' });
+      return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'Recovery token has expired (10 minutes). Please restart.' });
+    }
+
+    // Decrypt RSA-encrypted password from Flutter
+    let plainNewPassword;
+    try {
+      plainNewPassword = decryptPassword(newPassword);
+    } catch (e) {
+      console.error('[AUTH/LICENSE-RECOVERY/RESET] RSA decrypt failed:', e.message);
+      return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'Invalid encrypted password.' });
+    }
+
+    const salt           = await bcrypt.genSalt(AUTH.BCRYPT_SALT_ROUNDS);
+    const hashedPassword = await bcrypt.hash(plainNewPassword, salt);
+
+    // Update driver password (driver-only — never touches Police model)
+    const updated = await Driver.findOneAndUpdate(
+      { licenseNumber: { $regex: new RegExp(`^${licenseNumber.trim()}$`, 'i') } },
+      { password: hashedPassword }
+    );
+
+    if (!updated) {
+      return res.status(HTTP.NOT_FOUND).json({ success: false, message: 'Driver not found.' });
+    }
+
+    // Clean up the used recovery token
+    await Verification.deleteMany({ badgeNumber: licenseNumber.toUpperCase(), stationCode: 'LICENSE_RECOVERY' });
+
+    console.log(`[AUTH/LICENSE-RECOVERY/RESET] Password reset successful for license: ${licenseNumber}`);
+
+    res.status(HTTP.OK).json({ success: true, message: 'Password reset successfully. You can now log in with your new password.' });
+  } catch (error) {
+    console.error('[AUTH/LICENSE-RECOVERY/RESET] Error:', error.message);
+    res.status(HTTP.SERVER_ERROR).json({ success: false, message: 'Server Error', error: error.message });
+  }
+};
+
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
   try {
@@ -576,5 +771,9 @@ module.exports = {
   verifyDriver,
   updateProfileImage,
   updateProfile,
-  checkFieldExistence
+  checkFieldExistence,
+  // Driver License Recovery
+  lookupDriverByLicense,
+  verifyLicenseScan,
+  resetPasswordByLicense,
 };

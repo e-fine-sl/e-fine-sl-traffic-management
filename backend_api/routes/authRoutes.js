@@ -14,7 +14,11 @@ const {
   verifyDriver,
   updateProfileImage,
   updateProfile,
-  checkFieldExistence
+  checkFieldExistence,
+  // Driver License Recovery
+  lookupDriverByLicense,
+  verifyLicenseScan,
+  resetPasswordByLicense,
 } = require('../controllers/authController');
 
 
@@ -32,6 +36,11 @@ router.post('/verify-reset-otp', verifyResetOTP);
 router.post('/reset-password', resetPassword);
 
 router.get('/check-exists', checkFieldExistence);
+
+// Driver License Recovery Routes (Public — license scan is the 2nd factor)
+router.post('/license-recovery/lookup',         lookupDriverByLicense);
+router.post('/license-recovery/verify-scan',    verifyLicenseScan);
+router.post('/license-recovery/reset-password', resetPasswordByLicense);
 
 // Protected Routes (Login වෙලා ඉන්න ඕන)
 router.get('/me', protect, getMe);
