@@ -793,6 +793,100 @@ const checkFieldExistence = async (req, res) => {
   }
 };
 
+const verifyWithDMT = async (req, res) => {
+  const { licenseNumber, nic } = req.body;
+
+  // Step 1: Validate input
+  if (!licenseNumber || !nic) {
+    return res.status(400).json({
+      success: false,
+      message: 'licenseNumber and nic are required.'
+    });
+  }
+
+  console.log(`[AUTH/DMT-VERIFY] Checking license: ${licenseNumber}`);
+
+  try {
+    // Step 2: Call DMT server with API key in header
+    const dmtUrl = `${process.env.DMT_SERVER_URL}/api/dmt/verify-license`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    let dmtResponse;
+    try {
+      dmtResponse = await fetch(dmtUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-dmt-api-key': process.env.DMT_API_KEY
+        },
+        body: JSON.stringify({
+          licenseNumber: licenseNumber.trim().toUpperCase(),
+          nic: nic.trim().toUpperCase()
+        }),
+        signal: controller.signal
+      });
+    } catch (fetchError) {
+      // DMT server unreachable (timeout / connection refused / DNS failure)
+      console.error(`[AUTH/DMT-VERIFY] DMT Server unreachable: ${fetchError.message}`);
+      return res.status(503).json({
+        success: false,
+        dmtUnreachable: true,
+        message: 'DMT verification service is currently unavailable. Registration is temporarily blocked. Please try again later.'
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    // Step 3: Parse DMT response
+    const dmtData = await dmtResponse.json();
+    console.log(`[AUTH/DMT-VERIFY] DMT Status: ${dmtResponse.status} for license: ${licenseNumber}`);
+
+    // Step 4: Forward DMT result to Flutter
+    if (dmtResponse.status === 200) {
+      return res.status(200).json({
+        success: true,
+        found: true,
+        nicMatch: true,
+        message: 'License verified successfully in the DMT database.',
+        data: dmtData.data
+      });
+    }
+
+    if (dmtResponse.status === 404) {
+      return res.status(404).json({
+        success: false,
+        found: false,
+        message: dmtData.message || 'No driving license record found in DMT database.'
+      });
+    }
+
+    if (dmtResponse.status === 400) {
+      return res.status(400).json({
+        success: false,
+        found: true,
+        nicMatch: false,
+        message: dmtData.message || 'NIC Number does not match the license holder record.'
+      });
+    }
+
+    // Any other DMT error
+    return res.status(dmtResponse.status).json({
+      success: false,
+      message: dmtData.message || 'DMT verification failed.'
+    });
+
+  } catch (error) {
+    console.error(`[AUTH/DMT-VERIFY] Unexpected error: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error during DMT verification.',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   requestVerification,
   verifyOTP,
@@ -807,6 +901,7 @@ module.exports = {
   updateProfileImage,
   updateProfile,
   checkFieldExistence,
+  verifyWithDMT,
   // Driver License Recovery
   lookupDriverByLicense,
   verifyLicenseScan,

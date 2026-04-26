@@ -466,6 +466,74 @@ class AuthService {
     }
   }
 
+  /// Verifies a driving license + NIC combination against the DMT database
+  /// via the e-Fine SL backend proxy.
+  ///
+  /// Returns a Map with:
+  ///   success (bool), found (bool), nicMatch (bool),
+  ///   dmtUnreachable (bool), message (String), data (Map?) 
+  Future<Map<String, dynamic>> verifyLicenseWithDMT({
+    required String licenseNumber,
+    required String nic,
+  }) async {
+    try {
+      debugPrint('[AuthService] DMT verify: $licenseNumber / $nic');
+
+      final response = await http.post(
+        Uri.parse(ApiConstants.dmtVerifyUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'licenseNumber': licenseNumber.trim().toUpperCase(),
+          'nic':           nic.trim().toUpperCase(),
+        }),
+      );
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+      switch (response.statusCode) {
+        case 200:
+          return {
+            'success':    true,
+            'found':      true,
+            'nicMatch':   true,
+            'message':    data['message'] ?? 'Verified',
+            'data':       data['data'],
+          };
+        case 404:
+          return {
+            'success':    false,
+            'found':      false,
+            'message':    data['message'] ?? 'License not found in DMT',
+          };
+        case 400:
+          return {
+            'success':    false,
+            'found':      true,
+            'nicMatch':   false,
+            'message':    data['message'] ?? 'NIC does not match this license',
+          };
+        case 503:
+          return {
+            'success':        false,
+            'dmtUnreachable': true,
+            'message':        data['message'] ?? 'DMT service unavailable',
+          };
+        default:
+          return {
+            'success': false,
+            'message': data['message'] ?? 'DMT verification failed',
+          };
+      }
+    } catch (e) {
+      debugPrint('[AuthService] DMT verify error: $e');
+      return {
+        'success':        false,
+        'dmtUnreachable': true,
+        'message':        'Unable to reach DMT verification service. Please try again.',
+      };
+    }
+  }
+
   /// Encrypts driver password before sending for registration.
   Future<void> registerDriver(Map<String, dynamic> data) async {
     final publicKey = await _fetchPublicKey();

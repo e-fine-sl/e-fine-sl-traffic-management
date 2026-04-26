@@ -22,6 +22,9 @@ class ApiConstants {
   static const String authServiceUrl = 'https://e-fine-sl-auth-service.onrender.com';
   //static const String authServiceUrl = 'http://10.231.145.6:5000'; // local dev (pointing to main for now if merged)
 
+  // DMT License Verification Proxy (calls main backend which proxies to DMT)
+  static const String dmtVerifyUrl = '$baseUrl/auth/verify-dmt';
+
   static const String walletBaseUrl = 'https://efine-mock-data-loader.onrender.com/api/wallet';
   static const int    connectTimeout = 30000;
   static const int    receiveTimeout = 30000;
