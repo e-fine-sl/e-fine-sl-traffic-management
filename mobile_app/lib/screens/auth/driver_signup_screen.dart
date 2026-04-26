@@ -64,6 +64,11 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
   String? _phoneErrorText;
   bool _isPhoneUnique = false;
 
+  // DMT verification state
+  bool _isDmtChecking = false;
+  bool _isDmtVerified = false;
+  String? _dmtErrorText;
+
   @override
   void initState() {
     super.initState();
@@ -166,47 +171,118 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
         return;
       }
 
+      // Reset DMT state whenever NIC changes
+      // (forces re-verification with new NIC value)
+      if (field == 'nic') {
+        setState(() {
+          _isDmtVerified = false;
+          _dmtErrorText  = null;
+        });
+      }
+
       // Check DB
       final isTaken = await _authService.checkFieldExists(field, value.trim(), role: 'driver');
       
-      if (mounted) {
+      if (!mounted) return;
+
+      if (field == 'licenseNumber') {
+        if (isTaken) {
+          setState(() {
+            _isCheckingLicense = false;
+            _isLicenseUnique   = false;
+            _isDmtVerified     = false;
+            _dmtErrorText      = null;
+            _licenseErrorText  = "License Number is already registered in e-Fine SL";
+          });
+          return; // Stop — do not call DMT
+        }
+
+        // ── Step 2: DMT verification (NEW) ────────────────────────────
         setState(() {
-          switch (field) {
-            case 'nic':
-              _isCheckingNic = false;
-              if (isTaken) {
-                _nicErrorText = "NIC is already registered";
-              } else {
-                _isNicUnique = true;
-              }
-              break;
-            case 'licenseNumber':
-              _isCheckingLicense = false;
-              if (isTaken) {
-                _licenseErrorText = "License Number is already registered";
-              } else {
-                _isLicenseUnique = true;
-              }
-              break;
-            case 'email':
-              _isCheckingEmail = false;
-              if (isTaken) {
-                _emailErrorText = "Email is already registered";
-              } else {
-                _isEmailUnique = true;
-              }
-              break;
-            case 'phone':
-              _isCheckingPhone = false;
-              if (isTaken) {
-                _phoneErrorText = "Phone is already registered";
-              } else {
-                _isPhoneUnique = true;
-              }
-              break;
-          }
+          _isCheckingLicense = false;
+          _isLicenseUnique   = false;
+          _isDmtChecking     = true;
+          _dmtErrorText      = null;
         });
+
+        final dmtResult = await _authService.verifyLicenseWithDMT(
+          licenseNumber: value.trim(),
+          nic:           _nicController.text.trim(),
+        );
+
+        if (!mounted) return;
+
+        if (dmtResult['success'] == true) {
+          setState(() {
+            _isDmtChecking  = false;
+            _isDmtVerified  = true;
+            _isLicenseUnique = true;
+            _licenseErrorText = null;
+            _dmtErrorText     = null;
+          });
+        } else if (dmtResult['dmtUnreachable'] == true) {
+          setState(() {
+            _isDmtChecking  = false;
+            _isDmtVerified  = false;
+            _isLicenseUnique = false;
+            _dmtErrorText   = "⚠️ DMT verification service is unavailable. "
+                              "Registration is blocked. Please try again later.";
+          });
+        } else if (dmtResult['found'] == false) {
+          setState(() {
+            _isDmtChecking  = false;
+            _isDmtVerified  = false;
+            _isLicenseUnique = false;
+            _dmtErrorText   = "License Number not found in DMT records. "
+                              "Please check your driving license.";
+          });
+        } else if (dmtResult['nicMatch'] == false) {
+          setState(() {
+            _isDmtChecking  = false;
+            _isDmtVerified  = false;
+            _isLicenseUnique = false;
+            _dmtErrorText   = "NIC Number does not match this License Number "
+                              "in the DMT records. Please check both values.";
+          });
+        } else {
+          setState(() {
+            _isDmtChecking  = false;
+            _isDmtVerified  = false;
+            _isLicenseUnique = false;
+            _dmtErrorText   = dmtResult['message'] ?? "DMT verification failed.";
+          });
+        }
+        return;
       }
+
+      setState(() {
+        switch (field) {
+          case 'nic':
+            _isCheckingNic = false;
+            if (isTaken) {
+              _nicErrorText = "NIC is already registered";
+            } else {
+              _isNicUnique = true;
+            }
+            break;
+          case 'email':
+            _isCheckingEmail = false;
+            if (isTaken) {
+              _emailErrorText = "Email is already registered";
+            } else {
+              _isEmailUnique = true;
+            }
+            break;
+          case 'phone':
+            _isCheckingPhone = false;
+            if (isTaken) {
+              _phoneErrorText = "Phone is already registered";
+            } else {
+              _isPhoneUnique = true;
+            }
+            break;
+        }
+      });
     });
   }
 
@@ -289,6 +365,16 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
       _showError("Please fill all fields.");
       return false;
     }
+
+    // DMT verification must pass before KYC
+    if (!_isDmtVerified) {
+      _showError(
+        'Your License Number must be verified against the DMT database '
+        'before you can proceed with registration.'
+      );
+      return false;
+    }
+
     if (_issueDate.isEmpty) {
       setState(() => _issueDateErrorText = 'Please select the issue date');
       _showError('Please select the License Issue Date.');
@@ -342,6 +428,25 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
       );
     } else if (isUnique) {
       return const Icon(Icons.check_circle, color: AppColors.successGreen);
+    }
+    return null;
+  }
+
+  Widget? _buildLicenseSuffixIcon() {
+    if (_isCheckingLicense || _isDmtChecking) {
+      return const SizedBox(
+        width: 20, height: 20,
+        child: Padding(
+          padding: EdgeInsets.all(12),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    if (_isDmtVerified && _isLicenseUnique) {
+      return const Icon(Icons.verified, color: AppColors.successGreen);
+    }
+    if (_dmtErrorText != null || _licenseErrorText != null) {
+      return const Icon(Icons.gpp_bad, color: AppColors.errorRed);
     }
     return null;
   }
@@ -477,7 +582,28 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
                 prefixIcon: const Icon(Icons.card_membership), 
                 border: const OutlineInputBorder(),
                 errorText: _licenseErrorText,
-                suffixIcon: _buildSuffixIcon(_isCheckingLicense, _isLicenseUnique),
+                suffixIcon: _buildLicenseSuffixIcon(),
+              ),
+            ),
+            
+            // DMT Verification Error Message (shown below the field)
+            Visibility(
+              visible: _dmtErrorText != null,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8.0, left: 12.0, right: 12.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline, color: AppColors.errorRed, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _dmtErrorText ?? "",
+                        style: const TextStyle(color: AppColors.errorRed, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 15),

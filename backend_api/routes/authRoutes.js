@@ -19,6 +19,7 @@ const {
   lookupDriverByLicense,
   verifyLicenseScan,
   resetPasswordByLicense,
+  verifyWithDMT,
 } = require('../controllers/authController');
 
 
@@ -36,6 +37,9 @@ router.post('/verify-reset-otp', verifyResetOTP);
 router.post('/reset-password', resetPassword);
 
 router.get('/check-exists', checkFieldExistence);
+
+// DMT License Verification Proxy (public — no auth required)
+router.post('/verify-dmt', verifyWithDMT);
 
 // Driver License Recovery Routes (Public — license scan is the 2nd factor)
 router.post('/license-recovery/lookup',         lookupDriverByLicense);
