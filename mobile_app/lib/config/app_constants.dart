@@ -25,6 +25,9 @@ class ApiConstants {
   // DMT License Verification Proxy (calls main backend which proxies to DMT)
   static const String dmtVerifyUrl = '$baseUrl/auth/verify-dmt';
 
+  // Accident Report
+  static const String accidentReportUrl = '$baseUrl/accident/report';
+
   static const String walletBaseUrl = 'https://efine-mock-data-loader.onrender.com/api/wallet';
   static const int    connectTimeout = 30000;
   static const int    receiveTimeout = 30000;

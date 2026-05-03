@@ -13,6 +13,7 @@ import 'package:mobile_app/screens/driver/payment_history_screen.dart';
 import 'package:mobile_app/screens/settings_screen.dart';
 import 'package:mobile_app/screens/driver/wallet_screen.dart';
 import 'package:mobile_app/widgets/demerit_status_card.dart';
+import 'package:mobile_app/screens/driver/report_screen.dart';
 import '../../config/app_constants.dart';
 
 class DriverHomeScreen extends StatefulWidget {
@@ -412,7 +413,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       Navigator.push(context,
                         MaterialPageRoute(builder: (_) => const WalletScreen()));
                   }),
-                  _buildActionCard(Icons.report_problem, "report".tr(), AppColors.errorRed, () { }),
+                  _buildActionCard(Icons.report_problem, "report".tr(), AppColors.errorRed, () {
+                      Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const ReportScreen()));
+                  }),
                 ],
               ),
             ),
