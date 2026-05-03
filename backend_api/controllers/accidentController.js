@@ -217,7 +217,7 @@ const reportAccident = async (req, res) => {
       description: cleanDescription,
       latitude: latitude,
       longitude: longitude,
-      mapsLink: \`https://maps.google.com/?q=\${latitude},\${longitude}\`,
+      mapsLink: `https://maps.google.com/?q=${latitude},${longitude}`,
       province: geoData.province,
       district: geoData.district,
       division: geoData.policeDivision,
@@ -235,7 +235,7 @@ const reportAccident = async (req, res) => {
       stationEmail
         ? sendEmail({
             email: stationEmail,
-            subject: \`🚨 ACCIDENT ALERT: \${accidentType} — e-Fine SL\`,
+            subject: `🚨 ACCIDENT ALERT: ${accidentType} — e-Fine SL`,
             html: emailHtml
           })
         : Promise.resolve(null)
@@ -409,7 +409,7 @@ const notifyPoliceDivision = async (req, res) => {
 
     await sendEmail({
       email: station.officialEmail,
-      subject: \`🚨 ACTION REQUIRED: Accident in Your Division — e-Fine SL\`,
+      subject: `🚨 ACTION REQUIRED: Accident in Your Division — e-Fine SL`,
       html: emailHtml
     });
 
@@ -417,7 +417,7 @@ const notifyPoliceDivision = async (req, res) => {
     report.statusHistory.push({
       status: report.status,
       changedBy: adminName || 'System Admin',
-      note: \`Division notification sent to \${station.officialEmail}\`,
+      note: `Division notification sent to ${station.officialEmail}`,
       changedAt: new Date()
     });
 
