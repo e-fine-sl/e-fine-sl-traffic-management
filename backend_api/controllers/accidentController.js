@@ -187,8 +187,8 @@ const reportAccident = async (req, res) => {
     // STEP 6 — Build FCM payload
     console.log(`\n${tag} STEP 6: Building FCM payload...`);
     const fcmPayload = {
-      title: \`🚨 Accident Alert — \${accidentType}\`,
-      body: \`Driver \${driver.name} has reported an accident near you. Tap to view location.\`,
+      title: `🚨 Accident Alert — ${accidentType}`,
+      body: `Driver ${driver.name} has reported an accident near you. Tap to view location.`,
       data: {
         type: 'ACCIDENT_ALERT',
         licenseNumber: licenseNumber,
@@ -198,7 +198,7 @@ const reportAccident = async (req, res) => {
         description: cleanDescription,
         lat: String(latitude),
         lng: String(longitude),
-        mapsLink: \`https://maps.google.com/?q=\${latitude},\${longitude}\`,
+        mapsLink: `https://maps.google.com/?q=${latitude},${longitude}`,
         province: geoData.province,
         district: geoData.district,
         policeDivision: geoData.policeDivision,
@@ -278,7 +278,7 @@ const reportAccident = async (req, res) => {
     console.log(`\n${tag} STEP 10: Returning successful response`);
     return res.status(201).json({
       success: true,
-      message: \`Accident report submitted. \${fcmSent} officer(s) notified.\`,
+      message: `Accident report submitted. ${fcmSent} officer(s) notified.`,
       reportId: report._id,
       debug: {
         province: geoData.province,
@@ -373,7 +373,7 @@ const updateAccidentStatus = async (req, res) => {
     return res.status(200).json({ 
       success: true, 
       data: updatedReport, 
-      message: \`Status updated to \${status}\` 
+      message: `Status updated to ${status}` 
     });
   } catch (err) {
     console.error('[AccidentCtrl] Error updating status:', err);
@@ -402,7 +402,7 @@ const notifyPoliceDivision = async (req, res) => {
       province: report.province,
       district: report.district,
       division: report.policeDivision,
-      mapsLink: \`https://maps.google.com/?q=\${report.location.coordinates[1]},\${report.location.coordinates[0]}\`,
+      mapsLink: `https://maps.google.com/?q=${report.location.coordinates[1]},${report.location.coordinates[0]}`,
       reportedAt: new Date(report.reportedAt).toLocaleString(),
       sentBy: adminName || 'System Admin'
     });
@@ -425,7 +425,7 @@ const notifyPoliceDivision = async (req, res) => {
 
     return res.status(200).json({ 
       success: true, 
-      message: \`Police division notified at \${station.officialEmail}\` 
+      message: `Police division notified at ${station.officialEmail}` 
     });
   } catch (err) {
     console.error('[AccidentCtrl] Error notifying division:', err);
