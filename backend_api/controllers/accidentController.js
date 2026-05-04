@@ -16,7 +16,7 @@ const buildEmailHtml = ({
   return `
     <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
       <div style="background-color: #d32f2f; padding: 20px; text-align: center; color: white;">
-        <h2 style="margin: 0;">🚨 ACCIDENT ALERT</h2>
+        <h2 style="margin: 0;"> ACCIDENT ALERT</h2>
         <p style="margin: 5px 0 0 0; font-size: 14px;">e-Fine SL Traffic Management System</p>
       </div>
       
@@ -68,7 +68,7 @@ const buildDivisionNotificationHtml = ({
   return `
     <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
       <div style="background-color: #6a1b9a; padding: 20px; text-align: center; color: white;">
-        <h2 style="margin: 0;">🚨 ACTION REQUIRED</h2>
+        <h2 style="margin: 0;"> ACTION REQUIRED</h2>
         <p style="margin: 5px 0 0 0; font-size: 14px;">Accident in Your Division</p>
       </div>
       
@@ -104,7 +104,7 @@ const buildDivisionNotificationHtml = ({
 const reportAccident = async (req, res) => {
   const tag = '[AccidentCtrl]';
   console.log(`\n${'═'.repeat(60)}`);
-  console.log(`${tag} 🚨 ACCIDENT REPORT SUBMITTED`);
+  console.log(`${tag}  ACCIDENT REPORT SUBMITTED`);
   console.log(`${tag} Timestamp: ${new Date().toISOString()}`);
   console.log(`${tag} Raw Request Body:`, JSON.stringify(req.body, null, 2));
   console.log(`${'═'.repeat(60)}`);
@@ -114,13 +114,13 @@ const reportAccident = async (req, res) => {
     const { licenseNumber, lat, lng, accidentType, description } = req.body;
     
     if (!licenseNumber || !lat || !lng || !accidentType) {
-      console.error(`${tag} ❌ STEP 1 FAILED: Missing required fields`);
+      console.error(`${tag}  STEP 1 FAILED: Missing required fields`);
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
     const validTypes = ['Vehicle Collision', 'Pedestrian Accident', 'Hit & Run', 'Road Hazard / Obstruction', 'Other'];
     if (!validTypes.includes(accidentType)) {
-      console.error(`${tag} ❌ STEP 1 FAILED: Invalid accidentType`);
+      console.error(`${tag}  STEP 1 FAILED: Invalid accidentType`);
       return res.status(400).json({ success: false, message: 'Invalid accident type' });
     }
 
@@ -128,26 +128,26 @@ const reportAccident = async (req, res) => {
     const longitude = parseFloat(lng);
 
     if (isNaN(latitude) || isNaN(longitude)) {
-      console.error(`${tag} ❌ STEP 1 FAILED: Invalid lat/lng format`);
+      console.error(`${tag}  STEP 1 FAILED: Invalid lat/lng format`);
       return res.status(400).json({ success: false, message: 'Invalid latitude or longitude' });
     }
 
     const cleanDescription = description ? description.trim().substring(0, 200) : '';
-    console.log(`${tag} ✅ STEP 1 OK: Input validated`);
+    console.log(`${tag}  STEP 1 OK: Input validated`);
 
     // STEP 2 — Find Driver
     console.log(`\n${tag} STEP 2: Looking up driver...`);
     const driver = await Driver.findOne({ licenseNumber });
     if (!driver) {
-      console.error(`${tag} ❌ STEP 2 FAILED: Driver not found`);
+      console.error(`${tag}  STEP 2 FAILED: Driver not found`);
       return res.status(404).json({ success: false, message: 'Driver not found' });
     }
-    console.log(`${tag} ✅ STEP 2 OK: Found driver ${driver.name}`);
+    console.log(`${tag}  STEP 2 OK: Found driver ${driver.name}`);
 
     // STEP 3 — Resolve GPS to geo fields
     console.log(`\n${tag} STEP 3: Resolving GPS location...`);
     const geoData = resolveLocation(latitude, longitude);
-    console.log(`${tag} ✅ STEP 3 OK: ${geoData.province} / ${geoData.district} / ${geoData.policeDivision}`);
+    console.log(`${tag}  STEP 3 OK: ${geoData.province} / ${geoData.district} / ${geoData.policeDivision}`);
 
     // STEP 4 — Find nearby police officers (5 km $near query)
     console.log(`\n${tag} STEP 4: Finding nearby police officers...`);
@@ -162,7 +162,7 @@ const reportAccident = async (req, res) => {
     }).select('name badgeNumber fcmToken');
     
     const validTokens = nearbyOfficers.map(o => o.fcmToken).filter(t => t && t.length > 10);
-    console.log(`${tag} ✅ STEP 4 OK: Found ${nearbyOfficers.length} officer(s), ${validTokens.length} valid token(s)`);
+    console.log(`${tag}  STEP 4 OK: Found ${nearbyOfficers.length} officer(s), ${validTokens.length} valid token(s)`);
 
     // STEP 5 — Find police station email
     console.log(`\n${tag} STEP 5: Finding police station email...`);
@@ -175,19 +175,19 @@ const reportAccident = async (req, res) => {
         if (station) {
           stationName = station.name;
           stationEmail = station.officialEmail;
-          console.log(`${tag} ✅ STEP 5 OK: Found station email for ${stationName}`);
+          console.log(`${tag}  STEP 5 OK: Found station email for ${stationName}`);
         } else {
-          console.warn(`${tag} ⚠️ STEP 5 WARNING: Station not found for driver.policeStation = ${driver.policeStation}`);
+          console.warn(`${tag}  STEP 5 WARNING: Station not found for driver.policeStation = ${driver.policeStation}`);
         }
       }
     } catch (err) {
-      console.warn(`${tag} ⚠️ STEP 5 WARNING: Error looking up station email - ${err.message}`);
+      console.warn(`${tag}  STEP 5 WARNING: Error looking up station email - ${err.message}`);
     }
 
     // STEP 6 — Build FCM payload
     console.log(`\n${tag} STEP 6: Building FCM payload...`);
     const fcmPayload = {
-      title: `🚨 Accident Alert — ${accidentType}`,
+      title: ` Accident Alert — ${accidentType}`,
       body: `Driver ${driver.name} has reported an accident near you. Tap to view location.`,
       data: {
         type: 'ACCIDENT_ALERT',
@@ -205,7 +205,7 @@ const reportAccident = async (req, res) => {
         reportedAt: new Date().toISOString()
       }
     };
-    console.log(`${tag} ✅ STEP 6 OK: FCM payload ready`);
+    console.log(`${tag}  STEP 6 OK: FCM payload ready`);
 
     // STEP 7 — Build email HTML
     console.log(`\n${tag} STEP 7: Building email HTML...`);
@@ -224,7 +224,7 @@ const reportAccident = async (req, res) => {
       officersCount: validTokens.length,
       reportedAt: new Date().toLocaleString()
     });
-    console.log(`${tag} ✅ STEP 7 OK: Email HTML ready`);
+    console.log(`${tag}  STEP 7 OK: Email HTML ready`);
 
     // STEP 8 — Fire BOTH channels in PARALLEL using Promise.allSettled()
     console.log(`\n${tag} STEP 8: Dispatching FCM and Email in parallel...`);
@@ -235,7 +235,7 @@ const reportAccident = async (req, res) => {
       stationEmail
         ? sendEmail({
             email: stationEmail,
-            subject: `🚨 ACCIDENT ALERT: ${accidentType} — e-Fine SL`,
+            subject: ` ACCIDENT ALERT: ${accidentType} — e-Fine SL`,
             html: emailHtml
           })
         : Promise.resolve(null)
@@ -244,10 +244,10 @@ const reportAccident = async (req, res) => {
     const fcmSent = fcmResult.status === 'fulfilled' ? (fcmResult.value?.sent || 0) : 0;
     const emailSent = emailResult.status === 'fulfilled' && emailResult.value !== null;
     
-    if (fcmResult.status === 'rejected') console.error(`${tag} ❌ FCM Failed:`, fcmResult.reason);
-    if (emailResult.status === 'rejected') console.error(`${tag} ❌ Email Failed:`, emailResult.reason);
+    if (fcmResult.status === 'rejected') console.error(`${tag}  FCM Failed:`, fcmResult.reason);
+    if (emailResult.status === 'rejected') console.error(`${tag}  Email Failed:`, emailResult.reason);
     
-    console.log(`${tag} ✅ STEP 8 OK: Dispatched. FCM sent: ${fcmSent}. Email sent: ${emailSent}`);
+    console.log(`${tag}  STEP 8 OK: Dispatched. FCM sent: ${fcmSent}. Email sent: ${emailSent}`);
 
     // STEP 9 — Save AccidentReport to MongoDB
     console.log(`\n${tag} STEP 9: Saving accident report to DB...`);
@@ -272,13 +272,13 @@ const reportAccident = async (req, res) => {
         note: 'Report received from driver app'
       }]
     });
-    console.log(`${tag} ✅ STEP 9 OK: Saved with ID: ${report._id}`);
+    console.log(`${tag}  STEP 9 OK: Saved with ID: ${report._id}`);
 
     // STEP 9.5 — Emit real-time event to Admin Portal
     const io = req.app.get('io');
     if (io) {
       io.emit('new_accident_report', report);
-      console.log(`${tag} 📡 STEP 9.5 OK: Real-time event emitted`);
+      console.log(`${tag}  STEP 9.5 OK: Real-time event emitted`);
     }
 
     // STEP 10 — Return 201 response
@@ -299,7 +299,7 @@ const reportAccident = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(`${tag} ❌ UNHANDLED EXCEPTION:`, err);
+    console.error(`${tag}  UNHANDLED EXCEPTION:`, err);
     return res.status(500).json({ success: false, message: 'Internal Server Error', error: err.message });
   }
 };
@@ -416,7 +416,7 @@ const notifyPoliceDivision = async (req, res) => {
 
     await sendEmail({
       email: station.officialEmail,
-      subject: `🚨 ACTION REQUIRED: Accident in Your Division — e-Fine SL`,
+      subject: ` ACTION REQUIRED: Accident in Your Division — e-Fine SL`,
       html: emailHtml
     });
 

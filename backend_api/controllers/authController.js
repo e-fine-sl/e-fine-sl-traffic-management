@@ -59,7 +59,7 @@ const requestVerification = async (req, res) => {
             </h1>
           </div>
           <p style="color: #d9534f; font-size: 14px; text-align: center; font-weight: bold;">
-            ⚠️ Please verify the officer's identity before providing this code.
+             Please verify the officer's identity before providing this code.
           </p>
         </div>
         <div style="background-color: #eeeeee; padding: 10px; text-align: center; font-size: 12px; color: #777;">

@@ -42,7 +42,7 @@ const policeSchema = mongoose.Schema({
     },
     profileImage: { 
         type: String, 
-        default: 'https://cdn-icons-png.flaticon.com/512/206/206853.png' // Default පින්තූරයක්
+        default: 'https://cdn-icons-png.flaticon.com/512/206/206853.png' // Default image
     },
 
     // --- Role 

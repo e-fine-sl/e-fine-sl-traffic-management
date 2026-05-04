@@ -46,7 +46,7 @@ router.post('/license-recovery/lookup',         lookupDriverByLicense);
 router.post('/license-recovery/verify-scan',    verifyLicenseScan);
 router.post('/license-recovery/reset-password', resetPasswordByLicense);
 
-// Protected Routes (Login වෙලා ඉන්න ඕන)
+// Protected Routes (Must be logged in)
 router.get('/me', protect, getMe);
 router.put('/verify-driver', protect, verifyDriver);
 router.put('/update-profile-image', protect, updateProfileImage);

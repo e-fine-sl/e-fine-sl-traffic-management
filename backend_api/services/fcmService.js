@@ -32,13 +32,13 @@ const getMessaging = () => {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
-      console.log('[FCMService] ✅ Firebase Admin SDK initialized successfully.');
+      console.log('[FCMService]  Firebase Admin SDK initialized successfully.');
     } else {
-      console.log('[FCMService] ✅ Firebase Admin SDK was already initialized — reusing existing app.');
+      console.log('[FCMService]  Firebase Admin SDK was already initialized — reusing existing app.');
     }
     _messaging = admin.messaging();
   } catch (err) {
-    console.error('[FCMService] ❌ CRITICAL: Failed to initialize Firebase Admin SDK!');
+    console.error('[FCMService]  CRITICAL: Failed to initialize Firebase Admin SDK!');
     console.error('[FCMService]    Error:', err.message);
     console.error('[FCMService]    Make sure the file exists at:', SERVICE_ACCOUNT_PATH);
     console.error('[FCMService]    Download it from: Firebase Console → Project Settings → Service Accounts');
@@ -95,10 +95,10 @@ const sendToToken = async (token, { title, body, data = {} }) => {
 
   try {
     const messageId = await getMessaging().send(message);
-    console.log(`[FCMService] ✅ Sent to token ...${token.slice(-8)} | messageId: ${messageId}`);
+    console.log(`[FCMService]  Sent to token ...${token.slice(-8)} | messageId: ${messageId}`);
     return { success: true, messageId };
   } catch (err) {
-    console.error(`[FCMService] ❌ Failed for token ...${token.slice(-8)} | Error: ${err.code} — ${err.message}`);
+    console.error(`[FCMService]  Failed for token ...${token.slice(-8)} | Error: ${err.code} — ${err.message}`);
     return { success: false, error: err.message, code: err.code };
   }
 };
@@ -116,13 +116,13 @@ const sendToMultiple = async (tokens, payload) => {
     return { sent: 0, failed: 0, results: [] };
   }
 
-  console.log(`[FCMService] 📡 Sending to ${tokens.length} token(s)...`);
+  console.log(`[FCMService]  Sending to ${tokens.length} token(s)...`);
   const results = await Promise.all(tokens.map(token => sendToToken(token, payload)));
 
   const sent   = results.filter(r => r.success).length;
   const failed = results.filter(r => !r.success).length;
 
-  console.log(`[FCMService] 📊 Dispatch complete: ${sent} sent, ${failed} failed`);
+  console.log(`[FCMService] � Dispatch complete: ${sent} sent, ${failed} failed`);
   return { sent, failed, results };
 };
 

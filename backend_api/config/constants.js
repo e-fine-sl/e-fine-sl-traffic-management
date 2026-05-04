@@ -82,8 +82,8 @@ const PAGINATION = {
 const EMAIL = {
   FROM_NAME:    'e-Fine SL Traffic Authority',
   SUBJECTS: {
-    LICENSE_ACTIVATED: '✅ Your Driving License Has Been Activated — e-Fine SL',
-    LICENSE_SUSPENDED: '🚫 Your Driving License Has Been Suspended — e-Fine SL',
+    LICENSE_ACTIVATED: ' Your Driving License Has Been Activated — e-Fine SL',
+    LICENSE_SUSPENDED: '� Your Driving License Has Been Suspended — e-Fine SL',
   },
 };
 
