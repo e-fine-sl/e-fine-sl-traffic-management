@@ -1,4 +1,6 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -82,6 +84,41 @@ class NotificationService {
 
     await _plugin.show(id, title, body, details);
     debugPrint('[NotificationService] Showed notification: $title');
+  }
+
+  // ── Show a HIGH-PRIORITY accident alert notification ─────────────
+  Future<void> showAccidentNotification({
+    required String title,
+    required String body,
+    String? payload,
+    int id = 999,
+  }) async {
+    // Show regardless of _enabled preference — safety alerts always show
+    
+    const androidDetails = AndroidNotificationDetails(
+      'accident_alerts_channel',          // channel ID — distinct from fines
+      'Accident Alerts',                  // channel name
+      channelDescription: 'Real-time accident alerts for nearby incidents',
+      importance: Importance.max,         // Highest possible
+      priority: Priority.max,             // Highest possible
+      icon: '@mipmap/launcher_icon',
+      color: Color(0xFFD32F2F),           // Red
+      playSound: true,
+      enableVibration: true,
+      vibrationPattern: Int64List.fromList([0, 500, 250, 500, 250, 500]),
+      fullScreenIntent: true,             // Shows even on lock screen
+      styleInformation: BigTextStyleInformation(
+        '',
+        htmlFormatBigText: false,
+        contentTitle: title,
+        htmlFormatContentTitle: false,
+      ),
+    );
+
+    const details = NotificationDetails(android: androidDetails);
+
+    await _plugin.show(id, title, body, details, payload: payload);
+    debugPrint('[NotificationService] Showed ACCIDENT notification: $title');
   }
 
   // ── Tap handler ───────────────────────────────────────

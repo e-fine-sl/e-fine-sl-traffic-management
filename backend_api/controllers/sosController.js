@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const Police      = require('../models/policeModel');
+const OfficerSession = require('../models/officerSessionModel');
 const { sendToMultiple } = require('../services/fcmService');
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────────
@@ -203,15 +204,24 @@ const updateOfficerPresence = async (req, res) => {
     return res.status(400).json({ success: false, message: 'badgeNumber and fcmToken are required' });
   }
 
-  const updateFields = { fcmToken, isActive: true };
+  const updateFields = { 
+    fcmToken, 
+    isActive: true,
+    lastLoginTime: new Date()
+  };
 
   // Location is optional at login time (we update it precisely on SOS press)
   if (lat !== undefined && lng !== undefined) {
+    const coords = [parseFloat(lng), parseFloat(lat)];
     updateFields.location = {
       type: 'Point',
-      coordinates: [parseFloat(lng), parseFloat(lat)],
+      coordinates: coords,
     };
-    console.log(`${tag} Updating location to [${lng}, ${lat}]`);
+    updateFields.lastLoginLocation = {
+      type: 'Point',
+      coordinates: coords,
+    };
+    console.log(`${tag} Updating location and lastLoginLocation to [${lng}, ${lat}]`);
   }
 
   try {
@@ -228,6 +238,22 @@ const updateOfficerPresence = async (req, res) => {
 
     console.log(`${tag}  Presence updated for ${result.name} (${badgeNumber})`);
     console.log(`${tag}    FCM Token: ...${fcmToken.slice(-10)}`);
+
+    // Create session log entry (non-blocking)
+    OfficerSession.create({
+      badgeNumber: result.badgeNumber,
+      officerName: result.name,
+      policeStation: result.policeStation,
+      loginTime: new Date(),
+      loginLocation: (lat !== undefined && lng !== undefined) ? {
+        type: 'Point',
+        coordinates: [parseFloat(lng), parseFloat(lat)]
+      } : undefined,
+    }).then(() => {
+      console.log(`${tag} Session log created for ${result.name}`);
+    }).catch(err => {
+      console.error(`${tag} Session log failed (non-fatal): ${err.message}`);
+    });
 
     return res.status(200).json({ success: true, message: 'Presence updated successfully' });
   } catch (err) {
