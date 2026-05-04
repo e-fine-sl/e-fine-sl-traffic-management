@@ -23,27 +23,44 @@ let _messaging = null; // cached instance
  * Safe to call multiple times — initializes only once.
  */
 const getMessaging = () => {
-  if (_messaging) return _messaging; // already initialized
+  if (_messaging) return _messaging;
 
   try {
-    // Avoid re-initializing if another module already did it
     if (admin.apps.length === 0) {
-      const serviceAccount = require(SERVICE_ACCOUNT_PATH);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
+      let credential = null;
+
+      // OPTION A: Use Environment Variable (Best for production like Render)
+      if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        console.log('[FCMService]  Initializing using FIREBASE_SERVICE_ACCOUNT environment variable.');
+        try {
+          const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+          credential = admin.credential.cert(serviceAccount);
+        } catch (parseErr) {
+          console.error('[FCMService]  ERROR: FIREBASE_SERVICE_ACCOUNT is not a valid JSON string.');
+          throw parseErr;
+        }
+      } 
+      // OPTION B: Use local JSON file (Best for local development)
+      else if (require('fs').existsSync(SERVICE_ACCOUNT_PATH)) {
+        console.log('[FCMService]  Initializing using local service-account.json file.');
+        const serviceAccount = require(SERVICE_ACCOUNT_PATH);
+        credential = admin.credential.cert(serviceAccount);
+      } 
+      else {
+        console.warn('[FCMService]  ⚠️ WARNING: No Firebase credentials found (env or file). Notifications will fail.');
+        throw new Error('Firebase credentials missing');
+      }
+
+      admin.initializeApp({ credential });
       console.log('[FCMService]  Firebase Admin SDK initialized successfully.');
-    } else {
-      console.log('[FCMService]  Firebase Admin SDK was already initialized — reusing existing app.');
     }
     _messaging = admin.messaging();
   } catch (err) {
     console.error('[FCMService]  CRITICAL: Failed to initialize Firebase Admin SDK!');
     console.error('[FCMService]    Error:', err.message);
-    console.error('[FCMService]    Make sure the file exists at:', SERVICE_ACCOUNT_PATH);
-    console.error('[FCMService]    Download it from: Firebase Console → Project Settings → Service Accounts');
-    // Throw so the server startup fails loudly rather than silently sending nothing
-    throw err;
+    // Do not throw here to allow the rest of the server to start, 
+    // but FCM operations will fail gracefully
+    _messaging = null; 
   }
 
   return _messaging;
