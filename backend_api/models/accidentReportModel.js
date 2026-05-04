@@ -38,6 +38,7 @@ const accidentReportSchema = new mongoose.Schema({
   acknowledgedBy: { type: String, default: null },
   resolvedBy: { type: String, default: null },
   statusHistory: [statusHistorySchema],
+  images: [{ type: String }],
   reportedAt: { type: Date, default: Date.now }
 }, { 
   timestamps: true, 

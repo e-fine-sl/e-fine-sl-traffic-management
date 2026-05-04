@@ -110,6 +110,13 @@ const reportAccident = async (req, res) => {
   console.log(`${'═'.repeat(60)}`);
 
   try {
+    // STEP 0 — Process Files (if any)
+    let imageUrls = [];
+    if (req.files && req.files.length > 0) {
+      imageUrls = req.files.map(file => `/uploads/accidents/${file.filename}`);
+      console.log(`${tag}  STEP 0 OK: Received ${imageUrls.length} image(s)`);
+    }
+
     // STEP 1 — Validate input
     const { licenseNumber, lat, lng, accidentType, description } = req.body;
     
@@ -265,6 +272,7 @@ const reportAccident = async (req, res) => {
       stationNotified: stationName,
       stationEmail,
       emailSent,
+      images: imageUrls,
       status: 'OPEN',
       statusHistory: [{
         status: 'OPEN',

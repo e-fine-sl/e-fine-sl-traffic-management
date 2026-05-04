@@ -5,8 +5,10 @@ const { reportAccident, getAccidentReports, getAccidentReportById,
         updateAccidentStatus, notifyPoliceDivision, getAccidentStats
       } = require('../controllers/accidentController');
 
+const upload = require('../middleware/uploadMiddleware');
+
 // Driver route — no strict auth (same pattern as SOS)
-router.post('/report', reportAccident);
+router.post('/report', upload.array('images', 3), reportAccident);
 
 // Admin routes — all protected
 router.get('/reports/stats',                protectAdmin, getAccidentStats);
