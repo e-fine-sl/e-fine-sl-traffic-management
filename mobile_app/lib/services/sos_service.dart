@@ -234,7 +234,7 @@ class SosService {
   /// Signals logout to the backend — records logout time + location.
   /// Call this BEFORE clearing storage in auth_service.dart logout().
   Future<void> signalLogout(String badgeNumber) async {
-    debugPrint('$_tag 🔒 signalLogout() called for: $badgeNumber');
+    debugPrint('$_tag [Logout] signalLogout() called for: $badgeNumber');
 
     double? lat;
     double? lng;
@@ -299,7 +299,7 @@ class SosService {
 
     // Foreground messages (app is open)
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('\n$_tag 📨 FCM FOREGROUND MESSAGE RECEIVED');
+      debugPrint('\n$_tag [FCM] FOREGROUND MESSAGE RECEIVED');
       debugPrint('$_tag    Title: ${message.notification?.title}');
       debugPrint('$_tag    Body:  ${message.notification?.body}');
       debugPrint('$_tag    Data:  ${message.data}');
@@ -307,7 +307,7 @@ class SosService {
       // ── Handle ACCIDENT_ALERT ────────────────────────────────
       final type = message.data['type'] as String? ?? '';
       if (type == 'ACCIDENT_ALERT') {
-        debugPrint('$_tag 🚨 ACCIDENT_ALERT received — showing local notification');
+        debugPrint('$_tag [Accident] ACCIDENT_ALERT received — showing local notification');
         
         // Show local high-priority notification
         NotificationService().showAccidentNotification(

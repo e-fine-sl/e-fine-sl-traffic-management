@@ -118,7 +118,7 @@ class NotificationService {
     const details = NotificationDetails(android: androidDetails);
 
     await _plugin.show(id, title, body, details, payload: payload);
-    debugPrint('[NotificationService] Showed ACCIDENT notification: $title');
+    debugPrint('[NotificationService] [Accident] Showed ACCIDENT notification: $title');
   }
 
   // ── Tap handler ───────────────────────────────────────

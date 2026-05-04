@@ -43,15 +43,15 @@ class _AccidentAlertScreenState extends State<AccidentAlertScreen> {
   String _getTypeIcon(String type) {
     switch (type) {
       case 'Vehicle Collision':
-        return '🚗';
+        return '';
       case 'Pedestrian Accident':
-        return '🚶';
+        return '';
       case 'Hit & Run':
-        return '🏃';
+        return '';
       case 'Road Hazard / Obstruction':
-        return '⚠️';
+        return '';
       default:
-        return '📋';
+        return '';
     }
   }
 

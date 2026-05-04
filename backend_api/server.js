@@ -45,7 +45,7 @@ app.use('/api/kyc',     require('./routes/kyc'));           // KYC Face Verifica
 app.use('/api/sos',     require('./routes/sosRoutes'));     //  SOS Emergency Alert System
 app.use('/api/accident', require('./routes/accidentRoutes'));  //  Accident Reports
 app.use('/api/police',  require('./routes/policeRoutes'));  // Police Operations (HQ Alerts, etc)
-app.use('/api/officer', require('./routes/officerRoutes'));  // 🚔 Officer Session Tracking
+app.use('/api/officer', require('./routes/officerRoutes'));  // Officer Session Tracking
 
 app.get('/', (req, res) => {
   res.send('API is running successfully!');
