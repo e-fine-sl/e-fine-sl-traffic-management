@@ -12,14 +12,14 @@ const generateHash = (req, res) => {
             return res.status(HTTP.SERVER_ERROR).json({ error: "PayHere credentials missing in .env" });
         }
 
-        // 1. Merchant Secret එක Hash කරනවා (md5)
+        // 1. Hash Merchant Secret (md5)
         const hashedSecret = md5(merchantSecret).toUpperCase();
 
-        // 2. Amount එක format කරනවා (දශම ස්ථාන 2ක් තියෙන්න ඕනේ, කොමා නැතුව)
-        // උදා: 1000 -> 1000.00
+        // 2. Format Amount (must have 2 decimal places, no commas)
+        // ex: 1000 -> 1000.00
         let amountFormatted = parseFloat(amount).toFixed(2);
 
-        // 3. අනිත් දත්ත එකතු කරලා ආයේ Hash කරනවා (PayHere Formula)
+        // 3. Append other data and Hash again (PayHere Formula)
         // Formula: md5(merchant_id + order_id + amount + currency + hashedSecret)
         const hashString = merchantId + order_id + amountFormatted + currency + hashedSecret;
         const finalHash = md5(hashString).toUpperCase();

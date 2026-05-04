@@ -4,16 +4,16 @@ const { PAYMENT } = require('../config/constants');
 const issuedFineSchema = mongoose.Schema({
     licenseNumber: { type: String, required: true },
     vehicleNumber: { type: String, required: true },
-    offenseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Offense', required: true }, // දඩ වර්ගය
-    offenseName: { type: String, required: true }, // ලේසියට නම save කරගමු
+    offenseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Offense', required: true }, // Fine type
+    offenseName: { type: String, required: true }, // Save name for convenience
     amount: { type: Number, required: true },
     place: { type: String, required: true },
-    policeOfficerId: { type: String, default: "Officer-001" }, // දැනට hardcode කරමු
-    status: { type: String, default: PAYMENT.STATUS.UNPAID }, // ගෙව්වද නැද්ද කියන එක
+    policeOfficerId: { type: String, default: "Officer-001" }, // Hardcoded for now
+    status: { type: String, default: PAYMENT.STATUS.UNPAID }, // Payment status
     paymentId: { type: String }, // PayHere Payment ID
-    paidAt: { type: Date }, // ගෙව්ව වෙලාව
-    demeritPoints: { type: Number, default: 0 }, // දඩයට අදාළ ලකුණු ගණන
-    date: { type: Date, default: Date.now } // දඩ ගැහුව වෙලාව
+    paidAt: { type: Date }, // Paid time
+    demeritPoints: { type: Number, default: 0 }, // Demerit points associated with the fine
+    date: { type: Date, default: Date.now } // Time fine was issued
 }, {
     timestamps: true
 });

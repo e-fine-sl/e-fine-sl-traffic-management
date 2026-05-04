@@ -51,23 +51,23 @@ const testPlaces = [
 async function seedData() {
   try {
     // Connect to MongoDB
-    console.log('📡 Connecting to MongoDB...');
+    console.log(' Connecting to MongoDB...');
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/efine');
-    console.log('✅ Connected!\n');
+    console.log(' Connected!\n');
 
     // Get available offenses
-    console.log('📋 Fetching available offenses...');
+    console.log(' Fetching available offenses...');
     const offenses = await Offense.find({}).limit(5);
     if (offenses.length === 0) {
-      console.log('❌ No offenses found in database!');
+      console.log(' No offenses found in database!');
       console.log('   Please add offenses first using the admin panel.\n');
       await mongoose.connection.close();
       return;
     }
-    console.log(`✅ Found ${offenses.length} offenses\n`);
+    console.log(` Found ${offenses.length} offenses\n`);
 
     // Generate test fines
-    console.log(`🔄 Creating ${FINE_COUNT} test fines...\n`);
+    console.log(`� Creating ${FINE_COUNT} test fines...\n`);
     const createdFines = [];
 
     for (let i = 0; i < FINE_COUNT; i++) {
@@ -104,9 +104,9 @@ async function seedData() {
     }
 
     // Verify data
-    console.log('📊 Verification:');
+    console.log('� Verification:');
     const totalFines = await IssuedFine.countDocuments({ policeOfficerId: BADGE_NUMBER });
-    console.log(`✅ Total fines for ${BADGE_NUMBER}: ${totalFines}`);
+    console.log(` Total fines for ${BADGE_NUMBER}: ${totalFines}`);
 
     // Check today's fines
     const today = new Date();
@@ -119,13 +119,13 @@ async function seedData() {
       date: { $gte: today, $lt: tomorrow }
     });
     
-    console.log(`✅ Fines today: ${todayFines.length}`);
+    console.log(` Fines today: ${todayFines.length}`);
 
     const totalAmount = todayFines.reduce((sum, fine) => sum + fine.amount, 0);
-    console.log(`✅ Total amount today: Rs.${totalAmount}\n`);
+    console.log(` Total amount today: Rs.${totalAmount}\n`);
 
     console.log('✨ Seed data created successfully!\n');
-    console.log('📱 Next steps:');
+    console.log('� Next steps:');
     console.log('   1. Ensure you\'re logged in as officer with badge: ' + BADGE_NUMBER);
     console.log('   2. Go to Police Home Screen');
     console.log('   3. Pull down to refresh dashboard');
@@ -133,7 +133,7 @@ async function seedData() {
 
     await mongoose.connection.close();
   } catch (error) {
-    console.error('❌ Error seeding data:', error.message);
+    console.error(' Error seeding data:', error.message);
     console.error(error);
     process.exit(1);
   }

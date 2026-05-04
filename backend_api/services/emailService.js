@@ -92,7 +92,7 @@ function buildActivationEmail(driver, today) {
       <!-- INFO BOX -->
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#E8F5E9;border-radius:8px;border-left:4px solid #4CAF50;margin:0 0 20px;">
         <tr><td style="padding:16px 20px;">
-          <p style="margin:0 0 6px;font-size:14px;color:#333;"><strong>Status:</strong> ✅ ACTIVE</p>
+          <p style="margin:0 0 6px;font-size:14px;color:#333;"><strong>Status:</strong>  ACTIVE</p>
           <p style="margin:0 0 6px;font-size:14px;color:#333;"><strong>Effective:</strong> ${today}</p>
           <p style="margin:0;font-size:14px;color:#333;"><strong>License No:</strong> ${driver.licenseNumber}</p>
         </td></tr>
@@ -159,7 +159,7 @@ function buildSuspensionEmail(driver, today) {
       <!-- INFO BOX -->
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFEBEE;border-radius:8px;border-left:4px solid #F44336;margin:0 0 16px;">
         <tr><td style="padding:16px 20px;">
-          <p style="margin:0 0 6px;font-size:14px;color:#333;"><strong>Status:</strong> 🚫 SUSPENDED</p>
+          <p style="margin:0 0 6px;font-size:14px;color:#333;"><strong>Status:</strong> � SUSPENDED</p>
           <p style="margin:0 0 6px;font-size:14px;color:#333;"><strong>Effective:</strong> ${today}</p>
           <p style="margin:0;font-size:14px;color:#333;"><strong>License No:</strong> ${driver.licenseNumber}</p>
         </td></tr>
@@ -169,7 +169,7 @@ function buildSuspensionEmail(driver, today) {
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFF3E0;border-radius:8px;border-left:4px solid #FF9800;margin:0 0 16px;">
         <tr><td style="padding:14px 20px;">
           <p style="margin:0;font-size:13px;color:#E65100;line-height:1.6;">
-            ⚠️ Operating a vehicle with a suspended license is a serious criminal offense
+             Operating a vehicle with a suspended license is a serious criminal offense
             under Sri Lankan traffic law and may result in arrest and prosecution.
           </p>
         </td></tr>
