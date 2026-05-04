@@ -274,6 +274,13 @@ const reportAccident = async (req, res) => {
     });
     console.log(`${tag} ✅ STEP 9 OK: Saved with ID: ${report._id}`);
 
+    // STEP 9.5 — Emit real-time event to Admin Portal
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('new_accident_report', report);
+      console.log(`${tag} 📡 STEP 9.5 OK: Real-time event emitted`);
+    }
+
     // STEP 10 — Return 201 response
     console.log(`\n${tag} STEP 10: Returning successful response`);
     return res.status(201).json({
