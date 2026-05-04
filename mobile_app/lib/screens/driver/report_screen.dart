@@ -366,7 +366,7 @@ class _ReportScreenState extends State<ReportScreen> {
                           padding: const EdgeInsets.all(2),
                           decoration: const BoxDecoration(
                             color: Colors.red,
-                            shape: BoxCircle(),
+                            shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.close, size: 16, color: Colors.white),
                         ),
