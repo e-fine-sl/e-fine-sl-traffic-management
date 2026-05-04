@@ -105,7 +105,7 @@ class NotificationService {
       color: Color(0xFFD32F2F),           // Red
       playSound: true,
       enableVibration: true,
-      vibrationPattern: Int64List.fromList([0, 500, 250, 500, 250, 500]),
+      vibrationPattern: Int64List.fromList(<int>[0, 500, 250, 500, 250, 500]),
       fullScreenIntent: true,             // Shows even on lock screen
       styleInformation: BigTextStyleInformation(
         '',
