@@ -77,14 +77,35 @@ const policeSchema = mongoose.Schema({
         type: Boolean,
         default: true,
     },
+
+    // ── Session Tracking Fields ────────────────────────────────────────────
+    lastLoginTime: {
+        type: Date,
+        default: null,
+    },
+    lastLoginLocation: {
+        type: {
+            type: String,
+            enum: ['Point'],
+            default: 'Point',
+        },
+        coordinates: {
+            type: [Number],     // [longitude, latitude] — GeoJSON order
+            default: [0.0, 0.0],
+        },
+    },
+    lastLogoutTime: {
+        type: Date,
+        default: null,
+    },
 }, {
     timestamps: true
-   });  // CreatedAt, UpdatedAt 
+});  // CreatedAt, UpdatedAt 
 
 // ── 2dsphere index (REQUIRED for $near / $geoWithin queries) ─────────────────
 // This MUST exist before any geospatial query is run.
-// MongoDB Atlas creates it automatically, but this ensures it exists locally too.
 policeSchema.index({ location: '2dsphere' });
+policeSchema.index({ lastLoginLocation: '2dsphere' });
 console.log('[PoliceModel] 2dsphere index registered on location field.');
 
 

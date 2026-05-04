@@ -13,13 +13,17 @@
 
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart'; // Added for MaterialPageRoute
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'api_logger.dart' as http;
 import 'auth_service.dart';
+import 'notification_service.dart';
 import '../config/app_constants.dart';
+import '../screens/police/accident_alert_screen.dart';
+import 'package:mobile_app/main.dart' show navigatorKey;
 
 class SosService {
   static const String _tag = '[SosService]';
@@ -228,6 +232,55 @@ class SosService {
     }
   }
 
+  /// Signals logout to the backend — records logout time + location.
+  /// Call this BEFORE clearing storage in auth_service.dart logout().
+  Future<void> signalLogout(String badgeNumber) async {
+    debugPrint('$_tag [Logout] signalLogout() called for: $badgeNumber');
+
+    double? lat;
+    double? lng;
+    try {
+      final perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.always || perm == LocationPermission.whileInUse) {
+        final pos = await Geolocator.getCurrentPosition(
+          // ignore: deprecated_member_use
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 6),
+        );
+        lat = pos.latitude;
+        lng = pos.longitude;
+        debugPrint('$_tag ✅ Logout location: lat=$lat, lng=$lng');
+      }
+    } catch (e) {
+      debugPrint('$_tag ⚠️ Could not get logout location (non-fatal): $e');
+    }
+
+    final body = <String, dynamic>{
+      'badgeNumber': badgeNumber,
+      if (lat != null) 'lat': lat,
+      if (lng != null) 'lng': lng,
+    };
+
+    try {
+      final token = await _authService.getToken();
+      final response = await http.put(
+        Uri.parse('$_baseUrl/officer/logout'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+      if (response.statusCode == 200) {
+        debugPrint('$_tag ✅ Logout signal sent to backend successfully');
+      } else {
+        debugPrint('$_tag ⚠️ Logout signal failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('$_tag ⚠️ Logout signal exception (non-fatal): $e');
+    }
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
   // PUBLIC: setupFCMListeners()
   // Call once from main.dart after Firebase.initializeApp().
@@ -247,19 +300,73 @@ class SosService {
 
     // Foreground messages (app is open)
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('\n$_tag 📨 FCM FOREGROUND MESSAGE RECEIVED');
+      debugPrint('\n$_tag [FCM] FOREGROUND MESSAGE RECEIVED');
       debugPrint('$_tag    Title: ${message.notification?.title}');
       debugPrint('$_tag    Body:  ${message.notification?.body}');
       debugPrint('$_tag    Data:  ${message.data}');
-      // flutter_local_notifications can be triggered here to show a banner
-      // The notification_service.dart already handles this pattern
+      
+      // ── Handle ACCIDENT_ALERT ────────────────────────────────
+      final type = message.data['type'] as String? ?? '';
+      if (type == 'ACCIDENT_ALERT') {
+        debugPrint('$_tag [Accident] ACCIDENT_ALERT received — showing local notification');
+        
+        // Show local high-priority notification
+        NotificationService().showAccidentNotification(
+          title: message.notification?.title ?? 'Accident Alert',
+          body: message.notification?.body ?? 'An accident has been reported nearby',
+          payload: jsonEncode(message.data),
+        );
+
+        // Navigate to AccidentAlertScreen if app is open
+        final data = message.data;
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => AccidentAlertScreen(
+              accidentType: data['accidentType'] ?? 'Unknown',
+              driverName: data['driverName'] ?? '',
+              licenseNumber: data['licenseNumber'] ?? '',
+              driverPhone: data['driverPhone'] ?? '',
+              description: data['description'] ?? '',
+              lat: double.tryParse(data['lat'] ?? '0') ?? 0.0,
+              lng: double.tryParse(data['lng'] ?? '0') ?? 0.0,
+              province: data['province'] ?? '',
+              district: data['district'] ?? '',
+              policeDivision: data['policeDivision'] ?? '',
+              reportedAt: data['reportedAt'] ?? '',
+              reportId: data['reportId'] ?? '',
+            ),
+          ),
+        );
+      }
     });
 
     // Background tap (app was in background, user tapped the notification)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint('$_tag 📲 User TAPPED background notification:');
       debugPrint('$_tag    Data: ${message.data}');
-      // Navigate to SOS response screen here if desired
+      
+      final type = message.data['type'] as String? ?? '';
+      if (type == 'ACCIDENT_ALERT') {
+        final data = message.data;
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => AccidentAlertScreen(
+              accidentType: data['accidentType'] ?? 'Unknown',
+              driverName: data['driverName'] ?? '',
+              licenseNumber: data['licenseNumber'] ?? '',
+              driverPhone: data['driverPhone'] ?? '',
+              description: data['description'] ?? '',
+              lat: double.tryParse(data['lat'] ?? '0') ?? 0.0,
+              lng: double.tryParse(data['lng'] ?? '0') ?? 0.0,
+              province: data['province'] ?? '',
+              district: data['district'] ?? '',
+              policeDivision: data['policeDivision'] ?? '',
+              reportedAt: data['reportedAt'] ?? '',
+              reportId: data['reportId'] ?? '',
+            ),
+          ),
+        );
+      }
     });
 
     debugPrint('$_tag ✅ FCM listeners registered.');

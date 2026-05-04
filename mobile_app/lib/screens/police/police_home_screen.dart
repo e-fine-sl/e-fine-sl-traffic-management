@@ -469,6 +469,10 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
                   leading: const Icon(Icons.logout, color: Colors.red),
                   title: const Text('Logout', style: TextStyle(color: Colors.red)),
                   onTap: () async {
+                    // Signal backend BEFORE clearing storage (storage has badgeNumber needed for API call)
+                    if (badgeNumber.isNotEmpty) {
+                      await _sosService.signalLogout(badgeNumber);
+                    }
                     await _authService.logout();
                     if (context.mounted) {
                       Navigator.of(context).pushAndRemoveUntil(

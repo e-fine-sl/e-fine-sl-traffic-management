@@ -156,9 +156,14 @@ const reportAccident = async (req, res) => {
     const geoData = resolveLocation(latitude, longitude);
     console.log(`${tag}  STEP 3 OK: ${geoData.province} / ${geoData.district} / ${geoData.policeDivision}`);
 
-    // STEP 4 — Find nearby police officers (5 km $near query)
-    console.log(`\n${tag} STEP 4: Finding nearby police officers...`);
-    const nearbyOfficers = await Police.find({
+    // STEP 4 — Find nearby police officers (5 km radius)
+    console.log(`\n${tag} STEP 4: Finding nearby police officers (including grace window)...`);
+    
+    const GRACE_WINDOW_MINUTES = 20;
+    const graceWindowCutoff = new Date(Date.now() - GRACE_WINDOW_MINUTES * 60 * 1000);
+
+    // Query 1: Active officers within 5 km
+    const activeOfficers = await Police.find({
       location: {
         $near: {
           $geometry: { type: 'Point', coordinates: [longitude, latitude] },
@@ -168,8 +173,35 @@ const reportAccident = async (req, res) => {
       isActive: true
     }).select('name badgeNumber fcmToken');
     
+    // Query 2: Recently logged-out officers (within 20-min grace window)
+    // whose LAST LOGIN LOCATION was within 5 km
+    const graceOfficers = await Police.find({
+      lastLoginLocation: {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [longitude, latitude] },
+          $maxDistance: ACCIDENT_RADIUS_METERS
+        }
+      },
+      isActive: false,
+      lastLogoutTime: { $gte: graceWindowCutoff }
+    }).select('name badgeNumber fcmToken');
+
+    // Merge and deduplicate by badgeNumber
+    const seenBadges = new Set();
+    const nearbyOfficers = [];
+    
+    for (const o of [...activeOfficers, ...graceOfficers]) {
+      if (!seenBadges.has(o.badgeNumber)) {
+        seenBadges.add(o.badgeNumber);
+        nearbyOfficers.push(o);
+      }
+    }
+
     const validTokens = nearbyOfficers.map(o => o.fcmToken).filter(t => t && t.length > 10);
-    console.log(`${tag}  STEP 4 OK: Found ${nearbyOfficers.length} officer(s), ${validTokens.length} valid token(s)`);
+    console.log(`${tag}  STEP 4 OK:`);
+    console.log(`${tag}    Active officers: ${activeOfficers.length}`);
+    console.log(`${tag}    Grace window officers: ${graceOfficers.length}`);
+    console.log(`${tag}    Total unique: ${nearbyOfficers.length}, valid tokens: ${validTokens.length}`);
 
     // STEP 5 — Find police station email
     console.log(`\n${tag} STEP 5: Finding police station email...`);
