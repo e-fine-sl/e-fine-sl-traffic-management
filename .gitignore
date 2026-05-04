@@ -84,3 +84,7 @@ mobile_app/build/
 # RSA Keys - never commit these
 *.pem
 .aider*
+
+
+e-fine-sl-firebase-adminsdk-fbsvc-af71a5d66b.json
+firebase-service-account.json

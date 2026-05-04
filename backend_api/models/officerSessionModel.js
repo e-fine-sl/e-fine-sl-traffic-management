@@ -56,7 +56,6 @@ const officerSessionSchema = new mongoose.Schema({
 });
 
 // Indexes
-officerSessionSchema.index({ badgeNumber: 1 });
 officerSessionSchema.index({ loginTime: -1 });
 officerSessionSchema.index({ loginLocation: '2dsphere' });
 
