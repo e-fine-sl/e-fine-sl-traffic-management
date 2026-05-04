@@ -1,6 +1,6 @@
 const express    = require('express');
 const router     = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+const { protectAdmin } = require('../middleware/adminMiddleware');
 const { reportAccident, getAccidentReports, getAccidentReportById,
         updateAccidentStatus, notifyPoliceDivision, getAccidentStats
       } = require('../controllers/accidentController');
@@ -9,10 +9,10 @@ const { reportAccident, getAccidentReports, getAccidentReportById,
 router.post('/report', reportAccident);
 
 // Admin routes — all protected
-router.get('/reports/stats',                protect, getAccidentStats);
-router.get('/reports',                      protect, getAccidentReports);
-router.get('/reports/:id',                  protect, getAccidentReportById);
-router.patch('/reports/:id/status',         protect, updateAccidentStatus);
-router.post('/reports/:id/notify-division', protect, notifyPoliceDivision);
+router.get('/reports/stats',                protectAdmin, getAccidentStats);
+router.get('/reports',                      protectAdmin, getAccidentReports);
+router.get('/reports/:id',                  protectAdmin, getAccidentReportById);
+router.patch('/reports/:id/status',         protectAdmin, updateAccidentStatus);
+router.post('/reports/:id/notify-division', protectAdmin, notifyPoliceDivision);
 
 module.exports = router;
