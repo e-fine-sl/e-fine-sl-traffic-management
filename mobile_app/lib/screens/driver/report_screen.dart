@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../services/accident_service.dart';
 import '../../config/app_constants.dart';
@@ -22,19 +24,67 @@ class _ReportScreenState extends State<ReportScreen> {
   String? _errorMessage;
   final AccidentService _accidentService = AccidentService();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final ImagePicker _picker = ImagePicker();
+  final List<File> _selectedImages = [];
 
   final List<Map<String, String>> _accidentTypes = [
-    { 'emoji': '🚗', 'label': 'Vehicle Collision' },
-    { 'emoji': '🚶', 'label': 'Pedestrian Accident' },
-    { 'emoji': '🏃', 'label': 'Hit & Run' },
-    { 'emoji': '⚠️', 'label': 'Road Hazard / Obstruction' },
-    { 'emoji': '📋', 'label': 'Other' },
+    { 
+      'emoji': '🚗', 
+      'label': 'Vehicle Collision', 
+      'desc': 'Crash between cars, bikes, or trucks' 
+    },
+    { 
+      'emoji': '🚶', 
+      'label': 'Pedestrian Accident', 
+      'desc': 'Accident involving a person walking' 
+    },
+    { 
+      'emoji': '🏃', 
+      'label': 'Hit & Run', 
+      'desc': 'Vehicle hit someone and drove away' 
+    },
+    { 
+      'emoji': '⚠️', 
+      'label': 'Road Hazard', 
+      'desc': 'Blocked road, fallen tree, or potholes' 
+    },
+    { 
+      'emoji': '📋', 
+      'label': 'Other', 
+      'desc': 'Any other emergency not listed' 
+    },
   ];
 
   @override
   void dispose() {
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    if (_selectedImages.length >= 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You can only add up to 3 images'))
+      );
+      return;
+    }
+
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70, // Compress for faster upload
+    );
+
+    if (image != null) {
+      setState(() {
+        _selectedImages.add(File(image.path));
+      });
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+    });
   }
 
   Future<void> _submitReport() async {
@@ -93,6 +143,7 @@ class _ReportScreenState extends State<ReportScreen> {
         lng: position.longitude,
         accidentType: _selectedAccidentType!,
         description: desc.isEmpty ? null : desc,
+        images: _selectedImages.isNotEmpty ? _selectedImages : null,
       );
 
       if (result['success'] == true) {
@@ -214,18 +265,54 @@ class _ReportScreenState extends State<ReportScreen> {
           runSpacing: 8,
           children: _accidentTypes.map((option) {
             final isSelected = _selectedAccidentType == option['label'];
-            return FilterChip(
-              label: Text('${option['emoji']} ${option['label']}'),
-              selected: isSelected,
-              onSelected: (bool selected) {
+            return InkWell(
+              onTap: () {
                 setState(() {
-                  _selectedAccidentType = selected ? option['label'] : null;
+                  _selectedAccidentType = isSelected ? null : option['label'];
                 });
               },
-              selectedColor: Colors.red[600],
-              labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black87),
-              backgroundColor: Colors.white,
-              shape: StadiumBorder(side: BorderSide(color: isSelected ? Colors.transparent : Colors.grey.shade300)),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.red.shade50 : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected ? Colors.red.shade300 : Colors.grey.shade200,
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Text(option['emoji']!, style: const TextStyle(fontSize: 24)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            option['label']!,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isSelected ? Colors.red.shade800 : Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            option['desc']!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isSelected ? Colors.red.shade600 : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isSelected)
+                      Icon(Icons.check_circle, color: Colors.red.shade600, size: 20),
+                  ],
+                ),
+              ),
             );
           }).toList(),
         ),
@@ -238,11 +325,72 @@ class _ReportScreenState extends State<ReportScreen> {
           maxLength: 200,
           decoration: InputDecoration(
             labelText: 'Additional Details (Optional)',
-            hintText: 'Describe what happened, road conditions, number of vehicles...',
+            hintText: 'Use English or Sinhala (ඉංග්‍රීසි හෝ සිංහල)',
+            helperText: 'You can describe in English or Sinhala language.',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
+
+        // SECTION 3.5 — Image Picker
+        const Text('Attach Photos (Optional - Max 3)', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+        const SizedBox(height: 12),
+        if (_selectedImages.isNotEmpty)
+          Container(
+            height: 100,
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _selectedImages.length,
+              itemBuilder: (context, index) {
+                return Stack(
+                  children: [
+                    Container(
+                      width: 100,
+                      height: 100,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        image: DecorationImage(
+                          image: FileImage(_selectedImages[index]),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 8,
+                      child: GestureDetector(
+                        onTap: () => _removeImage(index),
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close, size: 16, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _pickImage,
+            icon: const Icon(Icons.add_a_photo),
+            label: Text(_selectedImages.isEmpty ? 'Add Photos' : 'Add More Photos'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
 
         // SECTION 4 — Location Info Card
         Container(

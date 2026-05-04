@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:path/path.dart' as p;
+import 'package:http/http.dart' as http_pkg;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
@@ -52,30 +55,51 @@ class AccidentService {
     required double lng,
     required String accidentType,
     String? description,
+    List<File>? images,
   }) async {
     debugPrint('\n${'═' * 55}');
     debugPrint('$_tag 🚨 REPORT ACCIDENT: $accidentType');
     debugPrint('$_tag Location: $lat, $lng');
+    if (images != null) debugPrint('$_tag Images: ${images.length}');
     debugPrint('═' * 55);
-
-    final body = {
-      'licenseNumber': licenseNumber,
-      'lat': lat,
-      'lng': lng,
-      'accidentType': accidentType,
-      if (description != null && description.isNotEmpty) 'description': description,
-    };
 
     try {
       final token = await _authService.getToken();
-      final response = await http.post(
-        Uri.parse(ApiConstants.accidentReportUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(body),
-      );
+      
+      final request = http_pkg.MultipartRequest('POST', Uri.parse(ApiConstants.accidentReportUrl));
+      
+      // Add Headers
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      // Add Fields
+      request.fields['licenseNumber'] = licenseNumber;
+      request.fields['lat'] = lat.toString();
+      request.fields['lng'] = lng.toString();
+      request.fields['accidentType'] = accidentType;
+      if (description != null && description.isNotEmpty) {
+        request.fields['description'] = description;
+      }
+
+      // Add Files
+      if (images != null && images.isNotEmpty) {
+        for (var image in images) {
+          final stream = http_pkg.ByteStream(image.openRead());
+          final length = await image.length();
+          final multipartFile = http_pkg.MultipartFile(
+            'images',
+            stream,
+            length,
+            filename: p.basename(image.path),
+          );
+          request.files.add(multipartFile);
+        }
+      }
+
+      // Send using our logger client to keep consistent logging
+      final streamedResponse = await http.httpLogger.send(request);
+      final response = await http_pkg.Response.fromStream(streamedResponse);
 
       debugPrint('$_tag HTTP Status: ${response.statusCode}');
       debugPrint('$_tag Response: ${response.body}');
@@ -84,21 +108,16 @@ class AccidentService {
         final data = jsonDecode(response.body);
         return {
           'success': true,
-          'officersNotified': data['debug']['officersNotified'] ?? 0,
-          'province': data['debug']['province'] ?? '',
-          'district': data['debug']['district'] ?? '',
-          'policeDivision': data['debug']['policeDivision'] ?? '',
+          'officersNotified': data['debug']?['officersNotified'] ?? 0,
+          'province': data['debug']?['province'] ?? '',
+          'district': data['debug']?['district'] ?? '',
+          'policeDivision': data['debug']?['policeDivision'] ?? '',
           'reportId': data['reportId'] ?? '',
           'message': data['message'] ?? 'Alert sent'
         };
-      } else if (response.statusCode == 404) {
-        final data = jsonDecode(response.body);
-        return {'success': false, 'message': data['message'] ?? 'Driver not found'};
-      } else if (response.statusCode == 400) {
-        final data = jsonDecode(response.body);
-        return {'success': false, 'message': data['message'] ?? 'Invalid request'};
       } else {
-        return {'success': false, 'message': 'Server error (${response.statusCode})'};
+        final data = jsonDecode(response.body);
+        return {'success': false, 'message': data['message'] ?? 'Failed to send alert (${response.statusCode})'};
       }
     } catch (e) {
       debugPrint('$_tag ❌ EXCEPTION: $e');
