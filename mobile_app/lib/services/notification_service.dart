@@ -95,14 +95,14 @@ class NotificationService {
   }) async {
     // Show regardless of _enabled preference — safety alerts always show
     
-    const androidDetails = AndroidNotificationDetails(
+    final androidDetails = AndroidNotificationDetails(
       'accident_alerts_channel',          // channel ID — distinct from fines
       'Accident Alerts',                  // channel name
       channelDescription: 'Real-time accident alerts for nearby incidents',
       importance: Importance.max,         // Highest possible
       priority: Priority.max,             // Highest possible
       icon: '@mipmap/launcher_icon',
-      color: Color(0xFFD32F2F),           // Red
+      color: const Color(0xFFD32F2F),     // Red
       playSound: true,
       enableVibration: true,
       vibrationPattern: Int64List.fromList(<int>[0, 500, 250, 500, 250, 500]),
@@ -115,7 +115,7 @@ class NotificationService {
       ),
     );
 
-    const details = NotificationDetails(android: androidDetails);
+    final details = NotificationDetails(android: androidDetails);
 
     await _plugin.show(id, title, body, details, payload: payload);
     debugPrint('[NotificationService] [Accident] Showed ACCIDENT notification: $title');
