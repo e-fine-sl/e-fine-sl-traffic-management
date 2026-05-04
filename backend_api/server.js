@@ -1,4 +1,6 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
@@ -8,6 +10,17 @@ dotenv.config();
 connectDB();
 
 const app = express();
+const server = http.createServer(app);
+
+// Initialize Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: '*', // In production, restrict this to the Admin Portal domain
+    methods: ['GET', 'POST', 'PATCH']
+  }
+});
+app.set('io', io);
+
 const { APP } = require('./config/constants');
 
 // Enable CORS
@@ -67,7 +80,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || APP.PORT;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running in ${APP.ENV} mode on port ${PORT}`);
 });
 
