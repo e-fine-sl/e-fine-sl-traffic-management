@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../config/app_constants.dart';
 
 class PaymentHistoryCard extends StatelessWidget {
@@ -91,11 +91,11 @@ class PaymentHistoryCard extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.large)),
-        title: const Text('Payment Reference ID'),
+        title: Text('payment_history.ref_dialog_title'.tr()),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('This is the unique transaction ID for your payment.'),
+            Text('payment_history.ref_dialog_content'.tr()),
             const SizedBox(height: AppSpacing.md),
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
@@ -118,18 +118,18 @@ class PaymentHistoryCard extends StatelessWidget {
         actions: [
           TextButton.icon(
             icon: const Icon(Icons.copy),
-            label: const Text('Copy'),
+            label: Text('payment_history.copy'.tr()),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: fullId));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Copied to Clipboard')),
+                SnackBar(content: Text('payment_history.copied'.tr())),
               );
               Navigator.pop(ctx);
             },
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
+            child: Text('payment_history.close'.tr()),
           ),
         ],
       ),
@@ -224,7 +224,7 @@ class PaymentHistoryCard extends StatelessWidget {
                           if (shortId.isNotEmpty) ...[
                             const SizedBox(height: 2),
                             Text(
-                              'ID: $shortId',
+                              'payment_history.card_id'.tr(args: [shortId]),
                               style: TextStyle(
                                 fontSize: AppTextSize.bodySmall,
                                 color: AppTheme.textHint(context),
@@ -256,9 +256,9 @@ class PaymentHistoryCard extends StatelessWidget {
                             borderRadius:
                                 BorderRadius.circular(AppRadius.circle),
                           ),
-                          child: const Text(
-                            'PAID',
-                            style: TextStyle(
+                          child: Text(
+                            'payment_history.badge_paid'.tr(),
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: AppTextSize.caption,
                               fontWeight: FontWeight.bold,
@@ -276,27 +276,27 @@ class PaymentHistoryCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
 
                 // ── SECTION A: ISSUED DETAILS ────────────────────
-                _sectionLabel(context, '📋  Issued Details'),
+                _sectionLabel(context, 'payment_history.issued_details'.tr()),
                 Row(
                   children: [
                     _infoChip(
                       context: context,
                       icon: Icons.calendar_today,
-                      label: 'Date',
+                      label: 'payment_history.date'.tr(),
                       value: issuedDate,
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     _infoChip(
                       context: context,
                       icon: Icons.access_time,
-                      label: 'Time',
+                      label: 'payment_history.time'.tr(),
                       value: issuedTime,
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     _infoChip(
                       context: context,
                       icon: Icons.location_on,
-                      label: 'Location',
+                      label: 'payment_history.location'.tr(),
                       value: shortLocation,
                     ),
                   ],
@@ -305,27 +305,27 @@ class PaymentHistoryCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
 
                 // ── SECTION B: PAYMENT DETAILS ───────────────────
-                _sectionLabel(context, '💳  Payment Details'),
+                _sectionLabel(context, 'payment_history.payment_details'.tr()),
                 Row(
                   children: [
                     _infoChip(
                       context: context,
                       icon: Icons.event_available,
-                      label: 'Paid Date',
+                      label: 'payment_history.paid_date'.tr(),
                       value: paidDate,
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     _infoChip(
                       context: context,
                       icon: Icons.schedule,
-                      label: 'Paid Time',
+                      label: 'payment_history.paid_time'.tr(),
                       value: paidTime,
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     _infoChip(
                       context: context,
                       icon: Icons.receipt,
-                      label: 'Ref ID',
+                      label: 'payment_history.ref_id'.tr(),
                       value: displayPid,
                       trailing: GestureDetector(
                         onTap: () => _showRefIdDialog(context, pid),

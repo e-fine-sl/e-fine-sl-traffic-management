@@ -233,18 +233,61 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         elevation: 0,
         title: const Text("e-Fine SL", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
-          // --- LANGUAGE CHANGE BUTTON 
-          TextButton(
-            onPressed: () {
-              if (context.locale.languageCode == 'en') {
-                context.setLocale(const Locale('si'));
-              } else {
-                context.setLocale(const Locale('en'));
-              }
-            },
-            child: Text(
-              context.locale.languageCode == 'en' ? 'සිං' : 'ENG',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          // --- LANGUAGE CHANGE DROPDOWN ---
+          DropdownButtonHideUnderline(
+            child: DropdownButton<Locale>(
+              value: context.locale,
+              icon: const Padding(
+                padding: EdgeInsets.only(left: 4),
+                child: Icon(Icons.language, color: Colors.white, size: 20),
+              ),
+              dropdownColor: AppColors.primaryGreen,
+              selectedItemBuilder: (BuildContext context) {
+                return const [Locale('en'), Locale('si'), Locale('ta')].map((Locale locale) {
+                  String label = 'ENG';
+                  if (locale.languageCode == 'si') label = 'සිං';
+                  if (locale.languageCode == 'ta') label = 'தமிழ்';
+                  return Container(
+                    alignment: Alignment.center,
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  );
+                }).toList();
+              },
+              items: const [
+                DropdownMenuItem(
+                  value: Locale('en'),
+                  child: Text(
+                    'English',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: Locale('si'),
+                  child: Text(
+                    'සිංහල',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: Locale('ta'),
+                  child: Text(
+                    'தமிழ்',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+              onChanged: (Locale? newLocale) {
+                if (newLocale != null) {
+                  context.setLocale(newLocale);
+                }
+              },
             ),
           ),
           
