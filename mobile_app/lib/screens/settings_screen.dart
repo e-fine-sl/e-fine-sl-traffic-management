@@ -74,7 +74,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         centerTitle: true,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         children: [
           // Section 1: Account
           _buildSectionHeader("Account"),
@@ -85,19 +85,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: _navigateToProfile,
           ),
 
-          const Divider(),
+          const Divider(indent: 24, endIndent: 24),
 
           // Section 2: Appearance
           _buildSectionHeader("Appearance"),
           // Dark Mode
-          SwitchListTile(
-            secondary: const Icon(Icons.dark_mode_outlined, color: AppColors.primaryGreen),
-            title: const Text("Dark Mode", style: TextStyle(fontWeight: FontWeight.bold)),
+          _buildSwitchListTile(
+            icon: Icons.dark_mode_outlined,
+            title: "Dark Mode",
             value: isDark,
             onChanged: (val) {
               context.read<ThemeProvider>().toggleTheme(val);
             },
-            activeThumbColor: AppColors.primaryGreen,
           ),
           // Language
           _buildListTile(
@@ -107,22 +106,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: _showLanguageDialog
           ),
 
-          const Divider(),
+          const Divider(indent: 24, endIndent: 24),
 
           // Section 3: General
           _buildSectionHeader("General"),
-          SwitchListTile(
-            secondary: const Icon(Icons.notifications_outlined, color: AppColors.primaryGreen),
-            title: const Text("Notifications", style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(
-              _notificationsEnabled
-                  ? "Show fines in device notification bar"
-                  : "Device notifications disabled",
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
+          _buildSwitchListTile(
+            icon: Icons.notifications_outlined,
+            title: "Notifications",
+            subtitle: _notificationsEnabled
+                ? "Show fines in device notification bar"
+                : "Device notifications disabled",
             value: _notificationsEnabled,
             onChanged: _toggleNotifications,
-            activeThumbColor: AppColors.primaryGreen,
           ),
           _buildListTile(
             icon: Icons.info_outline, 
@@ -137,18 +132,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             }
           ),
 
-          const Divider(),
+          const Divider(indent: 24, endIndent: 24),
 
           // Section 4: Logout
           const SizedBox(height: 20),
           ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: AppColors.errorRed.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.logout, color: AppColors.errorRed),
+              child: const Icon(Icons.logout, color: AppColors.errorRed, size: 24),
             ),
             title: const Text("Logout", style: TextStyle(color: AppColors.errorRed, fontWeight: FontWeight.bold)),
             onTap: _logout,
@@ -160,25 +156,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(top: 10, bottom: 10),
-      child: Text(title, style: TextStyle(color: Theme.of(context).hintColor, fontWeight: FontWeight.bold, fontSize: 13)),
+      padding: const EdgeInsets.only(left: 24, right: 24, top: 16, bottom: 8),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          color: Theme.of(context).hintColor, 
+          fontWeight: FontWeight.bold, 
+          fontSize: 11,
+          letterSpacing: 1.1,
+        )
+      ),
     );
   }
 
   Widget _buildListTile({required IconData icon, required String title, String? subtitle, required VoidCallback onTap}) {
     return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: AppColors.primaryGreen.withValues(alpha: 0.1), 
           borderRadius: BorderRadius.circular(8)
         ),
-        child: Icon(icon, color: AppColors.primaryGreen),
+        child: Icon(icon, color: AppColors.primaryGreen, size: 24),
       ),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: subtitle != null ? Text(subtitle) : null,
       trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
       onTap: onTap,
+    );
+  }
+
+  Widget _buildSwitchListTile({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.primaryGreen.withValues(alpha: 0.1), 
+          borderRadius: BorderRadius.circular(8)
+        ),
+        child: Icon(icon, color: AppColors.primaryGreen, size: 24),
+      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      subtitle: subtitle != null ? Text(subtitle) : null,
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeThumbColor: Colors.white,
+        activeTrackColor: AppColors.primaryGreen,
+        inactiveThumbColor: Colors.grey[300],
+        inactiveTrackColor: Colors.grey[400],
+      ),
     );
   }
 
