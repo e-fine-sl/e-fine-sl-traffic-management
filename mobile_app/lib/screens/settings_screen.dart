@@ -91,12 +91,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildSectionHeader("Appearance"),
           // Dark Mode
           SwitchListTile(
-            secondary: Icon(Icons.dark_mode_outlined, color: Colors.purple[300]),
+            secondary: const Icon(Icons.dark_mode_outlined, color: AppColors.primaryGreen),
             title: const Text("Dark Mode", style: TextStyle(fontWeight: FontWeight.bold)),
             value: isDark,
             onChanged: (val) {
               context.read<ThemeProvider>().toggleTheme(val);
             },
+            activeThumbColor: AppColors.primaryGreen,
           ),
           // Language
           _buildListTile(
@@ -165,15 +166,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildListTile({required IconData icon, required String title, String? subtitle, required VoidCallback onTap}) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isDark ? Colors.grey[800] : Colors.grey[200], 
+          color: AppColors.primaryGreen.withValues(alpha: 0.1), 
           borderRadius: BorderRadius.circular(8)
         ),
-        child: Icon(icon, color: isDark ? Colors.white : Colors.black87),
+        child: Icon(icon, color: AppColors.primaryGreen),
       ),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: subtitle != null ? Text(subtitle) : null,
@@ -183,7 +183,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _navigateToProfile() async {
-    showDialog(context: context, barrierDismissible: false, builder: (c) => const Center(child: CircularProgressIndicator()));
+    showDialog(context: context, barrierDismissible: false, builder: (c) => const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen)));
     
     try {
       final data = await _authService.getUserProfile();

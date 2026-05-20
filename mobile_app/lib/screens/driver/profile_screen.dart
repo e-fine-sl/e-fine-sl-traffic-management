@@ -197,7 +197,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const CircleAvatar(
                             radius: 15,
                             backgroundColor: Colors.white,
-                            child: Icon(Icons.verified, color: Colors.blue, size: 20),
+                            child: Icon(Icons.verified, color: AppColors.primaryGreen, size: 20),
                           )
                       ],
                     ),
@@ -284,7 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           // Status Icon
                           Icon(
                             isActive ? Icons.check_circle : Icons.block,
-                            color: isActive ? AppColors.successGreen : AppColors.errorRed,
+                            color: isActive ? AppColors.primaryGreen : AppColors.errorRed,
                             size: 30,
                           ),
                         ],
@@ -316,7 +316,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ? const Center(
                               child: Padding(
                                 padding: EdgeInsets.all(10.0),
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryGreen),
                               ),
                             )
                           : _vehicleClasses.isEmpty
@@ -343,7 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           Text("residential_address".tr(), style: const TextStyle(color: Colors.grey, fontSize: 12)),
                           IconButton(
-                            icon: const Icon(Icons.edit, size: 18, color: Colors.blue),
+                            icon: const Icon(Icons.edit, size: 18, color: AppColors.primaryGreen),
                             onPressed: _showEditAddressDialog,
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
@@ -434,6 +434,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.primaryGreen),
             onPressed: () => Navigator.pop(ctx),
             child: const Text("Close"),
           ),
@@ -494,6 +495,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Text("cancel".tr()),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () async {
               debugPrint('$_tag Profile update submitted.');
               final nav = Navigator.of(ctx);
@@ -692,10 +697,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.1),
+              color: AppColors.primaryGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: Colors.green[700], size: 20),
+            child: Icon(icon, color: AppColors.primaryGreen, size: 20),
           ),
           const SizedBox(width: 15),
           Column(
