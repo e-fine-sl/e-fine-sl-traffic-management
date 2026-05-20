@@ -172,6 +172,7 @@ class PrefKeys {
   static const String profileData  = 'profile_data';
   static const String historyCache  = 'driver_history_cache';
   static const String idleTimeoutMinutes = 'idle_timeout_minutes';
+  static const String sessionStartTime = 'session_start_time';
 }
 
 // ── EXTERNAL MEDIA/ASSETS ───────────────────────────────────────
@@ -225,7 +226,7 @@ class AppTheme {
 
   /// Input field fill colour (light grey in light, dark grey in dark)
   static Color inputFill(BuildContext context) =>
-      _isDark(context) ? const Color(0xFF2C2C2C) : const Color(0xFFF2F2F2);
+      _isDark(context) ? const Color(0xFF2C2C2C) : const Color.fromARGB(255, 213, 211, 211);
 
   /// Strong primary text (black87 / white)
   static Color textPrimary(BuildContext context) =>

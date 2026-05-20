@@ -60,19 +60,37 @@ class _InteractionListenerState extends State<InteractionListener> with WidgetsB
   }
 
   Future<void> _checkTimeout() async {
-    final prefs = await SharedPreferences.getInstance();
-    final timeoutMinutes = prefs.getInt(PrefKeys.idleTimeoutMinutes) ?? 5;
     final token = await _storage.read(key: PrefKeys.accessToken);
+    if (token == null) return; 
+
+    // 1. 2-Day Session Expiration Check
+    final startTimeStr = await _storage.read(key: PrefKeys.sessionStartTime);
+    if (startTimeStr != null) {
+      try {
+        final startTime = DateTime.parse(startTimeStr);
+        final difference = DateTime.now().difference(startTime);
+        if (difference.inDays >= 2) {
+          debugPrint('[InteractionListener] 2-Day Session Expired. Logging out...');
+          await _handleLogout();
+          return;
+        }
+      } catch (e) {
+        debugPrint('[InteractionListener] Error parsing session start time: $e');
+      }
+    }
+
+    // 2. Idle Timeout Check (if enabled)
+    final prefs = await SharedPreferences.getInstance();
+    final timeoutMinutes = prefs.getInt(PrefKeys.idleTimeoutMinutes) ?? 0;
     
-    // Feature disabled or not logged in
-    if (timeoutMinutes <= 0 || token == null) return; 
+    if (timeoutMinutes <= 0) return; 
 
     final now = DateTime.now();
     final difference = now.difference(_lastInteraction).inMinutes;
 
     if (difference >= timeoutMinutes) {
       debugPrint('[InteractionListener] IDLE TIMEOUT REACHED ($difference min). Logging out...');
-      _handleLogout();
+      await _handleLogout();
     }
   }
 

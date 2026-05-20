@@ -44,6 +44,21 @@ class AuthService {
   /// If the stored access token is expired, automatically fetches a new one
   /// using the refresh token — transparent to the caller.
   Future<String?> getToken() async {
+    // Check if the 2-day session has expired
+    final startTimeStr = await _storage.read(key: PrefKeys.sessionStartTime);
+    if (startTimeStr != null) {
+      try {
+        final startTime = DateTime.parse(startTimeStr);
+        if (DateTime.now().difference(startTime).inDays >= 2) {
+          debugPrint('[AuthService] 2-day session expired during getToken(). Logging out...');
+          await logout();
+          return null;
+        }
+      } catch (e) {
+        debugPrint('[AuthService] Error checking session expiry in getToken(): $e');
+      }
+    }
+
     String? token = await _storage.read(key: PrefKeys.accessToken);
     if (token == null) return null;
 
@@ -58,6 +73,50 @@ class AuthService {
       }
     }
     return token;
+  }
+
+  /// Checks if the current session is active and has not exceeded the 2-day limit.
+  /// If expired, it triggers a logout and returns null.
+  /// If valid, it returns the user's role string.
+  Future<String?> checkSession() async {
+    try {
+      final startTimeStr = await _storage.read(key: PrefKeys.sessionStartTime);
+      final accessToken = await _storage.read(key: PrefKeys.accessToken);
+      final role = await _storage.read(key: PrefKeys.userRole);
+
+      if (startTimeStr == null || accessToken == null || role == null) {
+        debugPrint('[AuthService] No active session found');
+        return null;
+      }
+
+      final startTime = DateTime.parse(startTimeStr);
+      final difference = DateTime.now().difference(startTime);
+
+      if (difference.inDays >= 2) {
+        debugPrint('[AuthService] Session expired (2 days reached). Logging out...');
+        await logout();
+        return null;
+      }
+
+      // Transparently refresh access token if it's expired but session is under 2 days
+      if (JwtDecoder.isExpired(accessToken)) {
+        debugPrint('[AuthService] Access token expired during checkSession, attempting refresh...');
+        try {
+          await refreshAccessToken();
+        } catch (e) {
+          debugPrint('[AuthService] Access token auto-refresh failed: $e. Logging out...');
+          await logout();
+          return null;
+        }
+      }
+
+      debugPrint('[AuthService] Session is valid. Role: $role');
+      return role;
+    } catch (e) {
+      debugPrint('[AuthService] Error in checkSession: $e. Logging out...');
+      await logout();
+      return null;
+    }
   }
 
   /// Calls auth-service /auth/refresh to get a new access token.
@@ -118,6 +177,7 @@ class AuthService {
       await _storage.write(key: PrefKeys.accessToken,  value: data['accessToken']  as String);
       await _storage.write(key: PrefKeys.refreshToken, value: data['refreshToken'] as String);
       await _storage.write(key: PrefKeys.sessionToken, value: data['sessionToken'] as String);
+      await _storage.write(key: PrefKeys.sessionStartTime, value: DateTime.now().toIso8601String());
 
       // Also store user info for quick access without an API call
       await _storage.write(key: PrefKeys.userName, value: user['name'] as String? ?? '');

@@ -156,6 +156,14 @@ const registerPolice = async (req, res) => {
       return res.status(HTTP.BAD_REQUEST).json({ message: `${duplicateField} already registered for an officer` });
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // NEW: Global Uniqueness Check (Email only)
+    // ─────────────────────────────────────────────────────────────────────
+    const emailUsedByDriver = await Driver.findOne({ email }).select('_id');
+    if (emailUsedByDriver) {
+      return res.status(HTTP.BAD_REQUEST).json({ message: 'Email already registered as a Driver' });
+    }
+
     // Decrypt RSA-encrypted password sent from Flutter
     let plainPassword;
     try {
@@ -255,6 +263,15 @@ const registerDriver = async (req, res) => {
 
       console.warn(`[AUTH/REGISTER-DRIVER] Duplicate field attempted: ${duplicateField}`);
       return res.status(HTTP.BAD_REQUEST).json({ message: `${duplicateField} already registered for a driver` });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // NEW: Global Uniqueness Check (Email only)
+    // ─────────────────────────────────────────────────────────────────────
+    const emailUsedByOfficer = await Police.findOne({ email }).select('_id');
+    if (emailUsedByOfficer) {
+      console.warn(`[AUTH/REGISTER-DRIVER] Email already used by an officer: ${email}`);
+      return res.status(HTTP.BAD_REQUEST).json({ message: 'Email already registered as a Police Officer' });
     }
 
     // Decrypt RSA-encrypted password sent from Flutter
@@ -762,19 +779,29 @@ const checkFieldExistence = async (req, res) => {
     let exists = false;
     let existingRecord = null;
 
-    // determine which models to check based on role
-    const checkDriver = !role || role === ROLES.DRIVER;
-    const checkPolice = !role || role === ROLES.POLICE || role === ROLES.OFFICER;
-
-    if (checkDriver) {
+    // ── NEW LOGIC: Always check both tables for EMAIL ────────────────────
+    if (field === 'email') {
       existingRecord = await Driver.findOne(query).select('_id');
-    }
-    
-    if (!existingRecord && checkPolice) {
-      // For badgeNumber, only check Police anyway
-      // For others, if role is police or not provided, check Police
-      if (field !== 'licenseNumber') {
+      if (!existingRecord) {
         existingRecord = await Police.findOne(query).select('_id');
+      }
+    } 
+    // ── OLD LOGIC: Role-specific checks for other fields ─────────────────
+    else {
+      // determine which models to check based on role
+      const checkDriver = !role || role === ROLES.DRIVER;
+      const checkPolice = !role || role === ROLES.POLICE || role === ROLES.OFFICER;
+
+      if (checkDriver) {
+        existingRecord = await Driver.findOne(query).select('_id');
+      }
+      
+      if (!existingRecord && checkPolice) {
+        // For badgeNumber, only check Police anyway
+        // For others, if role is police or not provided, check Police
+        if (field !== 'licenseNumber') {
+          existingRecord = await Police.findOne(query).select('_id');
+        }
       }
     }
 

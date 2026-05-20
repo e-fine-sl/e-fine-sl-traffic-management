@@ -141,7 +141,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (c) => const Center(child: CircularProgressIndicator()),
+        builder: (c) => const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen)),
       );
 
       final userData = await AuthService().getUserProfile();
@@ -216,12 +216,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey, // Add Key
-      onEndDrawerChanged: _handleDrawerChange, // Handle Read/Unread
-      endDrawer: _buildNotificationDrawer(), // Notification Side Panel
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor, 
-      appBar: AppBar(
+    return Theme(
+      data: Theme.of(context).copyWith(
+        primaryColor: AppColors.primaryGreen,
+        colorScheme: Theme.of(context).colorScheme.copyWith(
+          primary: AppColors.primaryGreen,
+        ),
+      ),
+      child: Scaffold(
+        key: _scaffoldKey, // Add Key
+        onEndDrawerChanged: _handleDrawerChange, // Handle Read/Unread
+        endDrawer: _buildNotificationDrawer(), // Notification Side Panel
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor, 
+        appBar: AppBar(
         backgroundColor: AppColors.primaryGreen,
         elevation: 0,
         title: const Text("e-Fine SL", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -374,7 +381,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
             // 2. DEMERIT POINTS METER
             _loadingStatus
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen))
                 : DemeritStatusCard(
                     points: _demeritPoints,
                     status: _licenseStatus,
@@ -445,6 +452,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           }
         },
       ),
+    ),
     );
   }
 
