@@ -98,139 +98,175 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Reset Password")),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // STEP 1: Email Input
-            if (_currentStep == 0) ...[
-              const Text("Enter your registered email to receive OTP", textAlign: TextAlign.center),
-              const SizedBox(height: 20),
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: "Email Address", border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity, height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _sendOTP,
-                  child: _isLoading ? const CircularProgressIndicator() : const Text("Send OTP"),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        primaryColor: AppColors.primaryGreen,
+        colorScheme: Theme.of(context).colorScheme.copyWith(
+          primary: AppColors.primaryGreen,
+        ),
+      ),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text("Reset Password"),
+          backgroundColor: AppColors.primaryGreen,
+          foregroundColor: Colors.white,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              // STEP 1: Email Input
+              if (_currentStep == 0) ...[
+                const Text("Enter your registered email to receive OTP", textAlign: TextAlign.center),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: "Email Address", border: OutlineInputBorder()),
                 ),
-              ),
-            ],
-
-            // STEP 2: OTP Input
-            if (_currentStep == 1) ...[
-              const Text("Enter the 6-digit code sent to your email", textAlign: TextAlign.center),
-              const SizedBox(height: 20),
-              TextField(
-                controller: _otpController,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 24, letterSpacing: 5),
-                decoration: const InputDecoration(labelText: "OTP Code", border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity, height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _verifyOTP,
-                  child: _isLoading ? const CircularProgressIndicator() : const Text("Verify OTP"),
-                ),
-              ),
-            ],
-
-            // STEP 3: New Password
-            if (_currentStep == 2) ...[
-              const Text("Create a new strong password", textAlign: TextAlign.center),
-              const SizedBox(height: 20),
-              TextField(
-                controller: _passController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: "New Password", border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 15),
-              TextField(
-                controller: _confirmPassController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: "Confirm Password", border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity, height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _resetPassword,
-                  child: _isLoading ? const CircularProgressIndicator() : const Text("Reset Password"),
-                ),
-              ),
-            ],
-
-            // ── Driver-only License Recovery option ──────────────────────────
-            if (_currentStep == 0) ...[
-              const SizedBox(height: 32),
-              Row(
-                children: const [
-                  Expanded(child: Divider()),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text('OR', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity, height: 50,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _sendOTP,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      elevation: 3,
+                    ),
+                    child: _isLoading 
+                      ? const CircularProgressIndicator(color: Colors.white) 
+                      : const Text("Send OTP", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
-                  Expanded(child: Divider()),
-                ],
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LicenseRecoveryScreen()),
                 ),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryGreenLight.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.4)),
+              ],
+  
+              // STEP 2: OTP Input
+              if (_currentStep == 1) ...[
+                const Text("Enter the 6-digit code sent to your email", textAlign: TextAlign.center),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _otpController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 24, letterSpacing: 5),
+                  decoration: const InputDecoration(labelText: "OTP Code", border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity, height: 50,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _verifyOTP,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      elevation: 3,
+                    ),
+                    child: _isLoading 
+                      ? const CircularProgressIndicator(color: Colors.white) 
+                      : const Text("Verify OTP", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryGreen.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
+                ),
+              ],
+  
+              // STEP 3: New Password
+              if (_currentStep == 2) ...[
+                const Text("Create a new strong password", textAlign: TextAlign.center),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _passController,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: "New Password", border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 15),
+                TextField(
+                  controller: _confirmPassController,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: "Confirm Password", border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity, height: 50,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _resetPassword,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      elevation: 3,
+                    ),
+                    child: _isLoading 
+                      ? const CircularProgressIndicator(color: Colors.white) 
+                      : const Text("Reset Password", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+  
+              // ── Driver-only License Recovery option ──────────────────────────
+              if (_currentStep == 0) ...[
+                const SizedBox(height: 32),
+                Row(
+                  children: const [
+                    Expanded(child: Divider()),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('OR', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                    ),
+                    Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LicenseRecoveryScreen()),
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGreenLight.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryGreen.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.credit_card_outlined, color: AppColors.primaryGreenDark, size: 20),
                         ),
-                        child: const Icon(Icons.credit_card_outlined, color: AppColors.primaryGreenDark, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Driver? Recover with License ID',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primaryGreenDark),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Scan your physical driving license to verify identity',
-                              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                            ),
-                          ],
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Driver? Recover with License ID',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primaryGreenDark),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Scan your physical driving license to verify identity',
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textSecondary),
-                    ],
+                        const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textSecondary),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
