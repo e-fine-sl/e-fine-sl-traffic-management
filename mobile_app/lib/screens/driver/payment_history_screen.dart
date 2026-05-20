@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/services/fine_service.dart';
-import 'package:intl/intl.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../config/app_constants.dart';
 import '../../widgets/driver/payment_history_card.dart';
 
@@ -87,6 +87,28 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen>
     _shimmerController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  String _getLocalizedOption(String option) {
+    switch (option) {
+      // Date options
+      case 'All Time': return 'payment_history.filter_all_time'.tr();
+      case 'Today': return 'payment_history.filter_today'.tr();
+      case 'This Week': return 'payment_history.filter_this_week'.tr();
+      case 'This Month': return 'payment_history.filter_this_month'.tr();
+      case 'This Year': return 'payment_history.filter_this_year'.tr();
+      // Amount options
+      case 'Any Amount': return 'payment_history.filter_any_amount'.tr();
+      case 'Under LKR 1000': return 'payment_history.filter_under_1000'.tr();
+      case 'LKR 1000–5000': return 'payment_history.filter_1000_5000'.tr();
+      case 'Over LKR 5000': return 'payment_history.filter_over_5000'.tr();
+      // Sort options
+      case 'Newest First': return 'payment_history.filter_newest'.tr();
+      case 'Oldest First': return 'payment_history.filter_oldest'.tr();
+      case 'Highest Amount': return 'payment_history.filter_highest'.tr();
+      case 'Lowest Amount': return 'payment_history.filter_lowest'.tr();
+      default: return option;
+    }
   }
 
   // ── Data loading ─────────────────────────────────────────────────
@@ -250,9 +272,9 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen>
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Payment History',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          'payment_history.title'.tr(),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primaryGreen,
         foregroundColor: Colors.white,
@@ -304,21 +326,21 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen>
           children: [
             _summaryCell(
               '${_filteredHistory.length}',
-              'Payments',
+              'payment_history.payments'.tr(),
               Icons.receipt_long,
             ),
             const VerticalDivider(
                 width: 1, thickness: 1, color: AppColors.divider),
             _summaryCell(
               'LKR ${fmt.format(_totalAmount)}',
-              'Total Paid',
+              'payment_history.total_paid'.tr(),
               Icons.payments_outlined,
             ),
             const VerticalDivider(
                 width: 1, thickness: 1, color: AppColors.divider),
             _summaryCell(
               _dateRange,
-              'Date Range',
+              'payment_history.date_range'.tr(),
               Icons.date_range,
             ),
           ],
@@ -365,7 +387,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen>
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Search by offense, location or ref ID...',
+          hintText: 'payment_history.search_hint'.tr(),
           hintStyle:
               TextStyle(color: AppTheme.textHint(context), fontSize: AppTextSize.bodyMedium),
           prefixIcon: Icon(Icons.search, color: AppTheme.textHint(context)),
@@ -412,7 +434,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen>
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           children: [
             ..._dateOptions.map((o) => _filterChip(
-                  label: o,
+                  label: _getLocalizedOption(o),
                   selected: _selectedDateFilter == o,
                   onTap: () {
                     setState(() => _selectedDateFilter = o);
@@ -424,7 +446,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen>
                 margin: const EdgeInsets.symmetric(vertical: 10)),
             const SizedBox(width: 4),
             ..._amountOptions.map((o) => _filterChip(
-                  label: o,
+                  label: _getLocalizedOption(o),
                   selected: _selectedAmountFilter == o,
                   onTap: () {
                     setState(() => _selectedAmountFilter = o);
@@ -436,7 +458,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen>
                 margin: const EdgeInsets.symmetric(vertical: 10)),
             const SizedBox(width: 4),
             ..._sortOptions.map((o) => _filterChip(
-                  label: o,
+                  label: _getLocalizedOption(o),
                   selected: _selectedSortFilter == o,
                   onTap: () {
                     setState(() => _selectedSortFilter = o);
@@ -454,9 +476,9 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen>
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     foregroundColor: AppColors.dangerRed,
                   ),
-                  child: const Text(
-                    'Clear Filters',
-                    style: TextStyle(fontSize: AppTextSize.bodySmall),
+                  child: Text(
+                    'payment_history.clear_filters'.tr(),
+                    style: const TextStyle(fontSize: AppTextSize.bodySmall),
                   ),
                 ),
               ),
@@ -519,7 +541,10 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen>
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(
-          'Showing ${_filteredHistory.length} of ${_history.length} payments',
+          'payment_history.showing_results'.tr(args: [
+            _filteredHistory.length.toString(),
+            _history.length.toString(),
+          ]),
           style: TextStyle(
             fontSize: AppTextSize.bodySmall,
             color: AppTheme.textHint(context),
@@ -579,7 +604,9 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
             child: Text(
-              '$month  ·  $count ${count == 1 ? 'payment' : 'payments'}',
+              count == 1
+                  ? 'payment_history.month_header_single'.tr(args: [month, count.toString()])
+                  : 'payment_history.month_header_plural'.tr(args: [month, count.toString()]),
               style: TextStyle(
                 fontSize: 11,
                 color: AppTheme.textHint(context),
@@ -605,21 +632,21 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen>
     switch (type) {
       case _EmptyType.noData:
         icon = Icons.receipt_long;
-        title = 'No Payments Yet';
-        subtitle = 'Your paid fine history will appear here';
+        title = 'payment_history.no_payments_title'.tr();
+        subtitle = 'payment_history.no_payments_subtitle'.tr();
         break;
       case _EmptyType.searchEmpty:
         icon = Icons.search_off;
-        title = 'No Results Found';
-        subtitle = 'No payments match "$_searchQuery"';
-        btnLabel = 'Clear Search';
+        title = 'payment_history.no_results_title'.tr();
+        subtitle = 'payment_history.no_results_subtitle'.tr(args: [_searchQuery]);
+        btnLabel = 'payment_history.clear_search'.tr();
         btnAction = () => _searchController.clear();
         break;
       case _EmptyType.filterEmpty:
         icon = Icons.filter_list_off;
-        title = 'No Matching Payments';
-        subtitle = 'Try adjusting your filters';
-        btnLabel = 'Reset Filters';
+        title = 'payment_history.no_matching_title'.tr();
+        subtitle = 'payment_history.no_matching_subtitle'.tr();
+        btnLabel = 'payment_history.reset_filters'.tr();
         btnAction = _clearFilters;
         break;
     }
@@ -658,7 +685,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen>
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.medium)),
               ),
-              child: Text(btnLabel),
+              child: Text('payment_history.reset_filters'.tr()),
             ),
           ],
         ],
