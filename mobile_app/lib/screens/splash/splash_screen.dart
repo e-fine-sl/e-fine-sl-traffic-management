@@ -4,6 +4,8 @@ import '../auth/login_screen.dart';
 import '../driver/driver_home_screen.dart';
 import '../police/police_home_screen.dart';
 import '../../services/auth_service.dart';
+import '../../services/biometric_service.dart';
+import '../../widgets/biometric_prompt_screen.dart';
 import '../../config/app_constants.dart'; 
 
 class SplashScreen extends StatefulWidget {
@@ -14,7 +16,8 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  final AuthService _authService = AuthService();
+  final AuthService      _authService      = AuthService();
+  final BiometricService _biometricService = BiometricService();
 
   @override
   void initState() {
@@ -29,30 +32,55 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     try {
+      // 1. Check if biometric is enabled first
+      final biometricEnabled = await _biometricService.isBiometricEnabled();
+
+      if (!mounted) return;
+
+      if (biometricEnabled) {
+        // Biometric ON → show full-screen biometric prompt (auto-triggers)
+        // We do not need to check session first, BiometricPromptScreen will do that
+        // after successful local authentication.
+        debugPrint('[SplashScreen] Biometric enabled → BiometricPromptScreen');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => const BiometricPromptScreen(),
+          ),
+        );
+        return;
+      }
+
+      // 2. Biometric OFF → check session to route to Home or Login
       final role = await _authService.checkSession();
 
       if (!mounted) return;
 
       if (role != null) {
-        if (role == UserRoles.officer || role == UserRoles.admin) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const PoliceHomeScreen()),
-          );
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const DriverHomeScreen()),
-          );
-        }
+        debugPrint('[SplashScreen] Session valid + biometric disabled → Home');
+        _navigateToHome(role);
       } else {
+        debugPrint('[SplashScreen] No active session → LoginScreen');
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
       }
     } catch (e) {
       debugPrint('[SplashScreen] Error verifying session: $e');
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
+  }
+
+  void _navigateToHome(String role) {
+    if (role == UserRoles.officer || role == UserRoles.admin) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const PoliceHomeScreen()),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
       );
     }
   }

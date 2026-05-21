@@ -27,6 +27,8 @@ import 'package:pointycastle/api.dart';
 
 import 'api_logger.dart' as http;
 import '../config/app_constants.dart';
+// Note: BiometricService is NOT imported here to avoid a circular dependency.
+// Biometric key cleanup is handled directly via _storage in _sessionExpiredLogout().
 
 class AuthService {
   final String _mainUrl  = ApiConstants.baseUrl;         // main backend
@@ -50,8 +52,8 @@ class AuthService {
       try {
         final startTime = DateTime.parse(startTimeStr);
         if (DateTime.now().difference(startTime).inDays >= 2) {
-          debugPrint('[AuthService] 2-day session expired during getToken(). Logging out...');
-          await logout();
+          debugPrint('[AuthService] 2-day session expired during getToken(). Session-expiry logout...');
+          await _sessionExpiredLogout(); // Resets biometric dialog flag
           return null;
         }
       } catch (e) {
@@ -93,8 +95,8 @@ class AuthService {
       final difference = DateTime.now().difference(startTime);
 
       if (difference.inDays >= 2) {
-        debugPrint('[AuthService] Session expired (2 days reached). Logging out...');
-        await logout();
+        debugPrint('[AuthService] Session expired (2 days reached). Session-expiry logout...');
+        await _sessionExpiredLogout(); // Resets biometric dialog flag
         return null;
       }
 
@@ -104,8 +106,8 @@ class AuthService {
         try {
           await refreshAccessToken();
         } catch (e) {
-          debugPrint('[AuthService] Access token auto-refresh failed: $e. Logging out...');
-          await logout();
+          debugPrint('[AuthService] Access token auto-refresh failed: $e. Session-expiry logout...');
+          await _sessionExpiredLogout(); // Refresh failed = treat as session expiry
           return null;
         }
       }
@@ -215,12 +217,77 @@ class AuthService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
+  // BIOMETRIC HELPERS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Encrypts [password] with RSA-OAEP and returns the Base64 result.
+  /// Used by BiometricService to store the encrypted password securely.
+  /// This keeps RSA logic centralised in AuthService.
+  Future<String> encryptPasswordForBiometric(String password) async {
+    final publicKey = await _fetchPublicKey();
+    return _encryptPassword(password, publicKey);
+  }
+
+  /// Performs a full login using an already-RSA-encrypted password.
+  /// Used by BiometricService.loginWithBiometric() to avoid double-encryption.
+  /// The [encryptedPassword] is the Base64-encoded RSA-OAEP ciphertext.
+  Future<Map<String, dynamic>> loginWithEncryptedPassword(
+    String email,
+    String encryptedPassword,
+  ) async {
+    debugPrint('[AuthService] loginWithEncryptedPassword() — biometric re-login for: $email');
+
+    final response = await http.post(
+      Uri.parse('$_authUrl/auth/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email':             email,
+        'encryptedPassword': encryptedPassword, // Already RSA-encrypted
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final user = data['user'] as Map<String, dynamic>;
+
+      // Store fresh tokens
+      await _storage.write(key: PrefKeys.accessToken,  value: data['accessToken']  as String);
+      await _storage.write(key: PrefKeys.refreshToken, value: data['refreshToken'] as String);
+      await _storage.write(key: PrefKeys.sessionToken, value: data['sessionToken'] as String);
+      await _storage.write(key: PrefKeys.sessionStartTime, value: DateTime.now().toIso8601String());
+      await _storage.write(key: PrefKeys.userName, value: user['name'] as String? ?? '');
+      await _storage.write(key: PrefKeys.userRole, value: user['role'] as String? ?? '');
+
+      // Restore biometric-enabled flag (it was cleared by deleteAll during expiry)
+      await _storage.write(key: PrefKeys.biometricEnabled, value: 'true');
+
+      final prefs = await SharedPreferences.getInstance();
+      final timeout = data['idleTimeoutMinutes'] ?? 5;
+      await prefs.setInt(PrefKeys.idleTimeoutMinutes, timeout);
+
+      debugPrint('[AuthService] Biometric re-login successful — role: ${user["role"]}');
+      return user;
+    } else {
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? 'Biometric login failed — please log in manually');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // LOGOUT
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// Revokes the session on the server then clears all local storage.
+  // ─────────────────────────────────────────────────────────────────────────
+  // LOGOUT — TWO PATHS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// MANUAL LOGOUT — User tapped the Logout button.
+  /// Clears session secure storage (but PRESERVES biometric keys) and
+  /// does NOT reset biometric_dialog_shown in SharedPreferences.
+  /// This means the "Enable Biometric" dialog will NOT re-appear
+  /// on the next login after a manual logout.
   Future<void> logout() async {
-    debugPrint('[AuthService] logout() called');
+    debugPrint('[AuthService] logout() called — MANUAL LOGOUT');
 
     final sessionToken = await _storage.read(key: PrefKeys.sessionToken);
 
@@ -237,15 +304,75 @@ class AuthService {
       }
     }
 
-    // Step 2: Clear local secure storage
-    await _storage.deleteAll();
+    // Clear session and auth tokens but PRESERVE biometric keys!
+    await Future.wait([
+      _storage.delete(key: PrefKeys.accessToken),
+      _storage.delete(key: PrefKeys.refreshToken),
+      _storage.delete(key: PrefKeys.sessionToken),
+      _storage.delete(key: PrefKeys.sessionStartTime),
+      _storage.delete(key: PrefKeys.userRole),
+      _storage.delete(key: PrefKeys.userName),
+      _storage.delete(key: PrefKeys.user),
+      _storage.delete(key: PrefKeys.profileData),
+      _storage.delete(key: PrefKeys.authToken),
+    ]);
 
-    // Step 3: Clear shared preferences (timeout, etc)
+    // Clear shared preferences EXCEPT biometric_dialog_shown
     final prefs = await SharedPreferences.getInstance();
+    final dialogShown = prefs.getBool(PrefKeys.biometricDialogShown) ?? false;
     await prefs.clear();
+    // Restore the dialog-shown flag so it won't pop up again after manual logout
+    if (dialogShown) {
+      await prefs.setBool(PrefKeys.biometricDialogShown, true);
+    }
 
     _cachedPublicKey = null;
-    debugPrint('[AuthService] Local storage cleared — logged out successfully');
+    debugPrint('[AuthService] Manual logout complete — biometric_dialog_shown preserved: $dialogShown');
+  }
+
+  /// SESSION-EXPIRY LOGOUT — Called automatically when the 2-day session expires
+  /// or when the refresh token itself fails.
+  /// Additionally resets biometric_dialog_shown to false so the dialog
+  /// re-appears on the next credential login (fresh install / expiry behaviour).
+  Future<void> _sessionExpiredLogout() async {
+    debugPrint('[AuthService] _sessionExpiredLogout() called — SESSION EXPIRY');
+
+    // Run the standard logout flow first
+    final sessionToken = await _storage.read(key: PrefKeys.sessionToken);
+    if (sessionToken != null) {
+      try {
+        await http.post(
+          Uri.parse('$_authUrl/auth/logout'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'sessionToken': sessionToken}),
+        );
+      } catch (e) {
+        debugPrint('[AuthService] Session revocation failed: $e');
+      }
+    }
+
+    // Clear session and auth tokens but PRESERVE biometric keys!
+    await Future.wait([
+      _storage.delete(key: PrefKeys.accessToken),
+      _storage.delete(key: PrefKeys.refreshToken),
+      _storage.delete(key: PrefKeys.sessionToken),
+      _storage.delete(key: PrefKeys.sessionStartTime),
+      _storage.delete(key: PrefKeys.userRole),
+      _storage.delete(key: PrefKeys.userName),
+      _storage.delete(key: PrefKeys.user),
+      _storage.delete(key: PrefKeys.profileData),
+      _storage.delete(key: PrefKeys.authToken),
+    ]);
+
+    // Clear ALL shared preferences INCLUDING biometric_dialog_shown
+    // so the "Enable Biometric" dialog shows again on next login
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    // Explicitly reset — in case clear() doesn't write a false value
+    await prefs.setBool(PrefKeys.biometricDialogShown, false);
+
+    _cachedPublicKey = null;
+    debugPrint('[AuthService] Session-expiry logout complete — biometric_dialog_shown reset to false');
   }
 
   // ─────────────────────────────────────────────────────────────────────────

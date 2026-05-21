@@ -87,7 +87,7 @@ class SecureStorageService {
   // FULL AUTH CLEAR (called on logout)
   // ──────────────────────────────────────────
 
-  /// Deletes ALL auth-related keys including the new 3-token system.
+  /// Deletes ALL auth-related keys including the new 3-token system and biometric keys.
   /// Call this on every logout to ensure no stale data remains.
   Future<void> clearAllAuth() async {
     debugPrint('$_tag clearAllAuth() called — wiping all auth data...');
@@ -104,6 +104,10 @@ class SecureStorageService {
         _storage.delete(key: PrefKeys.userRole),
         _storage.delete(key: PrefKeys.userName),
         _storage.delete(key: PrefKeys.profileData),
+        // Biometric credentials
+        _storage.delete(key: PrefKeys.biometricEnabled),
+        _storage.delete(key: PrefKeys.biometricEmail),
+        _storage.delete(key: PrefKeys.biometricPassword),
       ]);
       debugPrint('$_tag All auth data cleared successfully.');
     } catch (e) {
