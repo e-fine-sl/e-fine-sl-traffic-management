@@ -173,6 +173,15 @@ class PrefKeys {
   static const String historyCache  = 'driver_history_cache';
   static const String idleTimeoutMinutes = 'idle_timeout_minutes';
   static const String sessionStartTime = 'session_start_time';
+
+  // ── Biometric feature keys (stored in flutter_secure_storage) ─────────────
+  static const String biometricEnabled  = 'biometric_enabled';   // 'true'/'false'
+  static const String biometricEmail    = 'biometric_email';     // stored email
+  static const String biometricPassword = 'biometric_password';  // RSA-encrypted password (Base64)
+
+  // ── Biometric dialog flag (SharedPreferences — survives manual logout) ─────
+  // Reset to false ONLY on session-expiry auto-logout, NOT on manual logout.
+  static const String biometricDialogShown = 'biometric_dialog_shown';
 }
 
 // ── EXTERNAL MEDIA/ASSETS ───────────────────────────────────────

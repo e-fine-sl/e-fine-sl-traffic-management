@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/services/auth_service.dart';
+import 'package:mobile_app/services/biometric_service.dart';
 import 'package:mobile_app/services/notification_service.dart';
 import 'package:mobile_app/screens/auth/login_screen.dart';
 import 'package:mobile_app/screens/driver/profile_screen.dart';
@@ -16,13 +17,28 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final AuthService _authService = AuthService();
-  bool _notificationsEnabled = true;
+  final AuthService      _authService      = AuthService();
+  final BiometricService _biometricService = BiometricService();
+  bool _notificationsEnabled  = true;
+  bool _biometricEnabled      = false;
+  bool _biometricSupported    = false;
 
   @override
   void initState() {
     super.initState();
     _notificationsEnabled = NotificationService().isEnabled;
+    _loadBiometricState();
+  }
+
+  Future<void> _loadBiometricState() async {
+    final supported = await _biometricService.isDeviceSupported();
+    final enabled   = await _biometricService.isBiometricEnabled();
+    if (mounted) {
+      setState(() {
+        _biometricSupported = supported;
+        _biometricEnabled   = enabled;
+      });
+    }
   }
 
   Future<void> _logout() async {
@@ -108,7 +124,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const Divider(indent: 24, endIndent: 24),
 
-          // Section 3: General
+          // Section 3: Security
+          _buildSectionHeader("Security"),
+          _buildSwitchListTile(
+            icon: Icons.fingerprint,
+            title: "Fingerprint Login",
+            subtitle: !_biometricSupported
+                ? "Not supported on this device"
+                : _biometricEnabled
+                    ? "Tap to disable fingerprint login"
+                    : "Enable quick fingerprint login",
+            value: _biometricEnabled,
+            enabled: _biometricSupported,
+            onChanged: _biometricSupported ? _handleBiometricToggle : null,
+          ),
+
+          const Divider(indent: 24, endIndent: 24),
+
+          // Section 4: General
           _buildSectionHeader("General"),
           _buildSwitchListTile(
             icon: Icons.notifications_outlined,
@@ -192,19 +225,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String title,
     String? subtitle,
     required bool value,
-    required ValueChanged<bool> onChanged,
+    bool enabled = true,
+    required ValueChanged<bool>? onChanged,
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.primaryGreen.withValues(alpha: 0.1), 
+          color: AppColors.primaryGreen.withValues(alpha: enabled ? 0.1 : 0.05),
           borderRadius: BorderRadius.circular(8)
         ),
-        child: Icon(icon, color: AppColors.primaryGreen, size: 24),
+        child: Icon(icon, color: enabled ? AppColors.primaryGreen : Colors.grey, size: 24),
       ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: enabled ? null : Colors.grey,
+        ),
+      ),
       subtitle: subtitle != null ? Text(subtitle) : null,
       trailing: Switch(
         value: value,
@@ -260,6 +300,170 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       )
+    );
+  }
+
+  // ── Biometric toggle handler ───────────────────────────────────────────
+
+  Future<void> _handleBiometricToggle(bool val) async {
+    if (val) {
+      // Enabling → ask user to confirm credentials
+      await _showBiometricCredentialSheet();
+    } else {
+      // Disabling → just clear the biometric keys
+      await _biometricService.disableBiometric();
+      if (mounted) {
+        setState(() => _biometricEnabled = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Fingerprint login disabled'),
+            backgroundColor: AppColors.warningOrange,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showBiometricCredentialSheet() async {
+    final emailCtrl    = TextEditingController();
+    final passwordCtrl = TextEditingController();
+    bool  obscure      = true;
+    bool  isLoading    = false;
+    String? error;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+                decoration: BoxDecoration(
+                  color: Theme.of(ctx).scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Icon(Icons.fingerprint, size: 36, color: AppColors.primaryGreen),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Confirm to Enable Fingerprint',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Enter your credentials to set up fingerprint login',
+                      style: TextStyle(color: AppTheme.textSecondary(ctx), fontSize: 13),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: emailCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.email_outlined),
+                        hintText: 'Email Address',
+                        filled: true,
+                        fillColor: AppTheme.inputFill(ctx),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: passwordCtrl,
+                      obscureText: obscure,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
+                          onPressed: () => setSheetState(() => obscure = !obscure),
+                        ),
+                        hintText: 'Password',
+                        filled: true,
+                        fillColor: AppTheme.inputFill(ctx),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorText: error,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: isLoading
+                            ? null
+                            : () async {
+                                if (emailCtrl.text.isEmpty || passwordCtrl.text.isEmpty) {
+                                  setSheetState(() => error = 'Please fill in all fields');
+                                  return;
+                                }
+                                setSheetState(() { isLoading = true; error = null; });
+                                try {
+                                  await _biometricService.enableBiometric(
+                                    email:    emailCtrl.text.trim(),
+                                    password: passwordCtrl.text,
+                                  );
+                                  if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
+                                  if (mounted) {
+                                    setState(() => _biometricEnabled = true);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('✓ Fingerprint login enabled!'),
+                                        backgroundColor: AppColors.successGreen,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  setSheetState(() {
+                                    isLoading = false;
+                                    error = e.toString().replaceAll('Exception: ', '');
+                                  });
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryGreen,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 22, width: 22,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                              )
+                            : const Text('Enable Fingerprint Login', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextButton(
+                      onPressed: () => Navigator.of(sheetCtx).pop(),
+                      child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary(ctx))),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
