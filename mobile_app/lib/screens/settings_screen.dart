@@ -189,7 +189,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 24, right: 24, top: 16, bottom: 8),
+      padding: const EdgeInsets.only(left: 24, right: 24, top: 8, bottom: 4),
       child: Text(
         title.toUpperCase(),
         style: TextStyle(
@@ -204,7 +204,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildListTile({required IconData icon, required String title, String? subtitle, required VoidCallback onTap}) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+      visualDensity: VisualDensity.compact,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -229,7 +230,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required ValueChanged<bool>? onChanged,
   }) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+      visualDensity: VisualDensity.compact,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
