@@ -2,61 +2,85 @@
 // lib/controllers/liveness_detection_controller.dart
 // e-Fine SL — Liveness Detection State Machine
 //
-// Flow: look → blink → smile → neutral → success
-// Captures photo when user returns to neutral expression after smiling
+// Flow: look → blink → nodDown → nodUp → success
+//  • look    : face detected — confirm user is present
+//  • blink   : both eyes must close (eye-open probability drops below threshold)
+//  • nodDown : user nods chin down (headEulerAngleX goes negative, < nodDownThreshold)
+//  • nodUp   : user raises head back to level (headEulerAngleX returns > nodUpThreshold)
+//  • success : photo captured automatically
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
-enum LivenessState { look, blink, smile, neutral, success }
+enum LivenessState { look, blink, nodDown, nodUp, success }
 
 class LivenessDetectionController extends ChangeNotifier {
   LivenessState _state = LivenessState.look;
-  String _instruction = "Please look at the camera";
+  String _instruction  = 'Please look at the camera';
 
-  // Configurable thresholds
-  static const double eyeOpenThreshold = 0.2;    // Eyes closed when < 0.2
-  static const double smileThreshold = 0.7;      // Smiling when > 0.7
-  static const double neutralThreshold = 0.3;    // Neutral when < 0.3
+  // ── Eye blink thresholds ────────────────────────────────────────────────────
+  /// Probability below which an eye is considered closed.
+  static const double eyeClosedThreshold = 0.25;
 
-  LivenessState get state => _state;
-  String get instruction => _instruction;
+  // ── Head-nod thresholds (headEulerAngleX / pitch) ───────────────────────────
+  // Positive X → head tilted up (chin raised)
+  // Negative X → head tilted down (chin tucked)
+  /// Chin must drop below this angle (degrees) to register a down-nod.
+  static const double nodDownThreshold = -12.0;
 
+  /// Head must return above this angle (degrees) to register the up-recovery.
+  static const double nodUpThreshold   = -3.0;
+
+  // ── Public getters ──────────────────────────────────────────────────────────
+  LivenessState get state       => _state;
+  String        get instruction => _instruction;
+
+  // ── Main processing entry-point ─────────────────────────────────────────────
   void processFace(Face face) {
     if (_state == LivenessState.success) return;
 
+    final double leftEye  = face.leftEyeOpenProbability  ?? 1.0;
+    final double rightEye = face.rightEyeOpenProbability ?? 1.0;
+    final double pitch    = face.headEulerAngleX         ?? 0.0;
+
     switch (_state) {
+
+      // ── Step 0: Wait for a face to appear ──────────────────────────────────
       case LivenessState.look:
-        // Transition to blink once a face is detected
-        _updateState(LivenessState.blink, "Please blink your eyes");
+        _updateState(
+          LivenessState.blink,
+          'Great! Now blink your eyes',
+        );
         break;
 
+      // ── Step 1: Detect eye blink ────────────────────────────────────────────
       case LivenessState.blink:
-        final leftEyeProb = face.leftEyeOpenProbability ?? 1.0;
-        final rightEyeProb = face.rightEyeOpenProbability ?? 1.0;
-
-        // Detect eye closure
-        if (leftEyeProb < eyeOpenThreshold || rightEyeProb < eyeOpenThreshold) {
-          _updateState(LivenessState.smile, "Perfect! Now give us a big smile");
+        if (leftEye < eyeClosedThreshold || rightEye < eyeClosedThreshold) {
+          _updateState(
+            LivenessState.nodDown,
+            'Nice! Now slowly nod your head down ⬇',
+          );
         }
         break;
 
-      case LivenessState.smile:
-        final smileProb = face.smilingProbability ?? 0.0;
-
-        // Detect smile
-        if (smileProb > smileThreshold) {
-          _updateState(LivenessState.neutral, "Great! Now return to a neutral expression");
+      // ── Step 2: Detect chin-down nod ────────────────────────────────────────
+      case LivenessState.nodDown:
+        if (pitch < nodDownThreshold) {
+          _updateState(
+            LivenessState.nodUp,
+            'Perfect! Now raise your head back up ⬆',
+          );
         }
         break;
 
-      case LivenessState.neutral:
-        final smileProb = face.smilingProbability ?? 0.0;
-
-        // Capture when user returns to neutral (not smiling)
-        if (smileProb < neutralThreshold) {
-          _updateState(LivenessState.success, "Perfect! Verification Complete!");
+      // ── Step 3: Detect head returning to level ──────────────────────────────
+      case LivenessState.nodUp:
+        if (pitch > nodUpThreshold) {
+          _updateState(
+            LivenessState.success,
+            '✓  Liveness Verified!',
+          );
         }
         break;
 
@@ -65,13 +89,20 @@ class LivenessDetectionController extends ChangeNotifier {
     }
   }
 
+  // ── Helpers ─────────────────────────────────────────────────────────────────
   void _updateState(LivenessState newState, String newInstruction) {
-    _state = newState;
+    _state       = newState;
     _instruction = newInstruction;
     notifyListeners();
   }
 
   void reset() {
-    _updateState(LivenessState.look, "Please look at the camera");
+    _updateState(LivenessState.look, 'Please look at the camera');
+  }
+
+  @override
+  void dispose() {
+    // No resources to close; kept for symmetry with ChangeNotifier pattern.
+    super.dispose();
   }
 }
