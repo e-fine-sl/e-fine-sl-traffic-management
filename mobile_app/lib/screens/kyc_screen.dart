@@ -763,8 +763,9 @@ class _KycScreenState extends State<KycScreen> with TickerProviderStateMixin {
             color: AppColors.primaryBlue,
             title: 'Liveness Verification',
             subtitle:
-                'To verify you are a live human, we need a quick 3-step check. '
-                'You will be asked to: Blink your eyes, Nod your head down, then raise it back up.',
+                'Complete 6 quick steps to verify you are live:\n'
+                '1 Blink  •  2 Turn Left  •  3 Turn Right\n'
+                '4 Nod Down  •  5 Nod Up  •  6 Hold Neutral',
           ),
 
           const SizedBox(height: 32),
