@@ -238,7 +238,7 @@ const registerPolice = async (req, res) => {
 const registerDriver = async (req, res) => {
   const { 
     name, nic, licenseNumber, email, phone, password, 
-    kycVerified, isVerified, licenseIssueDate, licenseExpiryDate, 
+    kycVerified, isVerified,
     vehicleClasses, profileImage, licenseFrontImage, licenseBackImage,
     addressLine1, addressLine2, city, postalCode
   } = req.body;
@@ -296,10 +296,8 @@ const registerDriver = async (req, res) => {
       email,
       phone,
       password: hashedPassword,
-      kycVerified: kycVerified === true, // Only store true if explicitly passed
-      isVerified: isVerified === true,   // Mark as verified if KYC passed
-      licenseIssueDate,
-      licenseExpiryDate,
+      kycVerified: kycVerified === true,
+      isVerified: isVerified === true,
       vehicleClasses: vehicleClasses || [],
       profileImage,
       licenseFrontImage,

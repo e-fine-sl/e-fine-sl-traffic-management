@@ -125,8 +125,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     bool isVerified  = _userData['isVerified'] ?? false;
-    String issueDate  = _userData['licenseIssueDate'] ?? "N/A";
-    String expiryDate = _userData['licenseExpiryDate'] ?? "N/A";
 
     // --- STATUS CHECK ---
     String status   = _userData['licenseStatus'] ?? "ACTIVE";
@@ -291,14 +289,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const Divider(height: 30),
 
-                      // Dates
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildDateColumn(context, "issue_date".tr(), issueDate),
-                          _buildDateColumn(context, "expiry_date".tr(), expiryDate, isExpiry: true),
-                        ],
-                      ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -618,26 +608,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey[600]),
         ),
       ),
-    );
-  }
-
-  Widget _buildDateColumn(BuildContext context, String label, String date, {bool isExpiry = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-        const SizedBox(height: 5),
-        Text(
-          date,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-            color: isExpiry
-                ? AppColors.errorRed
-                : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
-          ),
-        ),
-      ],
     );
   }
 
