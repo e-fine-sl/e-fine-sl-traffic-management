@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_app/screens/auth/forgot_password_screen.dart';
 import 'package:mobile_app/screens/auth/user_selection_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/auth_service.dart';
 import '../../services/biometric_service.dart';
 import '../../widgets/biometric_enable_dialog.dart';
@@ -369,32 +370,47 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
       child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo
-                Image.asset(
-                  'assets/icons/app_icon/app_logo_circle.png',
-                  height: 100,
-                ),
+        extendBodyBehindAppBar: true,
+        body: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/images/login_bg.png'),
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+            ),
+          ),
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo
+                  Image.asset(
+                    'assets/icons/app_icon/app_logo_circle.png',
+                    height: 100,
+                  ),
                 const SizedBox(height: 10),
                 
                 Text(
                   'E-Fine SL',
-                  style: TextStyle(fontSize: 20, color: AppTheme.textSecondary(context)),
+                  style: GoogleFonts.montserrat(
+                    fontSize: 32, 
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                    shadows: const [Shadow(color: Colors.black87, blurRadius: 6, offset: Offset(0, 2))],
+                  ),
                 ),
                 const SizedBox(height: 30),
   
-                Text(
+                const Text(
                   'Welcome Back',
                   style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary(context),
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    shadows: [Shadow(color: Colors.black87, blurRadius: 6, offset: Offset(0, 3))],
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -474,13 +490,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         Container(
                           width: 60,
                           height: 60,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.primaryGreen.withValues(alpha: 0.5),
-                              width: 2,
-                            ),
-                            color: AppColors.primaryGreen.withValues(alpha: 0.06),
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3)),
+                            ],
                           ),
                           child: const Icon(
                             Icons.fingerprint,
@@ -489,11 +504,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        Text(
+                        const Text(
                           'Login with Fingerprint',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textSecondary(context),
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            shadows: [Shadow(color: Colors.black87, blurRadius: 4, offset: Offset(0, 2))],
                           ),
                         ),
                       ],
@@ -511,7 +528,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                   child: Text(
                     'Forgot Password?',
-                    style: TextStyle(color: AppTheme.textSecondary(context)),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      shadows: [Shadow(color: Colors.black87, blurRadius: 4, offset: Offset(0, 2))],
+                    ),
                   ),
                 ),
   
@@ -521,7 +543,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Text(
                       "Don't have an account? ",
-                      style: TextStyle(color: AppTheme.textSecondary(context)),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [Shadow(color: Colors.black87, blurRadius: 4, offset: Offset(0, 2))],
+                      ),
                     ),
                     GestureDetector(
                       onTap: () {
@@ -535,6 +562,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: AppColors.primaryBlueLight,
+                          shadows: [Shadow(color: Colors.black87, blurRadius: 4, offset: Offset(0, 2))],
                         ),
                       ),
                     ),
@@ -543,6 +571,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
           ),
+        ),
         ),
       ),
     );

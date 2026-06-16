@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async'; 
+import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/login_screen.dart'; 
+import '../onboarding/onboarding_screen.dart';
 import '../driver/driver_home_screen.dart';
 import '../police/police_home_screen.dart';
 import '../../services/auth_service.dart';
@@ -59,10 +61,22 @@ class _SplashScreenState extends State<SplashScreen> {
         debugPrint('[SplashScreen] Session valid + biometric disabled → Home');
         _navigateToHome(role);
       } else {
-        debugPrint('[SplashScreen] No active session → LoginScreen');
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
+        debugPrint('[SplashScreen] No active session → Check Onboarding');
+        
+        final prefs = await SharedPreferences.getInstance();
+        final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
+
+        if (!mounted) return;
+
+        if (hasSeenOnboarding) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+          );
+        }
       }
     } catch (e) {
       debugPrint('[SplashScreen] Error verifying session: $e');
