@@ -1,18 +1,29 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
 const { EMAIL } = require('../config/constants');
 require('dotenv').config();
 
-// Create a single global transport pool so we don't spam Gmail with simultaneous AUTH requests
+// CRITICAL FIX: Force IPv4 globally for this Node process
+// This bypasses a severe WSL/Node.js bug where smtp.gmail.com resolves to IPv6 
+// and drops all outbound packets, causing endless "Connection timeout" errors.
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
+// We do NOT use pool: true anymore. 
+// We create a fresh connection per email, but they are sent SEQUENTIALLY from the controller.
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
   secure: true,
-  pool: true, // Re-use the same connection for multiple emails
-  maxConnections: 3, // Prevent opening too many simultaneous sockets
   auth: {
     user: process.env.EMAIL_USER, 
     pass: process.env.EMAIL_PASS, 
   },
+  tls: {
+    // Avoid SSL failures in certain local network environments
+    rejectUnauthorized: false
+  }
 });
 
 const sendEmail = async (options) => {
