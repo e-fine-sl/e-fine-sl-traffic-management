@@ -3,6 +3,11 @@ const router = express.Router();
 const { protectAdmin, requireRole } = require('../middleware/adminMiddleware');
 const PreApprovedOfficer = require('../models/preApprovedOfficerModel');
 const {
+    createStation,
+    updateStation,
+    deleteStation
+} = require('../controllers/stationController');
+const {
     adminLogin,
     adminLogout,
     adminRefreshToken,
@@ -141,6 +146,11 @@ router.post('/register/complete', protectAdmin, requireRole('super_admin'), comp
 // Delete operations
 router.delete('/officers/:id', protectAdmin, requireRole('super_admin'), deleteOfficer);
 router.delete('/fines/offenses/:id', protectAdmin, requireRole('super_admin'), deleteOffense);
+
+// Station management
+router.post('/stations', protectAdmin, requireRole('super_admin'), createStation);
+router.put('/stations/:id', protectAdmin, requireRole('super_admin'), updateStation);
+router.delete('/stations/:id', protectAdmin, requireRole('super_admin'), deleteStation);
 
 // Admin management
 router.get('/all', protectAdmin, requireRole('super_admin'), getAllAdmins);

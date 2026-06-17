@@ -16,10 +16,24 @@ const stationSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    province: {
+      type: String,
+      required: false,
+    },
     officialEmail: {
       type: String,
       required: true, 
-      
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        required: false
+      },
+      coordinates: {
+        type: [Number],
+        required: false
+      }
     },
   },
   {
