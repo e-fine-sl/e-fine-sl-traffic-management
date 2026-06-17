@@ -28,6 +28,8 @@ const accidentReportSchema = new mongoose.Schema({
   officersNotified: { type: Number, default: 0 },
   stationNotified: { type: String, default: '' },
   stationEmail: { type: String, default: '' },
+  nearbyStationsNotified: { type: [String], default: [] },
+  nearbyStationEmails: { type: [String], default: [] },
   emailSent: { type: Boolean, default: false },
   divisionNotifiedAt: { type: Date, default: null },
   status: { 
