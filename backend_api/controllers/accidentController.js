@@ -5,8 +5,10 @@ const Station         = require('../models/stationModel');
 const { sendToMultiple } = require('../services/fcmService');
 const sendEmail          = require('../utils/sendEmail');
 const { resolveLocation } = require('../utils/sriLankaGeoHelper');
+const { buildNearbyStationAlertHtml } = require('../utils/nearbyStationAlertEmail');
 
-const ACCIDENT_RADIUS_METERS = 5000; // 5 km
+const ACCIDENT_RADIUS_METERS = 5000; // 5 km (for officers)
+const STATION_RADIUS_METERS = 10000; // 10 km (for nearby station email alerts)
 
 const buildEmailHtml = ({
   driverName, licenseNumber, driverPhone, accidentType,
@@ -203,24 +205,37 @@ const reportAccident = async (req, res) => {
     console.log(`${tag}    Grace window officers: ${graceOfficers.length}`);
     console.log(`${tag}    Total unique: ${nearbyOfficers.length}, valid tokens: ${validTokens.length}`);
 
-    // STEP 5 — Find police station email
-    console.log(`\n${tag} STEP 5: Finding police station email...`);
+    // STEP 5 — Find NEARBY police stations within 10 km radius
+    console.log(`\n${tag} STEP 5: Finding nearby police stations (${STATION_RADIUS_METERS / 1000} km radius)...`);
+    let nearbyStations = [];
     let stationName = '';
     let stationEmail = '';
     
     try {
-      if (driver.policeStation) {
-        const station = await Station.findOne({ name: { $regex: new RegExp(driver.policeStation, 'i') } });
-        if (station) {
-          stationName = station.name;
-          stationEmail = station.officialEmail;
-          console.log(`${tag}  STEP 5 OK: Found station email for ${stationName}`);
-        } else {
-          console.warn(`${tag}  STEP 5 WARNING: Station not found for driver.policeStation = ${driver.policeStation}`);
+      nearbyStations = await Station.find({
+        'location.type': 'Point',
+        location: {
+          $near: {
+            $geometry: { type: 'Point', coordinates: [longitude, latitude] },
+            $maxDistance: STATION_RADIUS_METERS
+          }
         }
+      }).select('name stationCode officialEmail location');
+
+      if (nearbyStations.length > 0) {
+        // Keep backward compat: store the closest station in old fields
+        stationName = nearbyStations.map(s => s.name).join(', ');
+        stationEmail = nearbyStations[0].officialEmail;
+        console.log(`${tag}  STEP 5 OK: Found ${nearbyStations.length} station(s) within range:`);
+        nearbyStations.forEach((s, i) => {
+          console.log(`${tag}    ${i + 1}. ${s.name} (${s.stationCode}) — ${s.officialEmail}`);
+        });
+      } else {
+        console.warn(`${tag}  STEP 5 WARNING: No police stations found within ${STATION_RADIUS_METERS / 1000} km`);
       }
     } catch (err) {
-      console.warn(`${tag}  STEP 5 WARNING: Error looking up station email - ${err.message}`);
+      console.warn(`${tag}  STEP 5 WARNING: Geospatial query failed - ${err.message}`);
+      console.warn(`${tag}  Ensure stations have location data and 2dsphere index exists.`);
     }
 
     // STEP 6 — Build FCM payload
@@ -265,28 +280,74 @@ const reportAccident = async (req, res) => {
     });
     console.log(`${tag}  STEP 7 OK: Email HTML ready`);
 
-    // STEP 8 — Fire BOTH channels in PARALLEL using Promise.allSettled()
-    console.log(`\n${tag} STEP 8: Dispatching FCM and Email in parallel...`);
-    const [fcmResult, emailResult] = await Promise.allSettled([
+    // STEP 8 — Fire FCM + Nearby Station Emails in PARALLEL
+    console.log(`\n${tag} STEP 8: Dispatching FCM and nearby station emails in parallel...`);
+
+    // Helper to calculate distance between two [lng, lat] coordinate pairs
+    const calcDistanceKm = (coord1, coord2) => {
+      const R = 6371; // Earth radius in km
+      const dLat = (coord2[1] - coord1[1]) * Math.PI / 180;
+      const dLon = (coord2[0] - coord1[0]) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(coord1[1] * Math.PI / 180) * Math.cos(coord2[1] * Math.PI / 180) *
+                Math.sin(dLon / 2) ** 2;
+      return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1);
+    };
+
+    // Build email promises for each nearby station
+    const stationEmailPromises = nearbyStations
+      .filter(s => s.officialEmail)
+      .map(station => {
+        const distKm = station.location?.coordinates
+          ? calcDistanceKm([longitude, latitude], station.location.coordinates)
+          : '?';
+
+        const stationAlertHtml = buildNearbyStationAlertHtml({
+          stationName: station.name,
+          stationCode: station.stationCode,
+          distanceKm: distKm,
+          driverName: driver.name,
+          licenseNumber: licenseNumber,
+          driverPhone: driver.phone,
+          accidentType: accidentType,
+          description: cleanDescription,
+          latitude: latitude,
+          longitude: longitude,
+          mapsLink: `https://maps.google.com/?q=${latitude},${longitude}`,
+          province: geoData.province,
+          district: geoData.district,
+          division: geoData.policeDivision,
+          reportedAt: new Date().toLocaleString()
+        });
+
+        return sendEmail({
+          email: station.officialEmail,
+          subject: `⚠️ EMERGENCY: ${accidentType} — ${distKm} km from ${station.name}`,
+          html: stationAlertHtml
+        }).then(() => ({ station: station.name, email: station.officialEmail, sent: true }))
+          .catch(err => ({ station: station.name, email: station.officialEmail, sent: false, error: err.message }));
+      });
+
+    const [fcmResult, ...stationEmailResults] = await Promise.allSettled([
       validTokens.length > 0
         ? sendToMultiple(validTokens, fcmPayload)
         : Promise.resolve({ sent: 0, failed: 0 }),
-      stationEmail
-        ? sendEmail({
-            email: stationEmail,
-            subject: ` ACCIDENT ALERT: ${accidentType} — e-Fine SL`,
-            html: emailHtml
-          })
-        : Promise.resolve(null)
+      ...stationEmailPromises
     ]);
 
     const fcmSent = fcmResult.status === 'fulfilled' ? (fcmResult.value?.sent || 0) : 0;
-    const emailSent = emailResult.status === 'fulfilled' && emailResult.value !== null;
+    const stationEmailsSent = stationEmailResults.filter(r => r.status === 'fulfilled' && r.value?.sent).length;
+    const emailSent = stationEmailsSent > 0;
     
     if (fcmResult.status === 'rejected') console.error(`${tag}  FCM Failed:`, fcmResult.reason);
-    if (emailResult.status === 'rejected') console.error(`${tag}  Email Failed:`, emailResult.reason);
     
-    console.log(`${tag}  STEP 8 OK: Dispatched. FCM sent: ${fcmSent}. Email sent: ${emailSent}`);
+    console.log(`${tag}  STEP 8 OK: FCM sent: ${fcmSent}. Station emails sent: ${stationEmailsSent}/${nearbyStations.length}`);
+    stationEmailResults.forEach(r => {
+      if (r.status === 'fulfilled') {
+        const v = r.value;
+        console.log(`${tag}    → ${v.station} (${v.email}): ${v.sent ? '✅ Sent' : '❌ Failed — ' + v.error}`);
+      }
+    });
 
     // STEP 9 — Save AccidentReport to MongoDB
     console.log(`\n${tag} STEP 9: Saving accident report to DB...`);
@@ -304,6 +365,8 @@ const reportAccident = async (req, res) => {
       stationNotified: stationName,
       stationEmail,
       emailSent,
+      nearbyStationsNotified: nearbyStations.map(s => s.name),
+      nearbyStationEmails: nearbyStations.filter(s => s.officialEmail).map(s => s.officialEmail),
       images: imageUrls,
       status: 'OPEN',
       statusHistory: [{
@@ -333,6 +396,8 @@ const reportAccident = async (req, res) => {
         policeDivision: geoData.policeDivision,
         nearbyOfficers: nearbyOfficers.length,
         officersNotified: fcmSent,
+        nearbyStationsFound: nearbyStations.length,
+        nearbyStationEmailsSent: stationEmailsSent,
         stationEmail: stationEmail || 'Not found',
         emailSent
       }

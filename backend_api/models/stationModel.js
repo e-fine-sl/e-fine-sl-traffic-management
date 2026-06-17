@@ -41,4 +41,7 @@ const stationSchema = mongoose.Schema(
   }
 );
 
+// Enable geospatial queries (e.g. find stations within 10km of an accident)
+stationSchema.index({ location: '2dsphere' });
+
 module.exports = mongoose.model('Station', stationSchema);
