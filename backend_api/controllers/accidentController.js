@@ -500,36 +500,59 @@ const notifyPoliceDivision = async (req, res) => {
     
     if (!report) return res.status(404).json({ success: false, message: 'Report not found' });
 
-    const station = await Station.findOne({ name: { $regex: new RegExp(report.policeDivision, 'i') } });
-    if (!station || !station.officialEmail) {
-      return res.status(404).json({ success: false, message: 'Police station email not found for this division' });
+    const [longitude, latitude] = report.location.coordinates;
+    const STATION_RADIUS_METERS = 10000; // 10 km
+
+    const nearbyStations = await Station.find({
+      'location.type': 'Point',
+      location: {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [longitude, latitude] },
+          $maxDistance: STATION_RADIUS_METERS
+        }
+      }
+    }).select('name stationCode officialEmail location');
+
+    const stationsWithEmail = nearbyStations.filter(s => s.officialEmail);
+
+    if (stationsWithEmail.length === 0) {
+      return res.status(404).json({ success: false, message: 'No nearby police stations found with a valid email address within 10km.' });
     }
 
-    const emailHtml = buildDivisionNotificationHtml({
-      reportId: report._id.toString().substring(0, 8).toUpperCase(),
-      driverName: report.driverName,
-      licenseNumber: report.driverLicense,
-      accidentType: report.accidentType,
-      description: report.description,
-      province: report.province,
-      district: report.district,
-      division: report.policeDivision,
-      mapsLink: `https://maps.google.com/?q=${report.location.coordinates[1]},${report.location.coordinates[0]}`,
-      reportedAt: new Date(report.reportedAt).toLocaleString(),
-      sentBy: adminName || 'System Admin'
+    const emailPromises = stationsWithEmail.map(station => {
+      const emailHtml = buildDivisionNotificationHtml({
+        reportId: report._id.toString().substring(0, 8).toUpperCase(),
+        driverName: report.driverName,
+        licenseNumber: report.driverLicense,
+        accidentType: report.accidentType,
+        description: report.description,
+        province: report.province,
+        district: report.district,
+        division: report.policeDivision,
+        mapsLink: `https://maps.google.com/?q=${latitude},${longitude}`,
+        reportedAt: new Date(report.reportedAt).toLocaleString(),
+        sentBy: adminName || 'System Admin'
+      });
+
+      return sendEmail({
+        email: station.officialEmail,
+        subject: ` ACTION REQUIRED: Accident near ${station.name} — e-Fine SL`,
+        html: emailHtml
+      }).then(() => station.name);
     });
 
-    await sendEmail({
-      email: station.officialEmail,
-      subject: ` ACTION REQUIRED: Accident in Your Division — e-Fine SL`,
-      html: emailHtml
-    });
+    const results = await Promise.allSettled(emailPromises);
+    const successfulStations = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+
+    if (successfulStations.length === 0) {
+      return res.status(500).json({ success: false, message: 'Failed to send emails to nearby stations.' });
+    }
 
     report.divisionNotifiedAt = new Date();
     report.statusHistory.push({
       status: report.status,
       changedBy: adminName || 'System Admin',
-      note: `Division notification sent to ${station.officialEmail}`,
+      note: `Manual notification sent to ${successfulStations.length} nearby station(s): ${successfulStations.join(', ')}`,
       changedAt: new Date()
     });
 
@@ -537,7 +560,7 @@ const notifyPoliceDivision = async (req, res) => {
 
     return res.status(200).json({ 
       success: true, 
-      message: `Police division notified at ${station.officialEmail}` 
+      message: `Notifications sent to ${successfulStations.length} nearby police station(s).` 
     });
   } catch (err) {
     console.error('[AccidentCtrl] Error notifying division:', err);
