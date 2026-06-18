@@ -37,6 +37,10 @@ const {
     updateAdmin,
     deleteAdmin
 } = require('../controllers/adminController');
+const {
+    getSystemConfig,
+    updateSystemConfig
+} = require('../controllers/systemConfigController');
 
 // ==========================================
 // PUBLIC ROUTES
@@ -156,5 +160,9 @@ router.delete('/stations/:id', protectAdmin, requireRole('super_admin'), deleteS
 router.get('/all', protectAdmin, requireRole('super_admin'), getAllAdmins);
 router.put('/:id', protectAdmin, requireRole('super_admin'), updateAdmin);
 router.delete('/:id', protectAdmin, requireRole('super_admin'), deleteAdmin);
+
+// System Config (Master Data)
+router.get('/system-config', protectAdmin, requireRole('super_admin', 'admin_officer'), getSystemConfig);
+router.put('/system-config', protectAdmin, requireRole('super_admin'), updateSystemConfig);
 
 module.exports = router;
