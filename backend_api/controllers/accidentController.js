@@ -294,62 +294,62 @@ const reportAccident = async (req, res) => {
       return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1);
     };
 
-    // Fire FCM
-    const fcmResult = validTokens.length > 0 
-      ? await sendToMultiple(validTokens, fcmPayload).catch(err => {
-          console.error(`${tag}  FCM Failed:`, err);
-          return { sent: 0, failed: validTokens.length };
-        })
-      : { sent: 0, failed: 0 };
+    // Fire FCM + all station emails in TRUE PARALLEL using Promise.allSettled
+    // SendGrid uses HTTPS so there are no SMTP throttling/timeout issues
+    const stationEmailPromises = nearbyStations
+      .filter(s => s.officialEmail)
+      .map(station => {
+        const distKm = station.location?.coordinates
+          ? calcDistanceKm([longitude, latitude], station.location.coordinates)
+          : '?';
 
-    // Fire emails SEQUENTIALLY to prevent SMTP connection throttling/timeouts
-    const stationEmailResults = [];
-    for (const station of nearbyStations.filter(s => s.officialEmail)) {
-      const distKm = station.location?.coordinates
-        ? calcDistanceKm([longitude, latitude], station.location.coordinates)
-        : '?';
+        const stationAlertHtml = buildNearbyStationAlertHtml({
+          stationName: station.name,
+          stationCode: station.stationCode,
+          distanceKm: distKm,
+          driverName: driver.name,
+          licenseNumber: licenseNumber,
+          driverPhone: driver.phone,
+          accidentType: accidentType,
+          description: cleanDescription,
+          latitude: latitude,
+          longitude: longitude,
+          mapsLink: `https://maps.google.com/?q=${latitude},${longitude}`,
+          province: geoData.province,
+          district: geoData.district,
+          division: geoData.policeDivision,
+          reportedAt: new Date().toLocaleString()
+        });
 
-      const stationAlertHtml = buildNearbyStationAlertHtml({
-        stationName: station.name,
-        stationCode: station.stationCode,
-        distanceKm: distKm,
-        driverName: driver.name,
-        licenseNumber: licenseNumber,
-        driverPhone: driver.phone,
-        accidentType: accidentType,
-        description: cleanDescription,
-        latitude: latitude,
-        longitude: longitude,
-        mapsLink: `https://maps.google.com/?q=${latitude},${longitude}`,
-        province: geoData.province,
-        district: geoData.district,
-        division: geoData.policeDivision,
-        reportedAt: new Date().toLocaleString()
-      });
-
-      try {
-        await sendEmail({
+        return sendEmail({
           email: station.officialEmail,
           subject: `⚠️ EMERGENCY: ${accidentType} — ${distKm} km from ${station.name}`,
           html: stationAlertHtml
-        });
-        stationEmailResults.push({ status: 'fulfilled', value: { station: station.name, email: station.officialEmail, sent: true } });
-      } catch (err) {
-        stationEmailResults.push({ status: 'rejected', value: { station: station.name, email: station.officialEmail, sent: false, error: err.message } });
-      }
-    }
+        })
+          .then(() => ({ station: station.name, email: station.officialEmail, sent: true }))
+          .catch(err => ({ station: station.name, email: station.officialEmail, sent: false, error: err.message }));
+      });
 
-    const fcmSent = fcmResult?.sent || 0;
+    const [fcmResult, ...stationEmailResults] = await Promise.allSettled([
+      validTokens.length > 0
+        ? sendToMultiple(validTokens, fcmPayload)
+        : Promise.resolve({ sent: 0, failed: 0 }),
+      ...stationEmailPromises
+    ]);
+
+    const fcmSent = fcmResult.status === 'fulfilled' ? (fcmResult.value?.sent || 0) : 0;
     const stationEmailsSent = stationEmailResults.filter(r => r.status === 'fulfilled' && r.value?.sent).length;
     const emailSent = stationEmailsSent > 0;
-    
+
     if (fcmResult.status === 'rejected') console.error(`${tag}  FCM Failed:`, fcmResult.reason);
-    
+
     console.log(`${tag}  STEP 8 OK: FCM sent: ${fcmSent}. Station emails sent: ${stationEmailsSent}/${nearbyStations.length}`);
     stationEmailResults.forEach(r => {
+      const v = r.status === 'fulfilled' ? r.value : r.reason;
       if (r.status === 'fulfilled') {
-        const v = r.value;
         console.log(`${tag}    → ${v.station} (${v.email}): ${v.sent ? '✅ Sent' : '❌ Failed — ' + v.error}`);
+      } else {
+        console.error(`${tag}    → ❌ Promise rejected:`, r.reason);
       }
     });
 
