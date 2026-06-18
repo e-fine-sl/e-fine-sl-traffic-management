@@ -2,13 +2,14 @@ const AccidentReport  = require('../models/accidentReportModel');
 const Driver          = require('../models/driverModel');
 const Police          = require('../models/policeModel');
 const Station         = require('../models/stationModel');
+const SystemConfig    = require('../models/systemConfigModel');
 const { sendToMultiple } = require('../services/fcmService');
 const sendEmail          = require('../utils/sendEmail');
 const { resolveLocation } = require('../utils/sriLankaGeoHelper');
 const { buildNearbyStationAlertHtml } = require('../utils/nearbyStationAlertEmail');
 
 const ACCIDENT_RADIUS_METERS = 5000; // 5 km (for officers)
-const STATION_RADIUS_METERS = 10000; // 10 km (for nearby station email alerts)
+// STATION_RADIUS_METERS is now fetched dynamically from SystemConfig
 
 const buildEmailHtml = ({
   driverName, licenseNumber, driverPhone, accidentType,
@@ -205,8 +206,20 @@ const reportAccident = async (req, res) => {
     console.log(`${tag}    Grace window officers: ${graceOfficers.length}`);
     console.log(`${tag}    Total unique: ${nearbyOfficers.length}, valid tokens: ${validTokens.length}`);
 
-    // STEP 5 — Find NEARBY police stations within 10 km radius
-    console.log(`\n${tag} STEP 5: Finding nearby police stations (${STATION_RADIUS_METERS / 1000} km radius)...`);
+    // Fetch dynamic radius configuration
+    let stationRadiusKm = 10; // Default to 10km
+    try {
+      const config = await SystemConfig.findOne();
+      if (config && config.accidentNotificationRadiusKm) {
+        stationRadiusKm = config.accidentNotificationRadiusKm;
+      }
+    } catch (err) {
+      console.warn(`${tag} WARNING: Failed to fetch SystemConfig, using default radius 10km`);
+    }
+    const stationRadiusMeters = stationRadiusKm * 1000;
+
+    // STEP 5 — Find NEARBY police stations
+    console.log(`\n${tag} STEP 5: Finding nearby police stations (${stationRadiusKm} km radius)...`);
     let nearbyStations = [];
     let stationName = '';
     let stationEmail = '';
@@ -217,7 +230,7 @@ const reportAccident = async (req, res) => {
         location: {
           $near: {
             $geometry: { type: 'Point', coordinates: [longitude, latitude] },
-            $maxDistance: STATION_RADIUS_METERS
+            $maxDistance: stationRadiusMeters
           }
         }
       }).select('name stationCode officialEmail location');
@@ -231,7 +244,7 @@ const reportAccident = async (req, res) => {
           console.log(`${tag}    ${i + 1}. ${s.name} (${s.stationCode}) — ${s.officialEmail}`);
         });
       } else {
-        console.warn(`${tag}  STEP 5 WARNING: No police stations found within ${STATION_RADIUS_METERS / 1000} km`);
+        console.warn(`${tag}  STEP 5 WARNING: No police stations found within ${stationRadiusKm} km`);
       }
     } catch (err) {
       console.warn(`${tag}  STEP 5 WARNING: Geospatial query failed - ${err.message}`);
