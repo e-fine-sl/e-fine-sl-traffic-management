@@ -745,8 +745,12 @@ const resetPasswordByLicense = async (req, res) => {
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
   try {
+    let role = 'Police';
     let user = await Police.findOne({ email });
-    if (!user) user = await Driver.findOne({ email });
+    if (!user) {
+      user = await Driver.findOne({ email });
+      if (user) role = 'Driver';
+    }
 
     if (!user) return res.status(HTTP.NOT_FOUND).json({ message: 'User not found with this email' });
 
@@ -757,7 +761,7 @@ const forgotPassword = async (req, res) => {
     const message = `You requested a password reset. OTP: ${otp}`;
     await sendEmail({ email: user.email, subject: 'Password Reset Code', message });
 
-    res.status(HTTP.OK).json({ success: true, message: 'OTP sent to email' });
+    res.status(HTTP.OK).json({ success: true, message: 'OTP sent to email', role: role });
   } catch (error) {
     res.status(HTTP.SERVER_ERROR).json({ message: 'Server Error', error: error.message });
   }

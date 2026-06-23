@@ -42,13 +42,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
     setState(() => _isLoading = true);
     try {
-      await _authService.forgotPassword(_emailController.text);
-      _showSuccess("OTP sent to your email!");
+      final role = await _authService.forgotPassword(_emailController.text);
+      _showSuccess("User Found: ${_emailController.text} is registered as a $role.\nOTP sent to your email!");
       setState(() => _currentStep = 1);
     } catch (e) {
-      _showError(e.toString());
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      _showError(msg);
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

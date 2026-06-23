@@ -464,7 +464,7 @@ class AuthService {
   // PASSWORD RESET FLOWS (also use RSA encryption)
   // ─────────────────────────────────────────────────────────────────────────
 
-  Future<void> forgotPassword(String email) async {
+  Future<String> forgotPassword(String email) async {
     final response = await http.post(
       Uri.parse('$_mainUrl/auth/forgot-password'),
       headers: {'Content-Type': 'application/json'},
@@ -474,6 +474,8 @@ class AuthService {
       final body = jsonDecode(response.body);
       throw Exception(body['message'] ?? 'Failed to send OTP');
     }
+    final body = jsonDecode(response.body);
+    return body['role'] ?? 'Unknown';
   }
 
   Future<void> verifyResetOTP(String email, String otp) async {
