@@ -476,7 +476,13 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: Theme.of(context).colorScheme.copyWith(
+          primary: AppColors.primaryGreenDark,
+        ),
+      ),
+      child: Scaffold(
       appBar: AppBar(
         title: const Text("Driver Registration"),
         backgroundColor: AppColors.primaryGreenDark, 
@@ -705,6 +711,6 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 }
