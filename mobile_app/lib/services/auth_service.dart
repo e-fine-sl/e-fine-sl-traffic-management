@@ -597,7 +597,8 @@ class AuthService {
     try {
       final response = await http.get(Uri.parse('$_mainUrl/stations'));
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final Map<String, dynamic> responseBody = jsonDecode(response.body);
+        final List<dynamic> data = responseBody['data'] ?? [];
         return data.map((e) => {
           'name': e['name'],
           'code': e['stationCode'] ?? e['_id'],

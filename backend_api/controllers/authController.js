@@ -202,6 +202,52 @@ const registerPolice = async (req, res) => {
       );
       console.log(`[AUTH/REGISTER-POLICE] Badge ${badgeNumber} marked as registered.`);
 
+      // ─────────────────────────────────────────────────────────────────────
+      // NEW: Send notification email to the selected police station
+      // ─────────────────────────────────────────────────────────────────────
+      try {
+        const stationDoc = await Station.findOne({ stationCode: station });
+        if (stationDoc && stationDoc.officialEmail) {
+          const emailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+              <div style="background-color: #003366; padding: 20px; text-align: center;">
+                <h2 style="color: #ffffff; margin: 0;">E-Fine SL - New Officer Registered</h2>
+              </div>
+              <div style="padding: 20px; background-color: #ffffff;">
+                <p style="font-size: 16px; color: #333;">Dear OIC, ${stationDoc.name},</p>
+                <p style="font-size: 16px; color: #333;">Please be informed that a new officer has successfully created an account and registered under your station.</p>
+                <table style="width: 100%; margin-bottom: 20px; background-color: #f9f9f9; padding: 10px; border-radius: 5px;">
+                  <tr>
+                    <td style="font-weight: bold; color: #555; padding: 5px;">Officer Name:</td>
+                    <td style="font-weight: bold; color: #000; padding: 5px;">${name}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #555; padding: 5px;">Badge ID:</td>
+                    <td style="font-weight: bold; color: #000; padding: 5px;">${badgeNumber}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #555; padding: 5px;">Position:</td>
+                    <td style="font-weight: bold; color: #000; padding: 5px;">${position}</td>
+                  </tr>
+                </table>
+              </div>
+              <div style="background-color: #eeeeee; padding: 10px; text-align: center; font-size: 12px; color: #777;">
+                © ${new Date().getFullYear()} E-Fine SL Project | Secure Notification System
+              </div>
+            </div>
+          `;
+          await sendEmail({
+            email: stationDoc.officialEmail,
+            subject: 'New Police Officer Registration',
+            message: `Officer ${name} (${badgeNumber}) has registered under your station.`,
+            html: emailHtml
+          });
+          console.log(`[AUTH/REGISTER-POLICE] Email sent to station ${stationDoc.name} (${stationDoc.officialEmail})`);
+        }
+      } catch (emailError) {
+        console.error("[AUTH/REGISTER-POLICE] Error sending email to station:", emailError);
+      }
+
       res.status(HTTP.CREATED).json({
         success: true,
         _id: officer.id,
