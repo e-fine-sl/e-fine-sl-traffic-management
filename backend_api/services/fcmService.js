@@ -73,11 +73,17 @@ const getMessaging = () => {
  * @param {string} token  - Target device FCM registration token
  * @param {object} payload - { title, body, data }
  */
-const sendToToken = async (token, { title, body, data = {} }) => {
+const sendToToken = async (token, payload) => {
   if (!token) {
     console.warn('[FCMService] sendToToken called with empty token — skipping.');
     return { success: false, error: 'Empty token' };
   }
+
+  // Extract from either flat or nested structure
+  const title = payload.title || (payload.notification && payload.notification.title);
+  const body = payload.body || (payload.notification && payload.notification.body);
+  const data = payload.data || {};
+  const androidPriority = (payload.android && payload.android.priority) || 'high';
 
   const message = {
     token,
@@ -88,7 +94,7 @@ const sendToToken = async (token, { title, body, data = {} }) => {
       click_action: 'FLUTTER_NOTIFICATION_CLICK',
     },
     android: {
-      priority: 'high',
+      priority: androidPriority,
       notification: {
         sound: 'default',
         channelId: 'sos_alerts', // Must match Flutter channel ID
