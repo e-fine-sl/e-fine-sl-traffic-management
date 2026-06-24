@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "858411702626",
-    "project_id": "e-fine-sl",
-    "storage_bucket": "e-fine-sl.firebasestorage.app"
+    "project_number": "857585888845",
+    "project_id": "sos-alert-308a2",
+    "storage_bucket": "sos-alert-308a2.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:858411702626:android:0cb82cee83c2ce752df43b",
+        "mobilesdk_app_id": "1:857585888845:android:75ba48c4de815dca467604",
         "android_client_info": {
           "package_name": "com.example.mobile_app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAFcP3h2aT5DWdT9Bb2lh0nG198gdy4Vfs"
+          "current_key": "AIzaSyCxb5I-kVisBqdOcsd784zcUS6kH2r34BY"
         }
       ],
       "services": {
