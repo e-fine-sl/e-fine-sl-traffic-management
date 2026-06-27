@@ -15,7 +15,7 @@ class AppInfo {
 // ── API ───────────────────────────────────────────────
 class ApiConstants {
   // Main backend API (existing)
-static const String primaryBaseUrl = 'https://e-fine-sl-traffic-management-ar1a.onrender.com/api';
+static const String primaryBaseUrl = 'https://e-fine-sl-traffic-management-1.onrender.com/api';
 static const String secondaryBaseUrl = 'https://e-fine-sl-traffic-management-wapm.onrender.com/api';  
 static const String baseUrl       = primaryBaseUrl;
    //static const String baseUrl    = 'http://10.231.145.6:5000/api'; // local dev

@@ -683,6 +683,30 @@ const activateDriver = async (req, res) => {
     }
 };
 
+// @desc    Delete driver
+// @route   DELETE /api/admin/drivers/:id
+// @access  Private (Super Admin, Admin Officer)
+const deleteDriver = async (req, res) => {
+    try {
+        const driver = await Driver.findById(req.params.id);
+
+        if (!driver) {
+            return res.status(HTTP.NOT_FOUND).json({ message: 'Driver not found' });
+        }
+
+        await driver.deleteOne();
+
+        res.json({
+            success: true,
+            message: 'Driver deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('Delete driver error:', error);
+        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
+    }
+};
+
 // @desc    Get all police officers
 // @route   GET /api/admin/officers?page=1&limit=20
 // @access  Private (Admin)
@@ -1401,6 +1425,7 @@ module.exports = {
     getDriverDetails,
     suspendDriver,
     activateDriver,
+    deleteDriver,
     getAllOfficers,
     createOfficer,
     updateOfficer,
