@@ -16,6 +16,7 @@ const {
     getDriverDetails,
     suspendDriver,
     activateDriver,
+    deleteDriver,
     getAllOfficers,
     createOfficer,
     updateOfficer,
@@ -123,6 +124,7 @@ router.post('/reports/driver-violations', protectAdmin, generateDriverViolationR
 // Driver management
 router.put('/drivers/:id/suspend', protectAdmin, requireRole('admin_officer', 'super_admin'), suspendDriver);
 router.put('/drivers/:id/activate', protectAdmin, requireRole('admin_officer', 'super_admin'), activateDriver);
+router.delete('/drivers/:id', protectAdmin, requireRole('admin_officer', 'super_admin'), deleteDriver);
 
 // Officer management
 router.post('/officers', protectAdmin, requireRole('admin_officer', 'super_admin'), createOfficer);
@@ -148,7 +150,7 @@ router.post('/register/init', protectAdmin, requireRole('super_admin'), initAdmi
 router.post('/register/complete', protectAdmin, requireRole('super_admin'), completeAdminRegistration);
 
 // Delete operations
-router.delete('/officers/:id', protectAdmin, requireRole('super_admin'), deleteOfficer);
+router.delete('/officers/:id', protectAdmin, requireRole('super_admin', 'admin_officer'), deleteOfficer);
 router.delete('/fines/offenses/:id', protectAdmin, requireRole('super_admin'), deleteOffense);
 
 // Station management
