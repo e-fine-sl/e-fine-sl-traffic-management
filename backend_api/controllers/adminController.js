@@ -943,6 +943,33 @@ const getAllIssuedFines = async (req, res) => {
     }
 };
 
+// @desc    Delete an issued fine
+// @route   DELETE /api/admin/fines/:id
+// @access  Private (Super Admin)
+const deleteFine = async (req, res) => {
+    try {
+        const fineId = req.params.id;
+        const fine = await IssuedFine.findById(fineId);
+        
+        if (!fine) {
+            return res.status(HTTP.NOT_FOUND).json({ message: 'Fine not found' });
+        }
+
+        await IssuedFine.findByIdAndDelete(fineId);
+        
+        // Note: If you want to deduct demerit points from the driver, that logic could go here.
+        // But since it's just deleting the record as requested by Super Admin, we just delete it.
+        
+        res.json({
+            success: true,
+            message: 'Fine deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete fine error:', error);
+        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
+    }
+};
+
 // @desc    Update offense type
 // @route   PUT /api/admin/fines/offenses/:id
 // @access  Private (Admin Officer, Super Admin)
@@ -1431,6 +1458,7 @@ module.exports = {
     updateOfficer,
     deleteOfficer,
     getAllIssuedFines,
+    deleteFine,
     updateOffense,
     deleteOffense,
     getAllPayments,
