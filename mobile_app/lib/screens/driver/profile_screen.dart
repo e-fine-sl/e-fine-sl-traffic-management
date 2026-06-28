@@ -5,8 +5,7 @@ import 'package:mobile_app/services/secure_storage_service.dart';
 import 'package:qr_flutter/qr_flutter.dart'; 
 import 'dart:convert'; // To encode JSON
 import '../../config/app_constants.dart';
-
-import '../../services/wallet_service.dart';
+import '../../services/dmt_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -102,14 +101,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isLoadingVehicles = true);
 
     try {
-      final wallet = await WalletService().verifyAndLoadWallet(nic, license);
-      if (wallet.drivingLicense != null) {
+      final vehicles = await DmtService().fetchAllowedVehicles(nic, license);
+      if (vehicles.isNotEmpty) {
         setState(() {
-          _vehicleClasses = wallet.drivingLicense!.vehicleClasses;
+          _vehicleClasses = vehicles;
         });
-        debugPrint('$_tag Vehicle classes loaded: ${_vehicleClasses.length} class(es).');
+
+        // Cache the fetched vehicles so it isn't fetched again on next navigation
+        _userData['vehicleClasses'] = _vehicleClasses;
+        await SecureStorageService().cacheProfile(_userData);
+
+        debugPrint('$_tag Vehicle classes loaded and cached from DMT: ${_vehicleClasses.length} class(es).');
       } else {
-        debugPrint('$_tag _fetchAllowedVehicles() — drivingLicense is null in wallet response.');
+        debugPrint('$_tag _fetchAllowedVehicles() — no vehicle classes returned from DMT.');
       }
     } catch (e) {
       debugPrint('$_tag Error fetching vehicle classes: $e');
@@ -612,17 +616,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildClassChip(String category, String issue, String expiry) {
+    // Format dates nicely
+    String formatDate(String dateStr) {
+      if (dateStr.isEmpty) return '';
+      try {
+        final dt = DateTime.parse(dateStr);
+        return DateFormat('dd MMM yyyy').format(dt); // e.g. 21 Sep 2021
+      } catch (e) {
+        return dateStr;
+      }
+    }
+
+    final formattedIssue = formatDate(issue);
+    final formattedExpiry = formatDate(expiry);
+
     return Builder(
       builder: (context) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         return Container(
-          width: 130,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          width: 140, // slightly wider to fit dates
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           decoration: BoxDecoration(
             color: isDark
                 ? AppColors.primaryGreenDark.withValues(alpha: 0.25)
                 : AppColors.primaryGreenLight.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isDark
                   ? AppColors.primaryGreen
@@ -637,20 +655,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 category,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 18,
                   color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreenDark,
                 ),
               ),
-              const SizedBox(height: 4),
-              if (issue.isNotEmpty)
+              const SizedBox(height: 6),
+              if (formattedIssue.isNotEmpty)
                 Text(
-                  "Iss: $issue",
-                  style: TextStyle(fontSize: 10, color: isDark ? Colors.white70 : Colors.black87),
+                  "Iss: $formattedIssue",
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: isDark ? Colors.white70 : Colors.black87),
                 ),
-              if (expiry.isNotEmpty)
+              if (formattedExpiry.isNotEmpty)
                 Text(
-                  "Exp: $expiry",
-                  style: TextStyle(fontSize: 10, color: isDark ? Colors.white70 : Colors.black87),
+                  "Exp: $formattedExpiry",
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: isDark ? Colors.white70 : Colors.black87),
                 ),
             ],
           ),
