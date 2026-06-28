@@ -22,6 +22,7 @@ const {
     updateOfficer,
     deleteOfficer,
     getAllIssuedFines,
+    deleteFine,
     updateOffense,
     deleteOffense,
     getAllPayments,
@@ -152,6 +153,7 @@ router.post('/register/complete', protectAdmin, requireRole('super_admin'), comp
 // Delete operations
 router.delete('/officers/:id', protectAdmin, requireRole('super_admin', 'admin_officer'), deleteOfficer);
 router.delete('/fines/offenses/:id', protectAdmin, requireRole('super_admin'), deleteOffense);
+router.delete('/fines/:id', protectAdmin, requireRole('super_admin'), deleteFine);
 
 // Station management
 router.post('/stations', protectAdmin, requireRole('super_admin'), createStation);
