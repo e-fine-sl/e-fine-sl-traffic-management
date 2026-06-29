@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:geolocator/geolocator.dart';
 
 // --- Services ---
 import 'package:mobile_app/services/police_locale_service.dart';
@@ -65,6 +66,20 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
     
     debugPrint('[PoliceHomeScreen] initState: User data loaded, now loading dashboard...');
     await _loadDashboardData();
+
+    // Request location permissions if not already granted
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        debugPrint('[PoliceHomeScreen] Location permission denied, requesting...');
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint('[PoliceHomeScreen] Location permission permanently denied.');
+      }
+    } catch (e) {
+      debugPrint('[PoliceHomeScreen] Failed to check location permissions: $e');
+    }
 
     // 🚨 REGISTER PRESENCE: Update FCM Token and GPS on backend so officer is "reachable" by nearby SOS alerts
     if (badgeNumber.isNotEmpty) {

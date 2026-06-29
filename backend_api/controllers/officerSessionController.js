@@ -19,6 +19,17 @@ const officerLogout = async (req, res) => {
         lastLogoutTime: logoutTime 
     };
 
+    if (lat !== undefined && lng !== undefined && lat !== null && lng !== null) {
+        const parsedLat = parseFloat(lat);
+        const parsedLng = parseFloat(lng);
+        if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+            updateFields.lastLoginLocation = {
+                type: 'Point',
+                coordinates: [parsedLng, parsedLat]
+            };
+        }
+    }
+
     try {
         const officer = await Police.findOneAndUpdate(
             { badgeNumber },
