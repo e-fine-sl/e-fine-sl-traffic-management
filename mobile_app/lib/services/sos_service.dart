@@ -10,6 +10,7 @@
 // DEBUG: Every step prints a labeled debugPrint so you can follow in the
 //         Flutter console during the university demo.
 // ─────────────────────────────────────────────────────────────────────────────
+import 'dart:io';
 
 import 'dart:convert';
 import 'package:flutter/material.dart'; // Added for MaterialPageRoute
@@ -204,15 +205,19 @@ class SosService {
     debugPrint('$_tag STEP A: Fetching FCM token from Firebase...');
     String? fcmToken;
     try {
-      // On iOS, we must ensure APNS token is available before getting FCM token
-      String? apnsToken = await FirebaseMessaging.instance.getAPNSToken();
-      if (apnsToken == null) {
-        debugPrint('$_tag ⚠️ APNS token is null. Waiting 3 seconds to let iOS register...');
-        await Future.delayed(const Duration(seconds: 3));
+      if (Platform.isIOS) {
+        // On iOS, we must ensure APNS token is available before getting FCM token
+        String? apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+        if (apnsToken == null) {
+          debugPrint('$_tag ⚠️ APNS token is null. Waiting 3 seconds to let iOS register...');
+          await Future.delayed(const Duration(seconds: 3));
+        }
       }
       fcmToken = await FirebaseMessaging.instance.getToken();
-      debugPrint(
-          '$_tag ✅ FCM Token obtained: ...${fcmToken?.substring(fcmToken.length - 15)}');
+      final safeTokenPrint = (fcmToken != null && fcmToken.length > 15) 
+          ? '...${fcmToken.substring(fcmToken.length - 15)}' 
+          : fcmToken;
+      debugPrint('$_tag ✅ FCM Token obtained: $safeTokenPrint');
     } catch (e) {
       debugPrint('$_tag ❌ Failed to get FCM token: $e');
       debugPrint('$_tag    → Continuing anyway to register location.');
