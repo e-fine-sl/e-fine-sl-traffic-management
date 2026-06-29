@@ -27,8 +27,12 @@ class NotificationService {
 
     const androidSettings =
         AndroidInitializationSettings('@mipmap/launcher_icon');
+    const darwinSettings = DarwinInitializationSettings();
 
-    const initSettings = InitializationSettings(android: androidSettings);
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: darwinSettings,
+    );
 
     await _plugin.initialize(
       initSettings,

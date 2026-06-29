@@ -569,11 +569,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ],
-            ),
-          ),
-        ),
-        ),
-      ),
-    );
+            ), // Column
+          ), // SingleChildScrollView
+        ), // Center
+      ), // Container
+      ), // Scaffold
+    ); // Theme
   }
 }

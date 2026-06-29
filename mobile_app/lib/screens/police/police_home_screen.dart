@@ -258,7 +258,13 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
           children: [
             const Icon(Icons.verified_user, color: AppColors.successGreen),
             const SizedBox(width: 10),
-            Text(PoliceLocaleService.instance.translate('police.home_driver_details_title')),
+            Expanded(
+              child: Text(
+                PoliceLocaleService.instance.translate('police.home_driver_details_title'),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+            ),
           ],
         ),
         content: SizedBox(

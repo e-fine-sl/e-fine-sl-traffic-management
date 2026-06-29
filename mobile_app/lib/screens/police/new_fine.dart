@@ -94,22 +94,46 @@ class _NewFineScreenState extends State<NewFineScreen> {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
+        if (permission == LocationPermission.denied) {
+          _locationController.text = "Permission Denied";
+          return;
+        }
       }
-      Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
-      List<Placemark> placemarks =
-          await placemarkFromCoordinates(position.latitude, position.longitude);
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        String address = "${place.street}, ${place.locality}";
-        if (address.startsWith(", ")) address = address.substring(2);
-        setState(() => _locationController.text = address);
-      } else {
+      if (permission == LocationPermission.deniedForever) {
+        _locationController.text = "Permission Permanently Denied";
+        return;
+      }
+      setState(() => _locationController.text = "Fetching location...");
+      
+      Position? lastKnown = await Geolocator.getLastKnownPosition();
+      Position position = lastKnown ?? await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 10));
+          
+      try {
+        List<Placemark> placemarks =
+            await placemarkFromCoordinates(position.latitude, position.longitude);
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks[0];
+          String address = "${place.street}, ${place.locality}";
+          if (address.startsWith(", ")) address = address.substring(2);
+          
+          if (address.trim().isEmpty || address == ", ") {
+            setState(() => _locationController.text = "${position.latitude}, ${position.longitude}");
+          } else {
+            setState(() => _locationController.text = address);
+          }
+        } else {
+          setState(() => _locationController.text =
+              "${position.latitude}, ${position.longitude}");
+        }
+      } catch (geocodingError) {
+        debugPrint("Geocoding failed, falling back to coords: $geocodingError");
         setState(() => _locationController.text =
             "${position.latitude}, ${position.longitude}");
       }
     } catch (e) {
+      debugPrint("Get Location Error: $e");
       setState(() => _locationController.text = "Error getting location");
     } finally {
       setState(() => _isGettingLocation = false);
@@ -306,7 +330,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
-                  onPressed: _isSubmitting ? null : _submitFine,
+                  onPressed: (_isSubmitting || _isGettingLocation) ? null : _submitFine,
                   icon: const Icon(Icons.send),
                   label: _isSubmitting
                       ? const CircularProgressIndicator(color: Colors.white)
