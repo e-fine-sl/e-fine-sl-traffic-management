@@ -162,7 +162,7 @@ const reportAccident = async (req, res) => {
     // STEP 4 — Find nearby police officers (5 km radius)
     console.log(`\n${tag} STEP 4: Finding nearby police officers (including grace window)...`);
     
-    const GRACE_WINDOW_MINUTES = 20;
+    const GRACE_WINDOW_MINUTES = 10;
     const graceWindowCutoff = new Date(Date.now() - GRACE_WINDOW_MINUTES * 60 * 1000);
 
     // Query 1: Active officers within 5 km
