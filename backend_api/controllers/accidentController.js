@@ -612,11 +612,147 @@ const getAccidentStats = async (req, res) => {
   }
 };
 
+const getNearbyOfficersForReport = async (req, res) => {
+  try {
+    const report = await AccidentReport.findById(req.params.id);
+    if (!report) return res.status(404).json({ success: false, message: 'Report not found' });
+
+    const [longitude, latitude] = report.location.coordinates;
+    const GRACE_WINDOW_MINUTES = 20;
+    const graceWindowCutoff = new Date(Date.now() - GRACE_WINDOW_MINUTES * 60 * 1000);
+
+    // Active officers
+    const activeOfficers = await Police.find({
+      location: {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [longitude, latitude] },
+          $maxDistance: ACCIDENT_RADIUS_METERS
+        }
+      },
+      isActive: true
+    }).select('name badgeNumber isActive fcmToken policeStation');
+
+    // Grace window officers
+    const graceOfficers = await Police.find({
+      lastLoginLocation: {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [longitude, latitude] },
+          $maxDistance: ACCIDENT_RADIUS_METERS
+        }
+      },
+      isActive: false,
+      lastLogoutTime: { $gte: graceWindowCutoff }
+    }).select('name badgeNumber isActive lastLogoutTime fcmToken policeStation');
+
+    // Merge and deduplicate
+    const seenBadges = new Set();
+    const nearbyOfficers = [];
+
+    for (const o of [...activeOfficers, ...graceOfficers]) {
+      if (!seenBadges.has(o.badgeNumber)) {
+        seenBadges.add(o.badgeNumber);
+        
+        nearbyOfficers.push({
+          name: o.name,
+          badgeNumber: o.badgeNumber,
+          isActive: o.isActive,
+          lastLogoutTime: o.lastLogoutTime,
+          policeStation: o.policeStation,
+          hasValidToken: !!(o.fcmToken && o.fcmToken.length > 10)
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: nearbyOfficers,
+      count: nearbyOfficers.length
+    });
+  } catch (err) {
+    console.error('[AccidentCtrl] Error fetching nearby officers:', err);
+    return res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+};
+
+const manualNotifyOfficers = async (req, res) => {
+  try {
+    const { adminName, badgeNumbers } = req.body;
+    
+    if (!badgeNumbers || !Array.isArray(badgeNumbers) || badgeNumbers.length === 0) {
+      return res.status(400).json({ success: false, message: 'No badge numbers provided' });
+    }
+
+    const report = await AccidentReport.findById(req.params.id);
+    if (!report) return res.status(404).json({ success: false, message: 'Report not found' });
+
+    // Find the officers and collect their FCM tokens
+    const officers = await Police.find({
+      badgeNumber: { $in: badgeNumbers }
+    }).select('fcmToken');
+
+    const validTokens = officers.map(o => o.fcmToken).filter(t => t && t.length > 10);
+
+    if (validTokens.length === 0) {
+      return res.status(400).json({ success: false, message: 'None of the selected officers have a valid notification token' });
+    }
+
+    const [longitude, latitude] = report.location.coordinates;
+    const cleanDescription = report.description ? report.description.trim().substring(0, 200) : '';
+
+    const fcmPayload = {
+      title: `🚨 Accident Alert — ${report.accidentType}`,
+      body: `Driver ${report.driverName} has reported an accident near you. Tap to view location.`,
+      data: {
+        type: 'ACCIDENT_ALERT',
+        licenseNumber: report.driverLicense,
+        driverName: report.driverName,
+        driverPhone: report.driverPhone || '',
+        accidentType: report.accidentType,
+        description: cleanDescription,
+        lat: String(latitude),
+        lng: String(longitude),
+        mapsLink: `https://maps.google.com/?q=${latitude},${longitude}`,
+        province: report.province,
+        district: report.district,
+        policeDivision: report.policeDivision,
+        reportedAt: new Date(report.reportedAt).toISOString()
+      }
+    };
+
+    const fcmResult = await sendToMultiple(validTokens, fcmPayload);
+    const sentCount = fcmResult.sent || 0;
+
+    if (sentCount > 0) {
+      report.officersNotified += sentCount;
+      report.statusHistory.push({
+        status: report.status,
+        changedBy: adminName || 'System Admin',
+        note: `Manual push notification sent to ${sentCount} officer(s)`,
+        changedAt: new Date()
+      });
+      await report.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      notifiedCount: sentCount,
+      failedCount: fcmResult.failed || 0,
+      message: `Notifications sent to ${sentCount} officer(s).`
+    });
+
+  } catch (err) {
+    console.error('[AccidentCtrl] Error sending manual notifications:', err);
+    return res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
   reportAccident,
   getAccidentReports,
   getAccidentReportById,
   updateAccidentStatus,
   notifyPoliceDivision,
-  getAccidentStats
+  getAccidentStats,
+  getNearbyOfficersForReport,
+  manualNotifyOfficers
 };
