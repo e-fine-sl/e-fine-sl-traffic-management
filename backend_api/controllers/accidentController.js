@@ -159,11 +159,22 @@ const reportAccident = async (req, res) => {
     const geoData = resolveLocation(latitude, longitude);
     console.log(`${tag}  STEP 3 OK: ${geoData.province} / ${geoData.district} / ${geoData.policeDivision}`);
 
-    // STEP 4 — Find nearby police officers (5 km radius)
-    console.log(`\n${tag} STEP 4: Finding nearby police officers (including grace window)...`);
-    
-    const GRACE_WINDOW_MINUTES = 10;
-    const graceWindowCutoff = new Date(Date.now() - GRACE_WINDOW_MINUTES * 60 * 1000);
+    // Fetch dynamic configuration
+    let stationRadiusKm = 10; // Default to 10km
+    let graceWindowMinutes = 20; // Default to 20 mins
+    try {
+      const config = await SystemConfig.findOne();
+      if (config) {
+        if (config.accidentNotificationRadiusKm) stationRadiusKm = config.accidentNotificationRadiusKm;
+        if (config.officerLogoutGracePeriodMinutes) graceWindowMinutes = config.officerLogoutGracePeriodMinutes;
+      }
+    } catch (err) {
+      console.warn(`${tag} WARNING: Failed to fetch SystemConfig, using defaults`);
+    }
+    const stationRadiusMeters = stationRadiusKm * 1000;
+
+    console.log(`\n${tag} STEP 4: Finding nearby police officers (including ${graceWindowMinutes}-min grace window)...`);
+    const graceWindowCutoff = new Date(Date.now() - graceWindowMinutes * 60 * 1000);
 
     // Query 1: Active officers within 5 km
     const activeOfficers = await Police.find({
@@ -205,18 +216,6 @@ const reportAccident = async (req, res) => {
     console.log(`${tag}    Active officers: ${activeOfficers.length}`);
     console.log(`${tag}    Grace window officers: ${graceOfficers.length}`);
     console.log(`${tag}    Total unique: ${nearbyOfficers.length}, valid tokens: ${validTokens.length}`);
-
-    // Fetch dynamic radius configuration
-    let stationRadiusKm = 10; // Default to 10km
-    try {
-      const config = await SystemConfig.findOne();
-      if (config && config.accidentNotificationRadiusKm) {
-        stationRadiusKm = config.accidentNotificationRadiusKm;
-      }
-    } catch (err) {
-      console.warn(`${tag} WARNING: Failed to fetch SystemConfig, using default radius 10km`);
-    }
-    const stationRadiusMeters = stationRadiusKm * 1000;
 
     // STEP 5 — Find NEARBY police stations
     console.log(`\n${tag} STEP 5: Finding nearby police stations (${stationRadiusKm} km radius)...`);
@@ -618,8 +617,18 @@ const getNearbyOfficersForReport = async (req, res) => {
     if (!report) return res.status(404).json({ success: false, message: 'Report not found' });
 
     const [longitude, latitude] = report.location.coordinates;
-    const GRACE_WINDOW_MINUTES = 20;
-    const graceWindowCutoff = new Date(Date.now() - GRACE_WINDOW_MINUTES * 60 * 1000);
+    
+    let graceWindowMinutes = 20;
+    try {
+      const config = await SystemConfig.findOne();
+      if (config && config.officerLogoutGracePeriodMinutes) {
+        graceWindowMinutes = config.officerLogoutGracePeriodMinutes;
+      }
+    } catch (err) {
+      console.warn('[AccidentCtrl] WARNING: Failed to fetch SystemConfig, using default grace period');
+    }
+
+    const graceWindowCutoff = new Date(Date.now() - graceWindowMinutes * 60 * 1000);
 
     // Active officers
     const activeOfficers = await Police.find({

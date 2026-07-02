@@ -10,7 +10,8 @@ const getSystemConfig = async (req, res) => {
     // If no config exists, create a default one
     if (!config) {
       config = await SystemConfig.create({
-        accidentNotificationRadiusKm: 10
+        accidentNotificationRadiusKm: 10,
+        officerLogoutGracePeriodMinutes: 20
       });
     }
 
@@ -29,10 +30,14 @@ const getSystemConfig = async (req, res) => {
 // @access  Private/SuperAdmin
 const updateSystemConfig = async (req, res) => {
   try {
-    const { accidentNotificationRadiusKm } = req.body;
+    const { accidentNotificationRadiusKm, officerLogoutGracePeriodMinutes } = req.body;
 
     if (accidentNotificationRadiusKm && (accidentNotificationRadiusKm < 1 || accidentNotificationRadiusKm > 100)) {
        return res.status(400).json({ success: false, message: 'Radius must be between 1 and 100 km' });
+    }
+
+    if (officerLogoutGracePeriodMinutes && (officerLogoutGracePeriodMinutes < 5 || officerLogoutGracePeriodMinutes > 120)) {
+       return res.status(400).json({ success: false, message: 'Grace period must be between 5 and 120 minutes' });
     }
 
     let config = await SystemConfig.findOne();
@@ -43,6 +48,10 @@ const updateSystemConfig = async (req, res) => {
 
     if (accidentNotificationRadiusKm) {
         config.accidentNotificationRadiusKm = accidentNotificationRadiusKm;
+    }
+
+    if (officerLogoutGracePeriodMinutes) {
+        config.officerLogoutGracePeriodMinutes = officerLogoutGracePeriodMinutes;
     }
 
     await config.save();

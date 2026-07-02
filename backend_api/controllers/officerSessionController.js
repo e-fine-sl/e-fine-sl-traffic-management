@@ -128,11 +128,22 @@ const getOfficerLastSession = async (req, res) => {
         const lastSession = await OfficerSession.findOne({ badgeNumber })
             .sort({ loginTime: -1 });
 
+        let graceWindowMinutes = 20;
+        try {
+            const SystemConfig = require('../models/systemConfigModel');
+            const config = await SystemConfig.findOne();
+            if (config && config.officerLogoutGracePeriodMinutes) {
+                graceWindowMinutes = config.officerLogoutGracePeriodMinutes;
+            }
+        } catch (err) {
+            console.warn('[OfficerSession] WARNING: Failed to fetch SystemConfig, using default grace period');
+        }
+
         const graceWindowActive = (() => {
             if (officer.isActive) return false;
             if (!officer.lastLogoutTime) return false;
             const minutesSinceLogout = (Date.now() - officer.lastLogoutTime.getTime()) / 60000;
-            return minutesSinceLogout <= 20;
+            return minutesSinceLogout <= graceWindowMinutes;
         })();
 
         return res.status(200).json({
