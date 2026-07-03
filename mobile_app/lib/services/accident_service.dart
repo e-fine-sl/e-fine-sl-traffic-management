@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:http/http.dart' as http_pkg;
+import 'package:http_parser/http_parser.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'api_logger.dart' as http;
@@ -86,11 +87,15 @@ class AccidentService {
         for (var image in images) {
           final stream = http_pkg.ByteStream(image.openRead());
           final length = await image.length();
+          final ext = p.extension(image.path).replaceAll('.', '').toLowerCase();
+          final String mimeType = ext == 'png' ? 'png' : (ext == 'webp' ? 'webp' : 'jpeg');
+
           final multipartFile = http_pkg.MultipartFile(
             'images',
             stream,
             length,
             filename: p.basename(image.path),
+            contentType: MediaType('image', mimeType),
           );
           request.files.add(multipartFile);
         }
