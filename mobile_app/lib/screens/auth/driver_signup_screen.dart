@@ -137,7 +137,7 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
 
     if (value.trim().isEmpty) return;
 
-    _debounce = Timer(const Duration(milliseconds: 500), () async {
+    _debounce = Timer(const Duration(milliseconds: 1200), () async {
       // First do local regex checks if applicable
       if (field == 'email' && !_isValidEmail(value)) {
         setState(() {
@@ -188,6 +188,16 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
         }
 
         // ── Step 2: DMT verification (NEW) ────────────────────────────
+        // Prevent hitting external API rate limits by enforcing a minimum length check
+        if (value.trim().length < 8 || _nicController.text.trim().isEmpty) {
+          setState(() {
+            _isCheckingLicense = false;
+            _isDmtChecking = false;
+            _isLicenseUnique = true; // DB check passed, but waiting for full length to check DMT
+          });
+          return;
+        }
+
         setState(() {
           _isCheckingLicense = false;
           _isLicenseUnique   = false;
