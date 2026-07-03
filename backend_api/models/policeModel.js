@@ -72,10 +72,21 @@ const policeSchema = mongoose.Schema({
         },
     },
 
-    // Officer active status — used to filter $near queries (only alert ACTIVE officers)
+    // Officer active status — used to filter $near queries (legacy, keep for backward compatibility)
     isActive: {
         type: Boolean,
         default: true,
+    },
+
+    // ── Presence Tracking Fields (New) ───────────────────────────────────────
+    appState: {
+        type: String,
+        enum: ['FOREGROUND', 'BACKGROUND', 'LOGGED_OUT'],
+        default: 'LOGGED_OUT',
+    },
+    lastActiveTime: {
+        type: Date,
+        default: null,
     },
 
     // ── Session Tracking Fields ────────────────────────────────────────────
