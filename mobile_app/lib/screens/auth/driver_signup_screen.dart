@@ -187,71 +187,12 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
           return; // Stop — do not call DMT
         }
 
-        // ── Step 2: DMT verification (NEW) ────────────────────────────
-        // Prevent hitting external API rate limits by enforcing a minimum length check
-        if (value.trim().length < 8 || _nicController.text.trim().isEmpty) {
-          setState(() {
-            _isCheckingLicense = false;
-            _isDmtChecking = false;
-            _isLicenseUnique = true; // DB check passed, but waiting for full length to check DMT
-          });
-          return;
-        }
-
+        // Only perform database uniqueness check
         setState(() {
           _isCheckingLicense = false;
-          _isLicenseUnique   = false;
-          _isDmtChecking     = true;
-          _dmtErrorText      = null;
+          _isLicenseUnique   = true;
+          _licenseErrorText  = null;
         });
-
-        final dmtResult = await _authService.verifyLicenseWithDMT(
-          licenseNumber: value.trim(),
-          nic:           _nicController.text.trim(),
-        );
-
-        if (!mounted) return;
-
-        if (dmtResult['success'] == true) {
-          setState(() {
-            _isDmtChecking  = false;
-            _isDmtVerified  = true;
-            _isLicenseUnique = true;
-            _licenseErrorText = null;
-            _dmtErrorText     = null;
-          });
-        } else if (dmtResult['dmtUnreachable'] == true) {
-          setState(() {
-            _isDmtChecking  = false;
-            _isDmtVerified  = false;
-            _isLicenseUnique = false;
-            _dmtErrorText   = "⚠️ DMT verification service is unavailable. "
-                              "Registration is blocked. Please try again later.";
-          });
-        } else if (dmtResult['found'] == false) {
-          setState(() {
-            _isDmtChecking  = false;
-            _isDmtVerified  = false;
-            _isLicenseUnique = false;
-            _dmtErrorText   = "License Number not found in DMT records. "
-                              "Please check your driving license.";
-          });
-        } else if (dmtResult['nicMatch'] == false) {
-          setState(() {
-            _isDmtChecking  = false;
-            _isDmtVerified  = false;
-            _isLicenseUnique = false;
-            _dmtErrorText   = "NIC Number does not match this License Number "
-                              "in the DMT records. Please check both values.";
-          });
-        } else {
-          setState(() {
-            _isDmtChecking  = false;
-            _isDmtVerified  = false;
-            _isLicenseUnique = false;
-            _dmtErrorText   = dmtResult['message'] ?? "DMT verification failed.";
-          });
-        }
         return;
       }
 
@@ -410,8 +351,38 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
   }
 
   // ── Phase 1: open KYC screen (called when KYC not yet done) ─────────────────
-  void _openKyc() {
+  Future<void> _openKyc() async {
     if (!_validateFields()) return;
+
+    // Verify License with DMT before proceeding to KYC
+    setState(() => _isLoading = true);
+    try {
+      final dmtResult = await _authService.verifyLicenseWithDMT(
+        licenseNumber: _licenseController.text.trim(),
+        nic:           _nicController.text.trim(),
+      );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (dmtResult['success'] != true) {
+        String errMsg = dmtResult['message'] ?? "DMT verification failed.";
+        if (dmtResult['dmtUnreachable'] == true) {
+          errMsg = "⚠️ DMT verification service is unavailable. Please try again later.";
+        } else if (dmtResult['found'] == false) {
+          errMsg = "License Number not found in DMT records. Please check your driving license.";
+        } else if (dmtResult['nicMatch'] == false) {
+          errMsg = "NIC Number does not match this License Number in the DMT records.";
+        }
+        _showError(errMsg);
+        return;
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showError("An unexpected error occurred during DMT verification.");
+      return;
+    }
 
     Navigator.push(
       context,
