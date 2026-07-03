@@ -118,7 +118,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildListTile(
             icon: Icons.language, 
             title: "Language", 
-            subtitle: context.locale.languageCode == 'en' ? "English" : "Sinhala (සිංහල)",
+            subtitle: context.locale.languageCode == 'en' 
+                ? "English" 
+                : context.locale.languageCode == 'si' 
+                    ? "Sinhala (සිංහල)" 
+                    : "Tamil (தமிழ்)",
             onTap: _showLanguageDialog
           ),
 
@@ -287,7 +291,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             child: const Padding(
               padding: EdgeInsets.all(8.0),
-              child: Text("English 🇺🇸"),
+              child: Text("English"),
             ),
           ),
           SimpleDialogOption(
@@ -297,7 +301,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             child: const Padding(
               padding: EdgeInsets.all(8.0),
-              child: Text("Sinhala (සිංහල) 🇱🇰"),
+              child: Text("Sinhala (සිංහල)"),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () {
+              context.setLocale(const Locale('ta'));
+              Navigator.pop(context);
+            },
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text("Tamil (தமிழ்)"),
             ),
           ),
         ],
