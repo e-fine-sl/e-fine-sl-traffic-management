@@ -21,6 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   late List<dynamic> _vehicleClasses;
   bool _isLoadingVehicles = false;
+  bool _hasErrorFetchingVehicles = false;
 
   // Mutable local copy of profile data — updated on pull-to-refresh
   late Map<String, dynamic> _userData;
@@ -98,7 +99,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    setState(() => _isLoadingVehicles = true);
+    setState(() {
+      _isLoadingVehicles = true;
+      _hasErrorFetchingVehicles = false;
+    });
 
     try {
       final vehicles = await DmtService().fetchAllowedVehicles(nic, license);
@@ -114,9 +118,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         debugPrint('$_tag Vehicle classes loaded and cached from DMT: ${_vehicleClasses.length} class(es).');
       } else {
         debugPrint('$_tag _fetchAllowedVehicles() — no vehicle classes returned from DMT.');
+        setState(() => _hasErrorFetchingVehicles = true);
       }
     } catch (e) {
       debugPrint('$_tag Error fetching vehicle classes: $e');
+      setState(() => _hasErrorFetchingVehicles = true);
     } finally {
       if (mounted) {
         setState(() => _isLoadingVehicles = false);
@@ -313,8 +319,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryGreen),
                               ),
                             )
-                          : _vehicleClasses.isEmpty
-                              ? Text("no_classes".tr(), style: const TextStyle(color: AppColors.errorRed))
+                          : _hasErrorFetchingVehicles
+                              ? const Text("Server busy. Please try again later.", style: TextStyle(color: AppColors.errorRed))
+                              : _vehicleClasses.isEmpty
+                                  ? Text("no_classes".tr(), style: const TextStyle(color: AppColors.errorRed))
                               : Wrap(
                                   spacing: 10,
                                   runSpacing: 10,
