@@ -16,6 +16,7 @@ const officerLogout = async (req, res) => {
     const logoutTime = new Date();
     const updateFields = { 
         isActive: false, 
+        appState: 'LOGGED_OUT',
         lastLogoutTime: logoutTime 
     };
 
@@ -71,6 +72,45 @@ const officerLogout = async (req, res) => {
 
     } catch (err) {
         console.error(`${tag} Error:`, err.message);
+        return res.status(500).json({ success: false, message: 'Internal Server Error', error: err.message });
+    }
+};
+
+/**
+ * @route   PUT /api/officer/presence
+ * @desc    Updates the officer's app state (FOREGROUND/BACKGROUND) and last active time.
+ */
+const officerPresence = async (req, res) => {
+    const tag = '[OfficerSession]';
+    const { badgeNumber, state } = req.body;
+
+    if (!badgeNumber || !state) {
+        return res.status(400).json({ success: false, message: 'badgeNumber and state are required' });
+    }
+
+    if (!['FOREGROUND', 'BACKGROUND'].includes(state)) {
+        return res.status(400).json({ success: false, message: 'Invalid state' });
+    }
+
+    try {
+        const officer = await Police.findOneAndUpdate(
+            { badgeNumber },
+            { 
+                $set: { 
+                    appState: state,
+                    lastActiveTime: new Date()
+                } 
+            },
+            { new: true }
+        );
+
+        if (!officer) {
+            return res.status(404).json({ success: false, message: `Officer ${badgeNumber} not found` });
+        }
+
+        return res.status(200).json({ success: true, message: 'Presence updated' });
+    } catch (err) {
+        console.error(`${tag} Presence Error:`, err.message);
         return res.status(500).json({ success: false, message: 'Internal Server Error', error: err.message });
     }
 };
@@ -166,4 +206,4 @@ const getOfficerLastSession = async (req, res) => {
     }
 };
 
-module.exports = { officerLogout, getOfficerSessions, getOfficerLastSession };
+module.exports = { officerLogout, officerPresence, getOfficerSessions, getOfficerLastSession };

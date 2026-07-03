@@ -630,41 +630,61 @@ const getNearbyOfficersForReport = async (req, res) => {
 
     const graceWindowCutoff = new Date(Date.now() - graceWindowMinutes * 60 * 1000);
 
-    // Active officers
-    const activeOfficers = await Police.find({
+    // Query 1: By current location
+    const locationOfficers = await Police.find({
       location: {
         $near: {
           $geometry: { type: 'Point', coordinates: [longitude, latitude] },
           $maxDistance: ACCIDENT_RADIUS_METERS
         }
-      },
-      isActive: true
-    }).select('name badgeNumber isActive fcmToken policeStation');
+      }
+    }).select('name badgeNumber isActive appState lastActiveTime lastLogoutTime fcmToken policeStation');
 
-    // Grace window officers
-    const graceOfficers = await Police.find({
+    // Query 2: By last login location (mostly for logged out officers)
+    const loginLocationOfficers = await Police.find({
       lastLoginLocation: {
         $near: {
           $geometry: { type: 'Point', coordinates: [longitude, latitude] },
           $maxDistance: ACCIDENT_RADIUS_METERS
         }
-      },
-      isActive: false,
-      lastLogoutTime: { $gte: graceWindowCutoff }
-    }).select('name badgeNumber isActive lastLogoutTime fcmToken policeStation');
+      }
+    }).select('name badgeNumber isActive appState lastActiveTime lastLogoutTime fcmToken policeStation');
 
-    // Merge and deduplicate
+    // Merge, deduplicate, and determine precise status
     const seenBadges = new Set();
     const nearbyOfficers = [];
 
-    for (const o of [...activeOfficers, ...graceOfficers]) {
+    for (const o of [...locationOfficers, ...loginLocationOfficers]) {
       if (!seenBadges.has(o.badgeNumber)) {
         seenBadges.add(o.badgeNumber);
         
+        let derivedStatus = 'LOGGED_OUT_GRACE';
+        
+        if (o.appState === 'LOGGED_OUT' || o.isActive === false) {
+           // Logged out explicitly - only include if within grace window
+           if (!o.lastLogoutTime || o.lastLogoutTime.getTime() < graceWindowCutoff.getTime()) {
+               continue; // Ignore, outside grace window
+           }
+           derivedStatus = 'LOGGED_OUT_GRACE';
+        } else if (o.appState === 'FOREGROUND') {
+           // Foreground, but verify heartbeat isn't stale (e.g. force killed app)
+           if (o.lastActiveTime && o.lastActiveTime.getTime() >= graceWindowCutoff.getTime()) {
+               derivedStatus = 'ACTIVE';
+           } else {
+               derivedStatus = 'BACKGROUND'; // Stale heartbeat -> Background
+           }
+        } else if (o.appState === 'BACKGROUND') {
+           derivedStatus = 'BACKGROUND';
+        } else {
+           // Legacy user without appState but isActive = true
+           derivedStatus = 'ACTIVE';
+        }
+
         nearbyOfficers.push({
           name: o.name,
           badgeNumber: o.badgeNumber,
-          isActive: o.isActive,
+          status: derivedStatus,
+          isActive: o.isActive, // Keep for backward compatibility
           lastLogoutTime: o.lastLogoutTime,
           policeStation: o.policeStation,
           hasValidToken: !!(o.fcmToken && o.fcmToken.length > 10)

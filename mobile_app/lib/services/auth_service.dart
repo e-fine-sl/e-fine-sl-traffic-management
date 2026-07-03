@@ -274,8 +274,30 @@ class AuthService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // LOGOUT
+  // PRESENCE
   // ─────────────────────────────────────────────────────────────────────────
+
+  /// Called by InteractionListener when app lifecycle changes
+  Future<void> updatePresence(String state) async {
+    final role = await _storage.read(key: PrefKeys.userRole);
+    if (role != UserRoles.officer && role != 'police') return;
+
+    final badgeNumber = await _storage.read(key: 'badgeNumber');
+    if (badgeNumber == null) return;
+
+    try {
+      await http.put(
+        Uri.parse('$_mainUrl/officer/presence'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'badgeNumber': badgeNumber,
+          'state': state,
+        }),
+      );
+    } catch (e) {
+      debugPrint('[AuthService] Failed to update presence: $e');
+    }
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // LOGOUT — TWO PATHS
