@@ -914,12 +914,40 @@ const verifyWithDMT = async (req, res) => {
       clearTimeout(timeout);
     }
 
-    // Step 3: Parse DMT response
-    const dmtData = await dmtResponse.json();
+    // Step 3: Parse DMT response safely
+    let dmtData;
+    try {
+      dmtData = await dmtResponse.json();
+    } catch (parseError) {
+      console.error(`[AUTH/DMT-VERIFY] Non-JSON response from DMT (Status: ${dmtResponse.status})`);
+      return res.status(dmtResponse.status).json({
+        success: false,
+        dmtUnreachable: dmtResponse.status >= 500 || dmtResponse.status === 429,
+        message: dmtResponse.status === 429 
+          ? 'DMT server is currently busy (Too Many Requests). Please try again later.'
+          : 'DMT verification service returned an invalid response.'
+      });
+    }
+    
     console.log(`[AUTH/DMT-VERIFY] DMT Status: ${dmtResponse.status} for license: ${licenseNumber}`);
 
     // Step 4: Forward DMT result to Flutter
     if (dmtResponse.status === 200) {
+      // Background task: Update the local Driver record with the fetched vehicle classes
+      // so we don't have to hit the DMT server every time they fetch their profile.
+      if (dmtData && dmtData.data && dmtData.data.vehicleClasses) {
+        try {
+          const Driver = require('../models/driverModel');
+          await Driver.findOneAndUpdate(
+            { nic: nic.trim().toUpperCase(), licenseNumber: licenseNumber.trim().toUpperCase() },
+            { $set: { vehicleClasses: dmtData.data.vehicleClasses } }
+          );
+          console.log(`[AUTH/DMT-VERIFY] Automatically cached vehicleClasses for driver ${licenseNumber} in MongoDB.`);
+        } catch (dbErr) {
+          console.error(`[AUTH/DMT-VERIFY] Failed to cache vehicleClasses in DB: ${dbErr.message}`);
+        }
+      }
+
       return res.status(200).json({
         success: true,
         found: true,
