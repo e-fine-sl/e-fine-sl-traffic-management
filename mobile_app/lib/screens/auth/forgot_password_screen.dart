@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../config/app_constants.dart';
+import '../../widgets/otp_input_field.dart';
 import 'license_recovery_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -146,16 +147,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               // STEP 2: OTP Input
               if (_currentStep == 1) ...[
                 const Text("Enter the 6-digit code sent to your email", textAlign: TextAlign.center),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: _otpController,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 24, letterSpacing: 5),
-                  decoration: const InputDecoration(labelText: "OTP Code", border: OutlineInputBorder()),
+                const SizedBox(height: 24),
+                OtpInputField(
+                  length: 6,
+                  accentColor: AppColors.primaryGreen,
+                  filledBackground: AppColors.pastelGreen,
+                  onCompleted: (otp) {
+                    _otpController.text = otp;
+                    _verifyOTP();
+                  },
+                  onChanged: (otp) {
+                    _otpController.text = otp;
+                  },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity, height: 50,
                   child: ElevatedButton(
