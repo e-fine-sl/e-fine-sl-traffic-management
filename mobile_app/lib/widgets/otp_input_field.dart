@@ -122,12 +122,13 @@ class OtpInputFieldState extends State<OtpInputField> {
       children: List.generate(widget.length, (index) {
         final hasValue = _controllers[index].text.isNotEmpty;
 
-        return Container(
-          width: 48,
-          height: 56,
-          margin: EdgeInsets.symmetric(
-            horizontal: index == widget.length - 1 ? 0 : 5,
-          ),
+        return Flexible(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 48),
+            height: 56,
+            margin: EdgeInsets.symmetric(
+              horizontal: index == widget.length - 1 ? 0 : 4,
+            ),
           child: KeyboardListener(
             focusNode: FocusNode(), // wrapper focus node for key events
             onKeyEvent: (event) => _onKeyEvent(index, event),
@@ -186,7 +187,7 @@ class OtpInputFieldState extends State<OtpInputField> {
               },
             ),
           ),
-        );
+        ));
       }),
     );
   }
