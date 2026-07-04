@@ -284,7 +284,7 @@ const registerPolice = async (req, res) => {
 const registerDriver = async (req, res) => {
   const { 
     name, nic, licenseNumber, email, phone, password, 
-    kycVerified, isVerified,
+    kycVerified, isVerified, emailIsVerified,
     vehicleClasses, profileImage, licenseFrontImage, licenseBackImage,
     addressLine1, addressLine2, city, postalCode
   } = req.body;
@@ -344,6 +344,7 @@ const registerDriver = async (req, res) => {
       password: hashedPassword,
       kycVerified: kycVerified === true,
       isVerified: isVerified === true,
+      emailIsVerified: emailIsVerified === true,
       vehicleClasses: vehicleClasses || [],
       profileImage,
       licenseFrontImage,
@@ -357,6 +358,10 @@ const registerDriver = async (req, res) => {
 
     if (driver) {
       console.log(`[AUTH/REGISTER-DRIVER] Successfully created driver ID: ${driver.id}`);
+
+      // Clean up email verification OTP records
+      await Verification.deleteMany({ badgeNumber: email.trim().toLowerCase(), stationCode: 'DRIVER_EMAIL' });
+
       res.status(HTTP.CREATED).json({
         success: true,
         _id: driver.id,
@@ -364,6 +369,7 @@ const registerDriver = async (req, res) => {
         email: driver.email,
         role: ROLES.DRIVER,
         kycVerified: driver.kycVerified,
+        emailIsVerified: driver.emailIsVerified,
         token: generateToken(driver.id),
       });
     } else {
@@ -868,6 +874,105 @@ const checkFieldExistence = async (req, res) => {
   }
 };
 
+// ─── DRIVER EMAIL OTP VERIFICATION ─────────────────────────────────────────
+// These endpoints verify a driver's email address during registration.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// @desc    Send OTP to driver's email for verification
+// @route   POST /api/auth/driver-email-otp/send
+// @access  Public
+const sendDriverEmailOTP = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email || email.trim() === '') {
+    return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'Email is required.' });
+  }
+
+  try {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Clear any previous OTP for this email
+    await Verification.deleteMany({ badgeNumber: email.trim().toLowerCase(), stationCode: 'DRIVER_EMAIL' });
+
+    // Store new OTP (auto-expires via TTL index on createdAt)
+    await Verification.create({
+      badgeNumber: email.trim().toLowerCase(),
+      stationCode: 'DRIVER_EMAIL',
+      otp,
+    });
+
+    // Send styled HTML email
+    const htmlMessage = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #388E3C; padding: 20px; text-align: center;">
+          <h2 style="color: #ffffff; margin: 0;">E-Fine SL — Email Verification</h2>
+        </div>
+        <div style="padding: 20px; background-color: #ffffff;">
+          <p style="font-size: 16px; color: #333;">Hello,</p>
+          <p style="font-size: 16px; color: #333;">You are registering a new driver account on <strong>E-Fine SL</strong>. Please use the verification code below to confirm your email address.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="margin: 0; font-size: 14px; color: #777;">YOUR VERIFICATION CODE</p>
+            <h1 style="margin: 10px 0; font-size: 40px; color: #388E3C; letter-spacing: 8px; font-weight: bold;">
+              ${otp}
+            </h1>
+          </div>
+          <p style="color: #d9534f; font-size: 14px; text-align: center; font-weight: bold;">
+            This code will expire in ${AUTH.OTP_EXPIRY_MINUTES} minutes. Do not share it with anyone.
+          </p>
+        </div>
+        <div style="background-color: #eeeeee; padding: 10px; text-align: center; font-size: 12px; color: #777;">
+          © ${new Date().getFullYear()} E-Fine SL Project | Secure Verification System
+        </div>
+      </div>
+    `;
+
+    await sendEmail({
+      email: email.trim(),
+      subject: 'E-Fine SL — Verify Your Email Address',
+      message: `Your email verification code is: ${otp}`,
+      html: htmlMessage,
+    });
+
+    console.log(`[AUTH/DRIVER-EMAIL-OTP] OTP sent to: ${email}`);
+    res.status(HTTP.OK).json({ success: true, message: 'Verification code sent to your email.' });
+
+  } catch (error) {
+    console.error(`[AUTH/DRIVER-EMAIL-OTP] Error sending OTP: ${error.message}`);
+    res.status(HTTP.SERVER_ERROR).json({ success: false, message: 'Failed to send verification code.', error: error.message });
+  }
+};
+
+// @desc    Verify driver's email OTP
+// @route   POST /api/auth/driver-email-otp/verify
+// @access  Public
+const verifyDriverEmailOTP = async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'Email and OTP are required.' });
+  }
+
+  try {
+    const record = await Verification.findOne({
+      badgeNumber: email.trim().toLowerCase(),
+      stationCode: 'DRIVER_EMAIL',
+      otp: otp.trim(),
+    });
+
+    if (!record) {
+      console.log(`[AUTH/DRIVER-EMAIL-OTP] Invalid OTP attempt for: ${email}`);
+      return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'Invalid or expired verification code.' });
+    }
+
+    console.log(`[AUTH/DRIVER-EMAIL-OTP] Email verified: ${email}`);
+    res.status(HTTP.OK).json({ success: true, message: 'Email verified successfully.' });
+
+  } catch (error) {
+    console.error(`[AUTH/DRIVER-EMAIL-OTP] Error verifying OTP: ${error.message}`);
+    res.status(HTTP.SERVER_ERROR).json({ success: false, message: 'Server Error', error: error.message });
+  }
+};
+
 const verifyWithDMT = async (req, res) => {
   const { licenseNumber, nic } = req.body;
 
@@ -1005,6 +1110,9 @@ module.exports = {
   updateProfile,
   checkFieldExistence,
   verifyWithDMT,
+  // Driver Email OTP
+  sendDriverEmailOTP,
+  verifyDriverEmailOTP,
   // Driver License Recovery
   lookupDriverByLicense,
   verifyLicenseScan,

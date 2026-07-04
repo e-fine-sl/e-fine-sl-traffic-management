@@ -746,6 +746,36 @@ class AuthService {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // DRIVER EMAIL OTP VERIFICATION
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Sends a 6-digit OTP to the driver's email for verification during registration.
+  Future<void> sendDriverEmailOTP(String email) async {
+    final response = await http.post(
+      Uri.parse('$_mainUrl/auth/driver-email-otp/send'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email.trim()}),
+    );
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? 'Failed to send verification code');
+    }
+  }
+
+  /// Verifies the driver's email OTP during registration.
+  Future<void> verifyDriverEmailOTP(String email, String otp) async {
+    final response = await http.post(
+      Uri.parse('$_mainUrl/auth/driver-email-otp/verify'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email.trim(), 'otp': otp.trim()}),
+    );
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? 'Invalid or expired verification code');
+    }
+  }
+
   /// Encrypts driver password before sending for registration.
   Future<void> registerDriver(Map<String, dynamic> data) async {
     final publicKey = await _fetchPublicKey();
