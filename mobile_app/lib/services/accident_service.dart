@@ -45,7 +45,20 @@ class AccidentService {
       );
       return position;
     } catch (e) {
-      throw 'Failed to get GPS location: $e';
+      debugPrint('$_tag High-accuracy request failed or timed out: $e');
+      debugPrint('$_tag STEP 4: Falling back to last known position...');
+      
+      try {
+        final lastPosition = await Geolocator.getLastKnownPosition();
+        if (lastPosition != null) {
+          debugPrint('$_tag Successfully retrieved last known position.');
+          return lastPosition;
+        }
+      } catch (fallbackErr) {
+        debugPrint('$_tag Fallback also failed: $fallbackErr');
+      }
+
+      throw 'Could not determine your location. Please move outside for a better GPS signal and try again.';
     }
   }
 
