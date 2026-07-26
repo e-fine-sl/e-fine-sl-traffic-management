@@ -30,7 +30,7 @@ static const String baseUrl       = primaryBaseUrl;
   // Accident Report
   static const String accidentReportUrl = '$baseUrl/accident/report';
 
-  static const String walletBaseUrl = 'https://efine-mock-data-loader.onrender.com/api/wallet';
+  static const String walletUrl = '$baseUrl/wallet';
   static const int    connectTimeout = 30000;
   static const int    receiveTimeout = 30000;
   static const String authPrefix    = 'Bearer';
@@ -172,6 +172,7 @@ class PrefKeys {
   static const String profileImage = 'serverProfileImage';
   static const String user         = 'user';
   static const String profileData  = 'profile_data';
+  static const String walletData   = 'wallet_data';
   static const String historyCache  = 'driver_history_cache';
   static const String idleTimeoutMinutes = 'idle_timeout_minutes';
   static const String sessionStartTime = 'session_start_time';

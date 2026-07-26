@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { protect } = require('../middleware/authMiddleware');
+
 // Import all required functions from fineController only (avoid duplicate declarations)
 const {
     getOffenses,
@@ -12,27 +14,13 @@ const {
     getDashboardStats
 } = require('../controllers/fineController');
 
-router.get('/offenses', getOffenses);
-
-
-router.post('/add', addOffense);
-
-
-router.post('/issue', issueFine);
-
-
-router.get('/dashboard-stats', getDashboardStats);
-
-
-router.get('/history', getFineHistory);
-
-
-router.get('/pending', getDriverPendingFines);
-
-router.get('/driver-history', getDriverPaidHistory);
-
-router.post('/:id/pay', payFine);
+router.get('/offenses', protect, getOffenses);
+router.post('/add', protect, addOffense);
+router.post('/issue', protect, issueFine);
+router.get('/dashboard-stats', protect, getDashboardStats);
+router.get('/history', protect, getFineHistory);
+router.get('/pending', protect, getDriverPendingFines);
+router.get('/driver-history', protect, getDriverPaidHistory);
+router.post('/:id/pay', protect, payFine);
 
 module.exports = router;
-
-//update the route name

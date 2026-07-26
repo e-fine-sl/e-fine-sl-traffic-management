@@ -326,7 +326,7 @@ class AuthService {
       }
     }
 
-    // Clear session and auth tokens but PRESERVE biometric keys!
+    // Clear session, auth tokens, profile and wallet, but PRESERVE biometric keys!
     await Future.wait([
       _storage.delete(key: PrefKeys.accessToken),
       _storage.delete(key: PrefKeys.refreshToken),
@@ -336,6 +336,7 @@ class AuthService {
       _storage.delete(key: PrefKeys.userName),
       _storage.delete(key: PrefKeys.user),
       _storage.delete(key: PrefKeys.profileData),
+      _storage.delete(key: PrefKeys.walletData),
       _storage.delete(key: PrefKeys.authToken),
     ]);
 
@@ -373,7 +374,7 @@ class AuthService {
       }
     }
 
-    // Clear session and auth tokens but PRESERVE biometric keys!
+    // Clear session, auth tokens, profile and wallet, but PRESERVE biometric keys!
     await Future.wait([
       _storage.delete(key: PrefKeys.accessToken),
       _storage.delete(key: PrefKeys.refreshToken),
@@ -383,6 +384,7 @@ class AuthService {
       _storage.delete(key: PrefKeys.userName),
       _storage.delete(key: PrefKeys.user),
       _storage.delete(key: PrefKeys.profileData),
+      _storage.delete(key: PrefKeys.walletData),
       _storage.delete(key: PrefKeys.authToken),
     ]);
 

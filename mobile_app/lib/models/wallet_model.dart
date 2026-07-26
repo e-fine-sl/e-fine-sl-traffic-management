@@ -21,9 +21,9 @@ class WalletModel {
             ? DrivingLicenseModel.fromJson(
                 json['drivingLicense'] as Map<String, dynamic>)
             : null,
-        vehicles: (json['vehicles'] as List<dynamic>)
-            .map((v) => VehicleModel.fromJson(v as Map<String, dynamic>))
-            .toList(),
+        vehicles: (json['vehicles'] as List<dynamic>?)
+            ?.map((v) => VehicleModel.fromJson(v as Map<String, dynamic>))
+            .toList() ?? [],
         summary: WalletSummaryModel.fromJson(
             json['summary'] as Map<String, dynamic>),
       );
