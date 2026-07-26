@@ -121,8 +121,11 @@ const reportAccident = async (req, res) => {
     }
 
     // STEP 1 — Validate input
-    const { licenseNumber, lat, lng, accidentType, description } = req.body;
+    const { lat, lng, accidentType, description } = req.body;
     
+    // IDOR Prevention: Enforce the authenticated driver's license number
+    const licenseNumber = req.user.role === 'Driver' ? req.user.licenseNumber : req.body.licenseNumber;
+
     if (!licenseNumber || !lat || !lng || !accidentType) {
       console.error(`${tag}  STEP 1 FAILED: Missing required fields`);
       return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -147,6 +150,7 @@ const reportAccident = async (req, res) => {
 
     // STEP 2 — Find Driver
     console.log(`\n${tag} STEP 2: Looking up driver...`);
+    // Optimisation: We already have req.user, so if it's a driver, we can use that instead of hitting the DB again, but for safety:
     const driver = await Driver.findOne({ licenseNumber });
     if (!driver) {
       console.error(`${tag}  STEP 2 FAILED: Driver not found`);

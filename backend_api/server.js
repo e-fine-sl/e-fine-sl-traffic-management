@@ -46,6 +46,7 @@ app.use('/api/sos',     require('./routes/sosRoutes'));     //  SOS Emergency Al
 app.use('/api/accident', require('./routes/accidentRoutes'));  //  Accident Reports
 app.use('/api/police',  require('./routes/policeRoutes'));  // Police Operations (HQ Alerts, etc)
 app.use('/api/officer', require('./routes/officerRoutes'));  // Officer Session Tracking
+app.use('/api/wallet',  require('./routes/walletRoutes'));   // Digital Wallet
 
 app.get('/', (req, res) => {
   res.send('API is running successfully!');

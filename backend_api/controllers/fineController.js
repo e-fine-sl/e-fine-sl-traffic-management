@@ -97,7 +97,8 @@ const getFineHistory = async (req, res) => {
 // @route   GET /api/fines/pending
 const getDriverPendingFines = async (req, res) => {
   try {
-    const { licenseNumber } = req.query;
+    // IDOR Prevention: If the user is a driver, force the query to their own license number.
+    const licenseNumber = req.user.role === 'Driver' ? req.user.licenseNumber : req.query.licenseNumber;
 
     if (!licenseNumber) {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'License number is required' });
@@ -131,6 +132,11 @@ const payFine = async (req, res) => {
       return res.status(HTTP.NOT_FOUND).json({ message: 'Fine not found' });
     }
 
+    // IDOR Prevention: Only the driver who received the fine can mark it as paid.
+    if (req.user.role === 'Driver' && fine.licenseNumber.toUpperCase() !== req.user.licenseNumber.toUpperCase()) {
+      return res.status(HTTP.FORBIDDEN).json({ message: 'Not authorized to pay this fine' });
+    }
+
     if (fine.status === PAYMENT.STATUS.PAID) {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'Fine is already paid' });
     }
@@ -151,7 +157,8 @@ const payFine = async (req, res) => {
 // @route   GET /api/fines/driver-history
 const getDriverPaidHistory = async (req, res) => {
   try {
-    const { licenseNumber } = req.query;
+    // IDOR Prevention: If the user is a driver, force the query to their own license number.
+    const licenseNumber = req.user.role === 'Driver' ? req.user.licenseNumber : req.query.licenseNumber;
 
     if (!licenseNumber) {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'License number is required' });

@@ -1,6 +1,5 @@
 // lib/screens/driver/wallet_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../config/app_constants.dart';
 import '../../models/wallet_model.dart';
 import '../../services/wallet_service.dart';
@@ -20,54 +19,32 @@ class WalletScreen extends StatefulWidget {
 }
 
 class _WalletScreenState extends State<WalletScreen> {
-  final _walletService    = WalletService();
-  final _nicController    = TextEditingController();
-  final _licenseController = TextEditingController();
-  final _formKey          = GlobalKey<FormState>();
+  final _walletService = WalletService();
 
   WalletModel? _wallet;
-  bool   _isLoading = false;
-  bool   _isLoaded  = false;
+  bool _isLoading = true;
+  bool _isLoaded = false;
   String? _errorMessage;
-  int    _selectedVehicleIndex = 0;
+  int _selectedVehicleIndex = 0;
 
-  // ── NIC Validation ─────────────────────────────────────
-  static final _nicOld = RegExp(r'^[0-9]{9}[VvXx]$');
-  static final _nicNew = RegExp(r'^[0-9]{12}$');
-
-  String? _validateNic(String? val) {
-    if (val == null || val.isEmpty) return 'NIC is required';
-    if (!_nicOld.hasMatch(val) && !_nicNew.hasMatch(val)) {
-      return 'Enter a valid Sri Lankan NIC number';
-    }
-    return null;
-  }
-
-  String? _validateLicense(String? val) {
-    if (val == null || val.isEmpty) return 'License number is required';
-    if (val.length < 6) return 'Enter a valid license number';
-    return null;
+  @override
+  void initState() {
+    super.initState();
+    _loadWallet();
   }
 
   // ── Load Wallet ─────────────────────────────────────────
-  Future<void> _loadWallet() async {
-    if (_formKey.currentState != null && !_formKey.currentState!.validate()) {
-      return;
-    }
-
+  Future<void> _loadWallet({bool forceRefresh = false}) async {
     setState(() {
-      if (!_isLoaded) _isLoading = true;
+      _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final wallet = await _walletService.verifyAndLoadWallet(
-        _nicController.text.trim(),
-        _licenseController.text.trim(),
-      );
+      final wallet = await _walletService.getWallet(forceRefresh: forceRefresh);
       if (mounted) {
         setState(() {
-          _wallet   = wallet;
+          _wallet = wallet;
           _isLoaded = true;
           _isLoading = false;
           _selectedVehicleIndex = 0;
@@ -77,27 +54,19 @@ class _WalletScreenState extends State<WalletScreen> {
       if (mounted) {
         setState(() {
           _errorMessage = e.message;
-          _isLoading    = false;
+          _isLoading = false;
+          _isLoaded = false;
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
           _errorMessage = 'Connection failed. Check your internet.';
-          _isLoading    = false;
+          _isLoading = false;
+          _isLoaded = false;
         });
       }
     }
-  }
-
-  void _resetWallet() {
-    setState(() {
-      _wallet       = null;
-      _isLoaded     = false;
-      _isLoading    = false;
-      _errorMessage = null;
-      _selectedVehicleIndex = 0;
-    });
   }
 
   void _selectVehicle(int index) {
@@ -105,23 +74,16 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   @override
-  void dispose() {
-    _nicController.dispose();
-    _licenseController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     if (_isLoading) return const WalletSkeletonLoader();
     if (_isLoaded && _wallet != null) return _buildWalletView();
-    return _buildEntryForm();
+    return _buildErrorView();
   }
 
   // ══════════════════════════════════════════════════════
-  // ENTRY FORM
+  // ERROR VIEW
   // ══════════════════════════════════════════════════════
-  Widget _buildEntryForm() {
+  Widget _buildErrorView() {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -133,6 +95,7 @@ class _WalletScreenState extends State<WalletScreen> {
         ),
       ),
       body: Container(
+        width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -142,167 +105,52 @@ class _WalletScreenState extends State<WalletScreen> {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const SizedBox(height: AppSpacing.xl),
-
-                // ── Icon + Title ─────────────────────────
                 Container(
                   width: 90,
                   height: 90,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryGreen,
+                    color: AppColors.errorRed.withAlpha(20),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primaryGreen.withAlpha(80),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
                   ),
-                  child: const Icon(Icons.account_balance_wallet,
-                      color: Colors.white, size: 44),
+                  child: const Icon(Icons.error_outline,
+                      color: AppColors.errorRed, size: 44),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                const Text('Digital Wallet',
+                const SizedBox(height: AppSpacing.lg),
+                const Text('Wallet Load Failed',
                     style: TextStyle(
-                        fontSize: 26,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary)),
-                const SizedBox(height: 4),
-                const Text('e-Fine SL',
-                    style: TextStyle(
-                        fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: AppSpacing.sm),
+                Text(_errorMessage ?? 'Unknown error occurred.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 14, color: AppColors.textSecondary)),
                 const SizedBox(height: AppSpacing.xl),
-
-                // ── Form Card ────────────────────────────
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(AppRadius.large),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(15),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _loadWallet(forceRefresh: true),
+                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    label: const Text('Try Again',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.medium),
                       ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Enter your details',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: AppColors.textPrimary)),
-                        const SizedBox(height: 4),
-                        const Text(
-                            'Your wallet contains your driving documents securely',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary)),
-                        const SizedBox(height: AppSpacing.lg),
-
-                        // NIC Field
-                        TextFormField(
-                          controller: _nicController,
-                          textCapitalization: TextCapitalization.characters,
-                          maxLength: 12,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                                RegExp(r'[0-9VvXx]')),
-                            UpperCaseTextFormatter(),
-                          ],
-                          decoration: const InputDecoration(
-                            labelText: 'National Identity Card Number',
-                            hintText: 'e.g. 199012345678 or 987654321V',
-                            prefixIcon: Icon(Icons.credit_card),
-                            border: OutlineInputBorder(),
-                            counterText: '',
-                          ),
-                          validator: _validateNic,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // License Field
-                        TextFormField(
-                          controller: _licenseController,
-                          textCapitalization: TextCapitalization.characters,
-                          inputFormatters: [UpperCaseTextFormatter()],
-                          decoration: const InputDecoration(
-                            labelText: 'Driving License Number',
-                            hintText: 'e.g. B1234567',
-                            prefixIcon: Icon(Icons.badge),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: _validateLicense,
-                        ),
-                        const SizedBox(height: AppSpacing.xl),
-
-                        // Error message
-                        if (_errorMessage != null) ...[
-                          Container(
-                            padding: const EdgeInsets.all(AppSpacing.sm),
-                            decoration: BoxDecoration(
-                              color: AppColors.errorBg,
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.small),
-                              border: Border.all(
-                                  color:
-                                      AppColors.errorRed.withAlpha(100)),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.error_outline,
-                                    color: AppColors.errorRed, size: 18),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(_errorMessage!,
-                                      style: const TextStyle(
-                                          color: AppColors.errorRed,
-                                          fontSize: 13)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                        ],
-
-                        // Load Button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton.icon(
-                            onPressed: _isLoading ? null : _loadWallet,
-                            icon: const Icon(Icons.account_balance_wallet,
-                                color: Colors.white),
-                            label: const Text('Load My Wallet',
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryGreen,
-                              shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(AppRadius.medium),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
               ],
             ),
           ),
@@ -315,7 +163,7 @@ class _WalletScreenState extends State<WalletScreen> {
   // WALLET LOADED VIEW
   // ══════════════════════════════════════════════════════
   Widget _buildWalletView() {
-    final wallet  = _wallet!;
+    final wallet = _wallet!;
     final vehicle = wallet.vehicles.isNotEmpty
         ? wallet.vehicles[_selectedVehicleIndex]
         : null;
@@ -330,18 +178,18 @@ class _WalletScreenState extends State<WalletScreen> {
             style: TextStyle(fontWeight: FontWeight.bold)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: _resetWallet,
+          onPressed: () => Navigator.of(context).pop(), // Just pop the screen
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
-            onPressed: _loadWallet,
+            onPressed: () => _loadWallet(forceRefresh: true),
           ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadWallet,
+        onRefresh: () => _loadWallet(forceRefresh: true),
         color: AppColors.primaryGreen,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -393,14 +241,5 @@ class _WalletScreenState extends State<WalletScreen> {
         ),
       ),
     );
-  }
-}
-
-// ── Helper: Uppercase Text Formatter ─────────────────────
-class UpperCaseTextFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
-    return newValue.copyWith(text: newValue.text.toUpperCase());
   }
 }
