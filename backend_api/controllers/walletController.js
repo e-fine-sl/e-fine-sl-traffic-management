@@ -82,15 +82,15 @@ const getMyWallet = async (req, res) => {
       }
     } catch (proxyError) {
       console.error('[WALLET] Proxy error:', proxyError);
-      return res.status(HTTP.INTERNAL_SERVER_ERROR).json({
+      return res.status(HTTP.SERVER_ERROR).json({
         success: false,
-        message: 'Failed to retrieve wallet data from provider'
+        message: 'Failed to retrieve wallet data from provider (Too many requests or provider is down)'
       });
     }
 
   } catch (error) {
     console.error('[WALLET] Error fetching wallet:', error);
-    res.status(HTTP.INTERNAL_SERVER_ERROR).json({
+    res.status(HTTP.SERVER_ERROR).json({
       success: false,
       message: 'Server Error: ' + error.message
     });
