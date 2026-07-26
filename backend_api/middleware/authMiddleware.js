@@ -19,12 +19,13 @@ const protect = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret123');
+    const tokenUserId = decoded.id || decoded.userId;
     
-    let user = await Police.findById(decoded.id).select('-password');
+    let user = await Police.findById(tokenUserId).select('-password');
     let role = ROLES.POLICE;
 
     if (!user) {
-      user = await Driver.findById(decoded.id).select('-password');
+      user = await Driver.findById(tokenUserId).select('-password');
       role = ROLES.DRIVER;
     }
 
