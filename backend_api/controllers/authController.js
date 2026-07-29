@@ -439,6 +439,14 @@ const loginUser = async (req, res) => {
     }
 
     if (user && (await bcrypt.compare(password, user.password))) {
+      let defaultPoints = DEMERIT.DEFAULT_POINTS;
+      try {
+        const sysConfig = await SystemConfig.findOne();
+        if (sysConfig && sysConfig.defaultDemeritPoints) {
+          defaultPoints = sysConfig.defaultDemeritPoints;
+        }
+      } catch (e) {}
+
       res.json({
         success: true,
         user: {
@@ -447,19 +455,26 @@ const loginUser = async (req, res) => {
           email: user.email,
           role: role,
           badgeNumber: user.badgeNumber,
-  
+
           // --- NEW FIELDS RETURNED FOR PROFILE ---
           position: user.position,
           policeStation: user.policeStation,
           profileImage: user.profileImage,
           licenseFrontImage: user.licenseFrontImage,
           licenseBackImage: user.licenseBackImage,
-  
+
           isVerified: user.isVerified,
           licenseNumber: user.licenseNumber,
           nic: user.nic,
           phone: user.phone,
           vehicleNumber: user.vehicleNumber,
+
+          // --- DEMERIT SYSTEM FIELDS ---
+          demeritPoints: user.demeritPoints !== undefined ? user.demeritPoints : defaultPoints,
+          defaultDemeritPoints: defaultPoints,
+          ratingScore: user.ratingScore !== undefined ? user.ratingScore : 5.0,
+          demeritLevel: user.demeritLevel || 'EXCELLENT',
+          licenseStatus: user.licenseStatus || 'ACTIVE',
         },
         token: generateToken(user.id),
       });
