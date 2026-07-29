@@ -7,7 +7,8 @@ const Police = require('../models/policeModel');
 const PreApprovedOfficer = require('../models/preApprovedOfficerModel');
 const generateToken = require('../utils/generateToken');
 const Driver = require('../models/driverModel');
-const { HTTP, ROLES, AUTH } = require('../config/constants');
+const SystemConfig = require('../models/systemConfigModel');
+const { HTTP, ROLES, AUTH, DEMERIT } = require('../config/constants');
 const { decryptPassword } = require('../utils/cryptoService'); // RSA decrypt from Flutter
 
 
@@ -334,7 +335,18 @@ const registerDriver = async (req, res) => {
     const salt = await bcrypt.genSalt(AUTH.BCRYPT_SALT_ROUNDS);
     const hashedPassword = await bcrypt.hash(plainPassword, salt);
 
-    console.log(`[AUTH/REGISTER-DRIVER] Creating driver record for: ${email}`);
+    console.log(`[AUTH/REGISTER-DRIVER] Fetching system config for default demerit points: ${email}`);
+    let defaultPoints = DEMERIT.DEFAULT_POINTS;
+    try {
+      const sysConfig = await SystemConfig.findOne();
+      if (sysConfig && sysConfig.defaultDemeritPoints) {
+        defaultPoints = sysConfig.defaultDemeritPoints;
+      }
+    } catch (e) {
+      console.warn('[AUTH/REGISTER-DRIVER] Failed to load SystemConfig:', e.message);
+    }
+
+    console.log(`[AUTH/REGISTER-DRIVER] Creating driver record for: ${email} with default points: ${defaultPoints}`);
     const driver = await Driver.create({
       name,
       nic,
@@ -342,6 +354,9 @@ const registerDriver = async (req, res) => {
       email,
       phone,
       password: hashedPassword,
+      demeritPoints: defaultPoints,
+      ratingScore: 5.0,
+      demeritLevel: 'EXCELLENT',
       kycVerified: kycVerified === true,
       isVerified: isVerified === true,
       emailIsVerified: emailIsVerified === true,
@@ -466,8 +481,16 @@ const getMe = async (req, res) => {
     if (user) {
       res.status(HTTP.OK).json(user);
     } else {
-      const driver = await Driver.findById(req.user.id).select('-password');
+      const driver = await Driver.findById(req.user.id).select('-password').lean();
       if (driver) {
+        let defaultPoints = DEMERIT.DEFAULT_POINTS;
+        try {
+          const sysConfig = await SystemConfig.findOne();
+          if (sysConfig && sysConfig.defaultDemeritPoints) {
+            defaultPoints = sysConfig.defaultDemeritPoints;
+          }
+        } catch (e) {}
+        driver.defaultDemeritPoints = defaultPoints;
         res.status(HTTP.OK).json(driver);
       } else {
         res.status(HTTP.NOT_FOUND).json({ message: 'User not found' });
