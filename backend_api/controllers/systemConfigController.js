@@ -98,29 +98,27 @@ const updateSystemConfig = async (req, res) => {
 
     await config.save();
 
-    // ── Synchronize driver demerit points if defaultDemeritPoints changed ──────────────
-    if (defaultDemeritPoints !== undefined && Number(defaultDemeritPoints) !== oldDefaultPoints) {
+    // ── Synchronize driver demerit points if defaultDemeritPoints provided ──────────────
+    if (defaultDemeritPoints !== undefined) {
       const newDefault = Number(defaultDemeritPoints);
-      console.log(`[SystemConfig] Default demerit points changed from ${oldDefaultPoints} to ${newDefault}. Syncing driver accounts...`);
+      console.log(`[SystemConfig] Default demerit points setting: ${newDefault}. Syncing all active driver accounts...`);
 
-      // 1. Update drivers whose points were at the old default (full balance drivers) to the new default
-      await Driver.updateMany(
-        { demeritPoints: oldDefaultPoints, licenseStatus: 'ACTIVE' },
-        { $set: { demeritPoints: newDefault } }
-      );
-
-      // 2. Recalculate ratingScore and demeritLevel for all active drivers based on the new max ceiling
       const activeDrivers = await Driver.find({ licenseStatus: 'ACTIVE' });
       for (const drv of activeDrivers) {
-        // Cap points at new max ceiling if higher than new default
-        if (drv.demeritPoints > newDefault) {
+        // If driver was at full balance (or old default / hardcoded 24 / higher than new max), set to newDefault
+        if (!drv.demeritPoints || drv.demeritPoints >= oldDefaultPoints || drv.demeritPoints === 24 || drv.demeritPoints > newDefault) {
           drv.demeritPoints = newDefault;
+        } else {
+          // Adjust points proportionally to preserve points lost deficit
+          const pointsLost = Math.max(0, oldDefaultPoints - drv.demeritPoints);
+          drv.demeritPoints = Math.max(0, newDefault - pointsLost);
         }
+
         drv.ratingScore = calculateRating(drv.demeritPoints, newDefault);
         drv.demeritLevel = calculateLevel(drv.demeritPoints, newDefault);
         await drv.save();
       }
-      console.log(`[SystemConfig] Synced ${activeDrivers.length} driver accounts with new default points (${newDefault}).`);
+      console.log(`[SystemConfig] Successfully synced ${activeDrivers.length} active driver account(s) with default points (${newDefault}).`);
     }
 
     res.status(200).json({
