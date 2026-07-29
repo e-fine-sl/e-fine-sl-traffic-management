@@ -41,7 +41,9 @@ const {
 } = require('../controllers/adminController');
 const {
     getSystemConfig,
-    updateSystemConfig
+    updateSystemConfig,
+    toggleRecovery,
+    resetDemeritConfig
 } = require('../controllers/systemConfigController');
 
 // ==========================================
@@ -163,6 +165,12 @@ router.delete('/stations/:id', protectAdmin, requireRole('super_admin'), deleteS
 // System Config (Master Data)
 router.get('/system-config', protectAdmin, requireRole('super_admin', 'admin_officer'), getSystemConfig);
 router.put('/system-config', protectAdmin, requireRole('super_admin'), updateSystemConfig);
+
+// Demerit Config — toggle recovery on/off (super_admin only)
+router.patch('/system-config/recovery-toggle', protectAdmin, requireRole('super_admin'), toggleRecovery);
+
+// Demerit Config — reset to factory defaults (super_admin only)
+router.delete('/system-config/demerit', protectAdmin, requireRole('super_admin'), resetDemeritConfig);
 
 // Admin management
 router.get('/all', protectAdmin, requireRole('super_admin'), getAllAdmins);
