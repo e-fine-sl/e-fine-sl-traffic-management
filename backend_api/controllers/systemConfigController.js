@@ -1,5 +1,7 @@
 // controllers/systemConfigController.js
 const SystemConfig = require('../models/systemConfigModel');
+const Driver = require('../models/driverModel');
+const { calculateLevel, calculateRating } = require('./demeritController');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: Ensure one SystemConfig document always exists (singleton pattern)
@@ -85,15 +87,41 @@ const updateSystemConfig = async (req, res) => {
     }
 
     const config = await getOrCreateConfig();
+    const oldDefaultPoints = config.defaultDemeritPoints;
 
     // Apply provided values (only update what was sent)
     if (accidentNotificationRadiusKm !== undefined)    config.accidentNotificationRadiusKm    = accidentNotificationRadiusKm;
     if (officerLogoutGracePeriodMinutes !== undefined) config.officerLogoutGracePeriodMinutes = officerLogoutGracePeriodMinutes;
-    if (defaultDemeritPoints !== undefined)            config.defaultDemeritPoints            = defaultDemeritPoints;
-    if (monthlyRecoveryPoints !== undefined)           config.monthlyRecoveryPoints           = monthlyRecoveryPoints;
-    if (recoveryPeriodMonths !== undefined)            config.recoveryPeriodMonths            = recoveryPeriodMonths;
+    if (defaultDemeritPoints !== undefined)            config.defaultDemeritPoints            = Number(defaultDemeritPoints);
+    if (monthlyRecoveryPoints !== undefined)           config.monthlyRecoveryPoints           = Number(monthlyRecoveryPoints);
+    if (recoveryPeriodMonths !== undefined)            config.recoveryPeriodMonths            = Number(recoveryPeriodMonths);
 
     await config.save();
+
+    // ── Synchronize driver demerit points if defaultDemeritPoints changed ──────────────
+    if (defaultDemeritPoints !== undefined && Number(defaultDemeritPoints) !== oldDefaultPoints) {
+      const newDefault = Number(defaultDemeritPoints);
+      console.log(`[SystemConfig] Default demerit points changed from ${oldDefaultPoints} to ${newDefault}. Syncing driver accounts...`);
+
+      // 1. Update drivers whose points were at the old default (full balance drivers) to the new default
+      await Driver.updateMany(
+        { demeritPoints: oldDefaultPoints, licenseStatus: 'ACTIVE' },
+        { $set: { demeritPoints: newDefault } }
+      );
+
+      // 2. Recalculate ratingScore and demeritLevel for all active drivers based on the new max ceiling
+      const activeDrivers = await Driver.find({ licenseStatus: 'ACTIVE' });
+      for (const drv of activeDrivers) {
+        // Cap points at new max ceiling if higher than new default
+        if (drv.demeritPoints > newDefault) {
+          drv.demeritPoints = newDefault;
+        }
+        drv.ratingScore = calculateRating(drv.demeritPoints, newDefault);
+        drv.demeritLevel = calculateLevel(drv.demeritPoints, newDefault);
+        await drv.save();
+      }
+      console.log(`[SystemConfig] Synced ${activeDrivers.length} driver accounts with new default points (${newDefault}).`);
+    }
 
     res.status(200).json({
       success: true,
