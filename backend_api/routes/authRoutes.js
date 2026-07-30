@@ -26,9 +26,12 @@ const {
 } = require('../controllers/authController');
 
 
+const { getPublicSystemConfig } = require('../controllers/systemConfigController');
+
 const { protect } = require('../middleware/authMiddleware');
 
 // --- Routes ---
+router.get('/system-config', getPublicSystemConfig);
 
 router.post('/request-verification', requestVerification);
 router.post('/verify-otp', verifyOTP);      

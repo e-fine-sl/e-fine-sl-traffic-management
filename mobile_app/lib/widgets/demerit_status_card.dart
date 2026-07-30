@@ -64,11 +64,13 @@ class _GaugeArcPainter extends CustomPainter {
 // ---------------------------------------------------------------------------
 class DemeritStatusCard extends StatefulWidget {
   final int points;            // 0–100
+  final int maxPoints;         // Default max ceiling (e.g. 24 or 26)
   final String status;         // 'ACTIVE' or 'SUSPENDED'
   final DateTime? suspendedAt;
 
   const DemeritStatusCard({
     required this.points,
+    this.maxPoints = DemeritConstants.defaultPoints,
     required this.status,
     this.suspendedAt,
     super.key,
@@ -83,6 +85,8 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
   late AnimationController _controller;
   late Animation<double> _animation;
 
+  int get _maxPoints => widget.maxPoints <= 0 ? DemeritConstants.defaultPoints : widget.maxPoints;
+
   @override
   void initState() {
     super.initState();
@@ -92,7 +96,7 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
     );
     _animation = Tween<double>(
       begin: 0.0, 
-      end: (widget.points / DemeritConstants.defaultPoints).clamp(0.0, 1.0)
+      end: (widget.points / _maxPoints).clamp(0.0, 1.0)
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _controller.forward();
   }
@@ -100,10 +104,10 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
   @override
   void didUpdateWidget(covariant DemeritStatusCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.points != widget.points) {
+    if (oldWidget.points != widget.points || oldWidget.maxPoints != widget.maxPoints) {
       _animation = Tween<double>(
         begin: _animation.value,
-        end: (widget.points / DemeritConstants.defaultPoints).clamp(0.0, 1.0),
+        end: (widget.points / _maxPoints).clamp(0.0, 1.0),
       ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
       _controller
         ..reset()
@@ -118,18 +122,18 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
   }
 
   // -- Color helper based on points --
-  Color _getStatusColor(int pts) => DemeritLevel.getColor(pts);
+  Color _getStatusColor(int pts) => DemeritLevel.getColor(pts, _maxPoints);
 
   // -- Localized label helper based on points --
   String _getStatusLabel(int pts) {
     if (pts <= 0) return 'demerit_suspended'.tr();
-    return DemeritLevel.getLabel(pts).tr();
+    return DemeritLevel.getLabel(pts, _maxPoints).tr();
   }
 
   String _formatDate(DateTime d) => '${d.day}/${d.month}/${d.year}';
 
   double _calculateRatingPoints(int points) {
-    final max = DemeritConstants.defaultPoints.toDouble();
+    final max = _maxPoints.toDouble();
     final rating = (points / max) * 5.0;
     return double.parse(rating.clamp(0.0, 5.0).toStringAsFixed(1));
   }
@@ -175,7 +179,7 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
             AnimatedBuilder(
               animation: _animation,
               builder: (context, _) {
-                final displayPts = (_animation.value * DemeritConstants.defaultPoints).round();
+                final displayPts = (_animation.value * _maxPoints).round();
                 final animColor = _getStatusColor(displayPts);
                 return SizedBox(
                   width: 180,
@@ -195,7 +199,7 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            '${widget.points} / ${DemeritConstants.defaultPoints}',
+                            '${widget.points} / $_maxPoints',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 24,
