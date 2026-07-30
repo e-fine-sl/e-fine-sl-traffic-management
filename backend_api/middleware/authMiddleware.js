@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { HTTP, ROLES } = require('../config/constants');
 const Driver = require('../models/driverModel');
 const Police = require('../models/policeModel');
+const Admin = require('../models/adminModel');
 
 /**
  * protect — Validates access token locally.
@@ -27,6 +28,13 @@ const protect = async (req, res, next) => {
     if (!user) {
       user = await Driver.findById(tokenUserId).select('-password');
       role = ROLES.DRIVER;
+    }
+
+    if (!user) {
+      user = await Admin.findById(tokenUserId).select('-password');
+      if (user) {
+        role = user.role;
+      }
     }
 
     if (!user) {

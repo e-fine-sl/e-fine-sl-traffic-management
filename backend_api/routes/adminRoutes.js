@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protectAdmin, requireRole } = require('../middleware/adminMiddleware');
 const PreApprovedOfficer = require('../models/preApprovedOfficerModel');
+const { getOffenses, addOffense } = require('../controllers/fineController');
 const {
     createStation,
     updateStation,
@@ -134,6 +135,8 @@ router.post('/officers', protectAdmin, requireRole('admin_officer', 'super_admin
 router.put('/officers/:id', protectAdmin, requireRole('admin_officer', 'super_admin'), updateOfficer);
 
 // Offense management
+router.get('/fines/offenses', protectAdmin, getOffenses);
+router.post('/fines/offenses', protectAdmin, requireRole('admin_officer', 'super_admin'), addOffense);
 router.put('/fines/offenses/:id', protectAdmin, requireRole('admin_officer', 'super_admin'), updateOffense);
 
 // ==========================================

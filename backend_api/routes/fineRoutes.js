@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 
-// Import all required functions from fineController only (avoid duplicate declarations)
 const {
     getOffenses,
     addOffense,
@@ -14,7 +13,8 @@ const {
     getDashboardStats
 } = require('../controllers/fineController');
 
-router.get('/offenses', protect, getOffenses);
+// Public / Authenticated read for offenses list
+router.get('/offenses', getOffenses);
 router.post('/add', protect, addOffense);
 router.post('/issue', protect, issueFine);
 router.get('/dashboard-stats', protect, getDashboardStats);
