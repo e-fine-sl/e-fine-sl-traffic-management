@@ -203,9 +203,9 @@ class AppLocale {
 
 // ── DEMERIT LEVEL HELPER ──────────────────────────────
 class DemeritLevel {
-  static String getLabel(int points) {
-    const max = DemeritConstants.defaultPoints;
-    final ratio = points / max;
+  static String getLabel(int points, [int max = DemeritConstants.defaultPoints]) {
+    final ceiling = max <= 0 ? DemeritConstants.defaultPoints : max;
+    final ratio = points / ceiling;
 
     if (ratio >= 1.0) return 'demerit_excellent';
     if (ratio >= 0.8) return 'demerit_good';
@@ -215,9 +215,9 @@ class DemeritLevel {
     return 'demerit_suspended';
   }
 
-  static Color getColor(int points) {
-    const max = DemeritConstants.defaultPoints;
-    final ratio = points / max;
+  static Color getColor(int points, [int max = DemeritConstants.defaultPoints]) {
+    final ceiling = max <= 0 ? DemeritConstants.defaultPoints : max;
+    final ratio = points / ceiling;
 
     if (ratio >= 0.8) return AppColors.goodStanding;
     if (ratio >= 0.4) return AppColors.warningLevel;
