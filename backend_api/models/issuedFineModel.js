@@ -8,7 +8,10 @@ const issuedFineSchema = mongoose.Schema({
     offenseName: { type: String, required: true }, // Save name for convenience
     amount: { type: Number, required: true },
     place: { type: String, required: true },
-    policeOfficerId: { type: String, default: "Officer-001" }, // Hardcoded for now
+    province: { type: String },
+    district: { type: String },
+    policeStation: { type: String },
+    policeOfficerId: { type: String, default: "Officer-001" }, // Officer ID / Badge Number
     status: { type: String, default: PAYMENT.STATUS.UNPAID }, // Payment status
     paymentId: { type: String }, // PayHere Payment ID
     paidAt: { type: Date }, // Paid time

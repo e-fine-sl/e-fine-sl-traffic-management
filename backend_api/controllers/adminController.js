@@ -13,6 +13,7 @@ const Offense = require('../models/offenseModel');
 const { sendLicenseStatusEmail } = require('../services/emailService');
 const { HTTP, ROLES, PAYMENT, AUTH, PAGINATION, DEMERIT, LICENSE_STATUS } = require('../config/constants');
 const PdfReportService = require('../services/pdfReportService');
+const ReportController = require('./reportController');
 
 // Helper: Get or create Admin token configuration from DB
 const getAdminTokenConfig = async () => {
@@ -1084,316 +1085,15 @@ const getAllPayments = async (req, res) => {
     }
 };
 
-// @desc    Generate monthly fine report
-// @route   POST /api/admin/reports/monthly-fines
-// @access  Private (Admin)
-const generateMonthlyReport = async (req, res) => {
-    try {
-        const { month, year } = req.body;
-
-        if (!month || !year) {
-            return res.status(HTTP.BAD_REQUEST).json({ message: 'Please provide month and year' });
-        }
-
-        // Calculate date range using IST boundaries
-        const pad = (n) => String(n).padStart(2, '0');
-        const startDate = new Date(`${year}-${pad(month)}-01T00:00:00.000+05:30`);
-        const lastDay = new Date(year, month, 0).getDate();
-        const endDate = new Date(`${year}-${pad(month)}-${pad(lastDay)}T23:59:59.999+05:30`);
-
-        // Get fines for the month
-        const fines = await IssuedFine.find({
-            date: { $gte: startDate, $lte: endDate }
-        }).populate('offenseId', 'offenseName');
-
-        // Calculate statistics
-        const totalFines = fines.length;
-        const paidFines = fines.filter(f => f.status === PAYMENT.STATUS.PAID).length;
-        const unpaidFines = fines.filter(f => f.status === PAYMENT.STATUS.UNPAID).length;
-        const totalAmount = fines.reduce((sum, f) => sum + (f.amount || 0), 0);
-        const paidAmount = fines.filter(f => f.status === PAYMENT.STATUS.PAID).reduce((sum, f) => sum + (f.amount || 0), 0);
-
-        // Offense breakdown
-        const offenseBreakdown = {};
-        fines.forEach(fine => {
-            const offenseName = fine.offenseName || fine.offenseId?.offenseName || 'General Violation';
-            if (!offenseBreakdown[offenseName]) {
-                offenseBreakdown[offenseName] = { count: 0, amount: 0 };
-            }
-            offenseBreakdown[offenseName].count++;
-            offenseBreakdown[offenseName].amount += (fine.amount || 0);
-        });
-
-        if (req.query.format === 'json') {
-            return res.json({
-                success: true,
-                report: {
-                    month,
-                    year,
-                    period: `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`,
-                    summary: {
-                        totalFines,
-                        paidFines,
-                        unpaidFines,
-                        totalAmount,
-                        paidAmount,
-                        unpaidAmount: totalAmount - paidAmount
-                    },
-                    offenseBreakdown,
-                    fines
-                }
-            });
-        }
-
-        // Generate PDF
-        const doc = PdfReportService.createDocument();
-        const filename = `Monthly_Fines_Report_${year}_${month}.pdf`;
-        
-        res.setHeader('Content-disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-type', 'application/pdf');
-        
-        doc.pipe(res);
-        
-        // Brand Header
-        PdfReportService.buildHeader(doc, {
-            title: `Monthly Fines Report (${pad(month)}/${year})`,
-            category: 'FINANCIAL & ENFORCEMENT AUDIT',
-            adminInfo: req.user,
-            reportId: `MFR-${year}${pad(month)}-${Date.now().toString().slice(-4)}`,
-            dateRange: `${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`
-        });
-        
-        // Executive Summary KPI Cards
-        const collectionRate = totalFines > 0 ? Math.round((paidFines / totalFines) * 100) : 0;
-        PdfReportService.buildKPICards(doc, [
-            { label: 'Total Fines', value: totalFines.toString(), subtext: 'Fines Issued', color: '#2563EB' },
-            { label: 'Paid Fines', value: `${paidFines} (${collectionRate}%)`, subtext: 'Settled Fines', color: '#10B981' },
-            { label: 'Total Amount', value: `LKR ${totalAmount.toLocaleString()}`, subtext: 'Liability Value', color: '#F59E0B' },
-            { label: 'Paid Revenue', value: `LKR ${paidAmount.toLocaleString()}`, subtext: 'Collected Cash', color: '#10B981' }
-        ]);
-
-        // Section Title
-        PdfReportService.buildSectionHeader(doc, 'Offense Type Breakdown');
-        
-        const table = {
-            headers: ["Offense Description", "Count", "Total Value (LKR)"],
-            rows: Object.keys(offenseBreakdown).map(name => [
-                name,
-                offenseBreakdown[name].count.toString(),
-                `LKR ${offenseBreakdown[name].amount.toLocaleString()}`
-            ])
-        };
-        
-        if (table.rows.length > 0) {
-            await doc.table(table, { 
-                prepareHeader: () => doc.font("Helvetica-Bold").fontSize(9),
-                prepareRow: () => doc.font("Helvetica").fontSize(9)
-            });
-        } else {
-            doc.fontSize(9).fillColor('#64748B').text("No offenses recorded for this monthly period.");
-        }
-        
-        PdfReportService.buildFooter(doc);
-        doc.end();
-
-    } catch (error) {
-        console.error('Generate monthly report error:', error);
-        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
-    }
-};
-
-// @desc    Generate payment summary report
-// @route   POST /api/admin/reports/payments
-// @access  Private (Admin)
-const generatePaymentReport = async (req, res) => {
-    try {
-        const { startDate, endDate } = req.body;
-
-        if (!startDate || !endDate) {
-            return res.status(HTTP.BAD_REQUEST).json({ message: 'Please provide start and end dates' });
-        }
-
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-
-        // Get paid fines in date range
-        const payments = await IssuedFine.find({
-            status: PAYMENT.STATUS.PAID,
-            paidAt: { $gte: start, $lte: end }
-        }).populate('offenseId', 'offenseName');
-
-        // Calculate statistics
-        const totalPayments = payments.length;
-        const totalRevenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-
-        if (req.query.format === 'json') {
-            return res.json({
-                success: true,
-                report: {
-                    period: `${startDate} - ${endDate}`,
-                    summary: {
-                        totalPayments,
-                        totalRevenue
-                    },
-                    payments
-                }
-            });
-        }
-
-        // Generate PDF
-        const doc = PdfReportService.createDocument();
-        const filename = `Payments_Report_${startDate}_to_${endDate}.pdf`;
-        
-        res.setHeader('Content-disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-type', 'application/pdf');
-        
-        doc.pipe(res);
-        
-        // Brand Header
-        PdfReportService.buildHeader(doc, {
-            title: 'Payment Summary Report',
-            category: 'FINANCE & REVENUE RECONCILIATION',
-            adminInfo: req.user,
-            reportId: `PAY-${Date.now().toString().slice(-6)}`,
-            dateRange: `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`
-        });
-
-        // KPI Summary Cards
-        PdfReportService.buildKPICards(doc, [
-            { label: 'Total Transactions', value: totalPayments.toString(), subtext: 'Paid Receipts', color: '#10B981' },
-            { label: 'Total Revenue', value: `LKR ${totalRevenue.toLocaleString()}`, subtext: 'Collected Revenue', color: '#2563EB' },
-            { label: 'Average Payment', value: `LKR ${(totalPayments > 0 ? Math.round(totalRevenue / totalPayments) : 0).toLocaleString()}`, subtext: 'Per Transaction', color: '#F59E0B' }
-        ]);
-
-        // Section Title
-        PdfReportService.buildSectionHeader(doc, 'Transaction Details');
-
-        const table = {
-            headers: ["Payment Date", "Offense Name", "Driver License", "Amount (LKR)"],
-            rows: payments.map(p => [
-                p.paidAt ? new Date(p.paidAt).toLocaleDateString() : 'N/A',
-                p.offenseName || p.offenseId?.offenseName || 'Traffic Offense',
-                p.licenseNumber || 'N/A',
-                `LKR ${(p.amount || 0).toLocaleString()}`
-            ])
-        };
-        
-        if (table.rows.length > 0) {
-            await doc.table(table, { 
-                prepareHeader: () => doc.font("Helvetica-Bold").fontSize(9),
-                prepareRow: () => doc.font("Helvetica").fontSize(9)
-            });
-        } else {
-            doc.fontSize(9).fillColor('#64748B').text("No payments recorded for this period.");
-        }
-        
-        PdfReportService.buildFooter(doc);
-        doc.end();
-
-    } catch (error) {
-        console.error('Generate payment report error:', error);
-        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
-    }
-};
-
-// @desc    Generate driver violation report
-// @route   POST /api/admin/reports/driver-violations
-// @access  Private (Admin)
-const generateDriverViolationReport = async (req, res) => {
-    try {
-        const { licenseNumber } = req.body;
-
-        if (!licenseNumber) {
-            return res.status(HTTP.BAD_REQUEST).json({ message: 'Please provide license number' });
-        }
-
-        const driver = await Driver.findOne({ licenseNumber });
-        if (!driver) {
-            return res.status(HTTP.NOT_FOUND).json({ message: 'Driver not found' });
-        }
-
-        const violations = await IssuedFine.find({ licenseNumber })
-            .populate('offenseId', 'offenseName')
-            .sort({ date: -1 });
-
-        const totalFineAmount = violations.reduce((sum, v) => sum + (v.amount || 0), 0);
-        const unpaidCount = violations.filter(v => v.status === PAYMENT.STATUS.UNPAID).length;
-
-        if (req.query.format === 'json') {
-            return res.json({
-                success: true,
-                driver: {
-                    name: driver.name,
-                    licenseNumber: driver.licenseNumber,
-                    status: driver.licenseStatus,
-                    demeritPoints: driver.demeritPoints,
-                    demeritLevel: driver.demeritLevel
-                },
-                violations
-            });
-        }
-
-        // Generate PDF
-        const doc = PdfReportService.createDocument();
-        const filename = `Driver_Violations_${licenseNumber}.pdf`;
-        
-        res.setHeader('Content-disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-type', 'application/pdf');
-        
-        doc.pipe(res);
-        
-        // Brand Header
-        PdfReportService.buildHeader(doc, {
-            title: `Driver Violation History Report`,
-            category: 'CITIZEN ENFORCEMENT RECORD',
-            adminInfo: req.user,
-            reportId: `DVR-${licenseNumber}`,
-            dateRange: `As of ${new Date().toLocaleDateString()}`
-        });
-
-        // Driver Info Executive Cards
-        const statusColor = driver.licenseStatus === 'SUSPENDED' ? '#EF4444' : '#10B981';
-        PdfReportService.buildKPICards(doc, [
-            { label: 'Driver Name', value: driver.name, subtext: `License: ${driver.licenseNumber}`, color: '#2563EB' },
-            { label: 'License Status', value: driver.licenseStatus || 'ACTIVE', subtext: `Level: ${driver.demeritLevel || 'GOOD'}`, color: statusColor },
-            { label: 'Demerit Points', value: `${driver.demeritPoints || 24} Pts`, subtext: 'Current Balance', color: '#F59E0B' },
-            { label: 'Total Offenses', value: violations.length.toString(), subtext: `${unpaidCount} Unpaid`, color: '#EF4444' }
-        ]);
-
-        // Section Title
-        PdfReportService.buildSectionHeader(doc, 'Detailed Violation History');
-
-        const table = {
-            headers: ["Date", "Offense Name", "Location", "Amount (LKR)", "Status"],
-            rows: violations.map(v => [
-                v.date ? new Date(v.date).toLocaleDateString() : 'N/A',
-                v.offenseName || v.offenseId?.offenseName || 'Violation',
-                v.place || 'Sri Lanka',
-                `LKR ${(v.amount || 0).toLocaleString()}`,
-                v.status || 'UNPAID'
-            ])
-        };
-        
-        if (table.rows.length > 0) {
-            await doc.table(table, { 
-                prepareHeader: () => doc.font("Helvetica-Bold").fontSize(9),
-                prepareRow: () => doc.font("Helvetica").fontSize(9)
-            });
-        } else {
-            doc.fontSize(9).fillColor('#64748B').text("No violations recorded for this driver.");
-        }
-        
-        PdfReportService.buildFooter(doc);
-        doc.end();
-
-    } catch (error) {
-        console.error('Generate driver report error:', error);
-        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
-    }
-};
-
-
+// ─────────────────────────────────────────────────────────────────────────────
+// REPORT GENERATION HANDLERS (Delegated to ReportController & Clean Architecture Layer)
+// ─────────────────────────────────────────────────────────────────────────────
+const verifyDriverForReport = (req, res) => ReportController.verifyDriver(req, res);
+const generateMonthlyReport = (req, res) => ReportController.generateMonthlyReport(req, res);
+const generatePaymentReport = (req, res) => ReportController.generatePaymentReport(req, res);
+const generateDriverViolationReport = (req, res) => ReportController.generateDriverViolationReport(req, res);
+const generateVehicleReport = (req, res) => ReportController.generateVehicleReport(req, res);
+const generateOfficerReport = (req, res) => ReportController.generateOfficerReport(req, res);
 
 // @desc    Get all admins
 // @route   GET /api/admin/all
@@ -1493,9 +1193,12 @@ module.exports = {
     updateOffense,
     deleteOffense,
     getAllPayments,
+    verifyDriverForReport,
     generateMonthlyReport,
     generatePaymentReport,
     generateDriverViolationReport,
+    generateVehicleReport,
+    generateOfficerReport,
     // 2FA Exports
     generateTwoFactor,
     enableTwoFactor,

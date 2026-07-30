@@ -39,6 +39,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/stations', require('./routes/stationRoutes'));
 app.use('/api/fines', require('./routes/fineRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes')); // New Payment Route
+app.use('/api/admin/reports', require('./routes/reportRoutes')); // Clean Architecture Executive Reports Route
 app.use('/api/admin', require('./routes/adminRoutes')); // Admin Routes
 app.use('/api/drivers', require('./routes/driverRoutes')); // Driver Demerit Routes
 app.use('/api/kyc',     require('./routes/kyc'));           // KYC Face Verification
