@@ -139,6 +139,33 @@ class ReportService {
             { label: 'Collected Revenue', value: `LKR ${paidAmount.toLocaleString()}`, subtext: 'Realized Cash', color: '#10B981' }
         ]);
 
+        // If Annual Report, render 12-Month Performance Matrix first
+        if (params.periodType === 'annual') {
+            PdfReportService.buildSectionHeader(doc, `12-Month Annual Performance Matrix (${params.year || 'Annual'})`);
+
+            const monthsName = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            const monthRows = monthsName.map((mName, idx) => {
+                const monthFines = fines.filter(f => f.date && new Date(f.date).getMonth() === idx);
+                const count = monthFines.length;
+                const paid = monthFines.filter(f => f.status === PAYMENT.STATUS.PAID).length;
+                const rev = monthFines.filter(f => f.status === PAYMENT.STATUS.PAID).reduce((s, f) => s + (f.amount || 0), 0);
+                const rate = count > 0 ? Math.round((paid / count) * 100) : 0;
+                return [mName, count.toString(), paid.toString(), `${rate}%`, `LKR ${rev.toLocaleString()}`];
+            });
+
+            const annualMatrixTable = {
+                headers: ["Month", "Fines Issued", "Settled Fines", "Collection Rate", "Revenue (LKR)"],
+                rows: monthRows
+            };
+
+            await doc.table(annualMatrixTable, {
+                prepareHeader: () => doc.font("Helvetica-Bold").fontSize(8.5),
+                prepareRow: () => doc.font("Helvetica").fontSize(8.5)
+            });
+
+            doc.moveDown(1);
+        }
+
         PdfReportService.buildSectionHeader(doc, 'Offense Type Summary Breakdown');
 
         const table = {
@@ -214,6 +241,32 @@ class ReportService {
             { label: 'Total Revenue', value: `LKR ${totalRevenue.toLocaleString()}`, subtext: 'Realized Revenue', color: '#2563EB' },
             { label: 'Average Fine Value', value: `LKR ${(totalPayments > 0 ? Math.round(totalRevenue / totalPayments) : 0).toLocaleString()}`, subtext: 'Per Transaction', color: '#F59E0B' }
         ]);
+
+        // If Annual Report, render 12-Month Settlement Matrix first
+        if (params.periodType === 'annual') {
+            PdfReportService.buildSectionHeader(doc, `12-Month Annual Payment Settlement Matrix (${params.year || 'Annual'})`);
+
+            const monthsName = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            const monthRows = monthsName.map((mName, idx) => {
+                const monthPayments = payments.filter(p => p.paidAt && new Date(p.paidAt).getMonth() === idx);
+                const count = monthPayments.length;
+                const rev = monthPayments.reduce((s, p) => s + (p.amount || 0), 0);
+                const avg = count > 0 ? Math.round(rev / count) : 0;
+                return [mName, count.toString(), `LKR ${rev.toLocaleString()}`, `LKR ${avg.toLocaleString()}`];
+            });
+
+            const annualMatrixTable = {
+                headers: ["Month", "Settled Transactions", "Monthly Revenue (LKR)", "Avg Transaction Value"],
+                rows: monthRows
+            };
+
+            await doc.table(annualMatrixTable, {
+                prepareHeader: () => doc.font("Helvetica-Bold").fontSize(8.5),
+                prepareRow: () => doc.font("Helvetica").fontSize(8.5)
+            });
+
+            doc.moveDown(1);
+        }
 
         PdfReportService.buildSectionHeader(doc, 'Settled Payment Log');
 
