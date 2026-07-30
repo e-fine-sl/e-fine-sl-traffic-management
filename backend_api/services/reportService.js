@@ -42,6 +42,77 @@ class ReportService {
     }
 
     /**
+     * Pre-validate vehicle registration and citation history in database
+     */
+    static async verifyVehicle(vehicleNumber) {
+        if (!vehicleNumber || !vehicleNumber.trim()) {
+            throw { status: 400, message: 'Please provide a vehicle registration number to search.' };
+        }
+
+        const cleanVehicle = vehicleNumber.trim().toUpperCase();
+        const fines = await ReportRepository.findFinesByVehicle(cleanVehicle);
+
+        if (!fines || fines.length === 0) {
+            throw {
+                status: 404,
+                message: `No citation records or registered vehicle found matching Plate Number: ${cleanVehicle}`
+            };
+        }
+
+        const totalFineValue = fines.reduce((sum, f) => sum + (f.amount || 0), 0);
+        const unpaidCount = fines.filter(f => f.status === PAYMENT.STATUS.UNPAID).length;
+        const paidCount = fines.filter(f => f.status === PAYMENT.STATUS.PAID).length;
+
+        return {
+            vehicleNumber: cleanVehicle,
+            totalViolations: fines.length,
+            paidCount,
+            unpaidCount,
+            totalFineValue,
+            latestViolationDate: fines[0]?.date ? new Date(fines[0].date).toLocaleDateString() : 'N/A',
+            latestOffense: fines[0]?.offenseName || fines[0]?.offenseId?.offenseName || 'Traffic Offense'
+        };
+    }
+
+    /**
+     * Pre-validate police officer existence and citation log in database
+     */
+    static async verifyOfficer(policeOfficerId) {
+        if (!policeOfficerId || !policeOfficerId.trim()) {
+            throw { status: 400, message: 'Please provide Police Officer Badge Number or ID to search.' };
+        }
+
+        const cleanBadgeId = policeOfficerId.trim();
+        const [officerDoc, fines] = await Promise.all([
+            ReportRepository.findOfficerByBadge(cleanBadgeId),
+            ReportRepository.findFinesByOfficer(cleanBadgeId)
+        ]);
+
+        if (!officerDoc && (!fines || fines.length === 0)) {
+            throw {
+                status: 404,
+                message: `No police officer or citation records found matching Badge ID: ${cleanBadgeId.toUpperCase()}`
+            };
+        }
+
+        const totalIssued = fines.length;
+        const settledCount = fines.filter(f => f.status === PAYMENT.STATUS.PAID).length;
+        const totalRevenue = fines.reduce((sum, f) => sum + (f.amount || 0), 0);
+        const settlementRate = totalIssued > 0 ? Math.round((settledCount / totalIssued) * 100) : 0;
+
+        return {
+            name: officerDoc?.name || `Officer (${cleanBadgeId})`,
+            badgeNumber: officerDoc?.badgeNumber || cleanBadgeId,
+            policeStation: officerDoc?.policeStation || 'Traffic Division',
+            position: officerDoc?.position || 'Traffic Officer',
+            totalIssued,
+            settledCount,
+            settlementRate,
+            totalRevenue
+        };
+    }
+
+    /**
      * Build date range using IST boundaries (+05:30)
      */
     static buildDateRange({ periodType = 'monthly', month, year, startDate: customStart, endDate: customEnd }) {

@@ -26,6 +26,42 @@ class ReportController {
     }
 
     /**
+     * Pre-validate vehicle existence before generating report
+     */
+    static async verifyVehicle(req, res) {
+        try {
+            const { vehicleNumber } = req.body;
+            const vehicle = await ReportService.verifyVehicle(vehicleNumber);
+            res.status(HTTP.OK).json({
+                success: true,
+                message: 'Vehicle found and verified',
+                vehicle
+            });
+        } catch (error) {
+            const status = error.status || HTTP.SERVER_ERROR;
+            res.status(status).json({ success: false, message: error.message || 'Server error verifying vehicle' });
+        }
+    }
+
+    /**
+     * Pre-validate police officer existence before generating report
+     */
+    static async verifyOfficer(req, res) {
+        try {
+            const { policeOfficerId } = req.body;
+            const officer = await ReportService.verifyOfficer(policeOfficerId);
+            res.status(HTTP.OK).json({
+                success: true,
+                message: 'Officer found and verified',
+                officer
+            });
+        } catch (error) {
+            const status = error.status || HTTP.SERVER_ERROR;
+            res.status(status).json({ success: false, message: error.message || 'Server error verifying officer' });
+        }
+    }
+
+    /**
      * Helper to send PDF stream or JSON response
      */
     static handleOutput(res, result) {
