@@ -1,5 +1,6 @@
 const IssuedFine = require('../models/issuedFineModel');
 const Driver = require('../models/driverModel');
+const Police = require('../models/policeModel');
 const { PAYMENT } = require('../config/constants');
 
 /**
@@ -39,6 +40,18 @@ class ReportRepository {
         return await IssuedFine.countDocuments({
             licenseNumber: { $regex: new RegExp(`^${licenseNumber.trim()}$`, 'i') }
         });
+    }
+
+    /**
+     * Find police officer record by badge ID or name
+     */
+    static async findOfficerByBadge(badgeId) {
+        return await Police.findOne({
+            $or: [
+                { badgeNumber: { $regex: new RegExp(`^${badgeId.trim()}$`, 'i') } },
+                { name: { $regex: new RegExp(badgeId.trim(), 'i') } }
+            ]
+        }).select('-password');
     }
 
     /**
