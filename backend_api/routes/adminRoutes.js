@@ -30,6 +30,9 @@ const {
     generateMonthlyReport,
     generatePaymentReport,
     generateDriverViolationReport,
+    generateVehicleReport,
+    generateOfficerReport,
+    verifyDriverForReport,
     // 2FA Imports
     generateTwoFactor,
     enableTwoFactor,
@@ -117,9 +120,12 @@ router.get('/fines', protectAdmin, getAllIssuedFines);
 router.get('/payments', protectAdmin, getAllPayments);
 
 // Reports - All admins can generate reports
+router.post('/reports/verify-driver', protectAdmin, verifyDriverForReport);
 router.post('/reports/monthly-fines', protectAdmin, generateMonthlyReport);
 router.post('/reports/payments', protectAdmin, generatePaymentReport);
 router.post('/reports/driver-violations', protectAdmin, generateDriverViolationReport);
+router.post('/reports/vehicle-violations', protectAdmin, generateVehicleReport);
+router.post('/reports/officer-performance', protectAdmin, generateOfficerReport);
 
 // ==========================================
 // ADMIN OFFICER & SUPER ADMIN ONLY
