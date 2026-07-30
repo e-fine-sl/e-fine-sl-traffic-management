@@ -98,37 +98,7 @@ const updateSystemConfig = async (req, res) => {
 
     await config.save();
 
-    // ── Synchronize driver demerit points if defaultDemeritPoints provided ──────────────
-    if (defaultDemeritPoints !== undefined) {
-      const newDefault = Number(defaultDemeritPoints);
-      console.log(`[SystemConfig] Default demerit points setting: ${newDefault}. Syncing all driver accounts in database...`);
-
-      // Query ALL drivers in database to guarantee no driver record is missed
-      const allDrivers = await Driver.find({});
-      for (const drv of allDrivers) {
-        // Sanitize legacy or mixed-case licenseStatus values in database (e.g. 'Active' -> 'ACTIVE')
-        if (drv.licenseStatus) {
-          const upper = String(drv.licenseStatus).toUpperCase();
-          drv.licenseStatus = ['ACTIVE', 'SUSPENDED'].includes(upper) ? upper : 'ACTIVE';
-        } else {
-          drv.licenseStatus = 'ACTIVE';
-        }
-
-        // If driver was at full balance (or old default / hardcoded 24 / higher than new max / missing points), set to newDefault
-        if (!drv.demeritPoints || drv.demeritPoints >= oldDefaultPoints || drv.demeritPoints === 24 || drv.demeritPoints > newDefault) {
-          drv.demeritPoints = newDefault;
-        } else {
-          // Adjust points proportionally to preserve points lost deficit
-          const pointsLost = Math.max(0, oldDefaultPoints - drv.demeritPoints);
-          drv.demeritPoints = Math.max(0, newDefault - pointsLost);
-        }
-
-        drv.ratingScore = calculateRating(drv.demeritPoints, newDefault);
-        drv.demeritLevel = calculateLevel(drv.demeritPoints, newDefault);
-        await drv.save();
-      }
-      console.log(`[SystemConfig] Successfully synced ${allDrivers.length} driver account(s) in DB with default points (${newDefault}).`);
-    }
+    console.log(`[SystemConfig] System configuration updated successfully. Default demerit points ceiling is now: ${config.defaultDemeritPoints}`);
 
     res.status(200).json({
       success: true,

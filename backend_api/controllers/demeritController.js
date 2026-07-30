@@ -102,12 +102,15 @@ exports.getDriverStatus = async (req, res) => {
       return res.status(HTTP.NOT_FOUND).json({ message: 'Driver not found' });
     }
 
+    const liveRating = calculateRating(driver.demeritPoints, maxPoints);
+    const liveLevel = calculateLevel(driver.demeritPoints, maxPoints);
+
     res.json({
       demeritPoints: driver.demeritPoints,
       defaultDemeritPoints: maxPoints,
-      ratingScore: driver.ratingScore,
+      ratingScore: liveRating,
       licenseStatus: driver.licenseStatus,
-      demeritLevel: driver.demeritLevel,
+      demeritLevel: liveLevel,
       suspendedAt: driver.suspendedAt,
     });
   } catch (err) {
