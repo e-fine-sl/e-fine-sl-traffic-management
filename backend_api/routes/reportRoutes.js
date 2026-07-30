@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ReportController = require('../controllers/reportController');
-const { protectAdmin } = require('../middleware/authMiddleware');
+const { protectAdmin } = require('../middleware/adminMiddleware');
 
 // Dedicated Modular Report Subsystem Routes
 router.post('/verify-driver', protectAdmin, ReportController.verifyDriver);
