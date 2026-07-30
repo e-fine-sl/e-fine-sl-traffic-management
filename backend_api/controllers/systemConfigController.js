@@ -106,6 +106,14 @@ const updateSystemConfig = async (req, res) => {
       // Query ALL drivers in database to guarantee no driver record is missed
       const allDrivers = await Driver.find({});
       for (const drv of allDrivers) {
+        // Sanitize legacy or mixed-case licenseStatus values in database (e.g. 'Active' -> 'ACTIVE')
+        if (drv.licenseStatus) {
+          const upper = String(drv.licenseStatus).toUpperCase();
+          drv.licenseStatus = ['ACTIVE', 'SUSPENDED'].includes(upper) ? upper : 'ACTIVE';
+        } else {
+          drv.licenseStatus = 'ACTIVE';
+        }
+
         // If driver was at full balance (or old default / hardcoded 24 / higher than new max / missing points), set to newDefault
         if (!drv.demeritPoints || drv.demeritPoints >= oldDefaultPoints || drv.demeritPoints === 24 || drv.demeritPoints > newDefault) {
           drv.demeritPoints = newDefault;

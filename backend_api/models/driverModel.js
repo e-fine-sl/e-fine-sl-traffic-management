@@ -14,7 +14,12 @@ const driverSchema = mongoose.Schema(
     // (Demerit Points)
     demeritPoints: { type: Number, default: DEMERIT.DEFAULT_POINTS }, 
     ratingScore: { type: Number, default: 5.0, min: 0.0, max: 5.0 }, // 0.0 - 5.0 Stars
-    licenseStatus: { type: String, enum: [LICENSE_STATUS.ACTIVE, LICENSE_STATUS.SUSPENDED], default: LICENSE_STATUS.ACTIVE },
+    licenseStatus: {
+      type: String,
+      enum: [LICENSE_STATUS.ACTIVE, LICENSE_STATUS.SUSPENDED],
+      default: LICENSE_STATUS.ACTIVE,
+      set: (val) => (val ? String(val).toUpperCase() : LICENSE_STATUS.ACTIVE)
+    },
     demeritLevel: { type: String, enum: ['EXCELLENT', 'GOOD', 'FAIR', 'WARNING', 'DANGER', LICENSE_STATUS.SUSPENDED], default: 'EXCELLENT' },
     suspendedAt: { type: Date, default: null },
 
