@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844" style="background:#0F172A; font-family:'Inter', system-ui, sans-serif;">
+  <!-- Frame Background -->
+  <rect width="390" height="844" rx="40" fill="#0F172A" stroke="#334155" stroke-width="4"/>
+  <!-- Dynamic Notch / Island -->
+  <rect x="135" y="12" width="120" height="30" rx="15" fill="#000000"/>
+  <!-- Status Bar -->
+  <text x="32" y="32" fill="#94A3B8" font-size="12" font-weight="600">09:41</text>
+  <text x="310" y="32" fill="#94A3B8" font-size="11">5G 🔋</text>
+
+  <!-- Screen Header -->
+  <rect x="0" y="50" width="390" height="60" fill="#1E293B"/>
+  <text x="20" y="86" fill="#F8FAFC" font-size="18" font-weight="700">Police Duty Dashboard</text>
+
+  <!-- Content Layer -->
+  <g transform="translate(0, 110)">
+    
+  <!-- Officer Header Badge -->
+  <rect x="20" y="10" width="350" height="70" rx="16" fill="#1E293B"/>
+  <text x="40" y="38" fill="#F8FAFC" font-size="16" font-weight="700">Officer Badge #OP-1042</text>
+  <text x="40" y="60" fill="#94A3B8" font-size="12">Kollupitiya Police Station | Sergeant</text>
+  <rect x="280" y="26" width="75" height="26" rx="13" fill="#166534"/>
+  <text x="317" y="43" fill="#4ADE80" font-size="11" font-weight="800" text-anchor="middle">ACTIVE 🟢</text>
+
+  <!-- Daily Summary Cards -->
+  <rect x="20" y="95" width="168" height="90" rx="16" fill="#1E293B" stroke="#3B82F6" stroke-width="1"/>
+  <text x="35" y="125" fill="#94A3B8" font-size="12">FINES ISSUED TODAY</text>
+  <text x="35" y="165" fill="#3B82F6" font-size="28" font-weight="800">14</text>
+
+  <rect x="202" y="95" width="168" height="90" rx="16" fill="#1E293B" stroke="#22C55E" stroke-width="1"/>
+  <text x="217" y="125" fill="#94A3B8" font-size="12">REVENUE COLLECTED</text>
+  <text x="217" y="165" fill="#22C55E" font-size="20" font-weight="800">Rs. 42,500</text>
+
+  <!-- Action Buttons -->
+  <rect x="20" y="200" width="350" height="52" rx="14" fill="#2563EB"/>
+  <text x="195" y="232" fill="#FFFFFF" font-size="15" font-weight="800" text-anchor="middle">📷 SCAN LICENSE (OCR)</text>
+
+  <rect x="20" y="264" width="350" height="52" rx="14" fill="#334155"/>
+  <text x="195" y="296" fill="#FFFFFF" font-size="15" font-weight="700" text-anchor="middle">🔍 SEARCH DRIVER BY NIC / LICENSE</text>
+
+  <!-- Recent Fine Stream -->
+  <text x="20" y="345" fill="#F8FAFC" font-size="16" font-weight="700">Recent Fine Activity Stream</text>
+
+  <rect x="20" y="360" width="350" height="75" rx="12" fill="#1E293B"/>
+  <text x="35" y="388" fill="#F8FAFC" font-size="14" font-weight="700">Speeding (ABC-1234)</text>
+  <text x="35" y="412" fill="#94A3B8" font-size="12">21 Jul 2026, 10:30 AM — Rs. 5,000</text>
+  <rect x="290" y="375" width="65" height="22" rx="11" fill="#DC2626"/>
+  <text x="322" y="390" fill="#FFFFFF" font-size="10" font-weight="800" text-anchor="middle">UNPAID</text>
+
+  <rect x="20" y="445" width="350" height="75" rx="12" fill="#1E293B"/>
+  <text x="35" y="473" fill="#F8FAFC" font-size="14" font-weight="700">No Helmet (XYZ-5678)</text>
+  <text x="35" y="497" fill="#94A3B8" font-size="12">21 Jul 2026, 09:15 AM — Rs. 2,500</text>
+  <rect x="290" y="460" width="65" height="22" rx="11" fill="#166534"/>
+  <text x="322" y="475" fill="#4ADE80" font-size="10" font-weight="800" text-anchor="middle">PAID</text>
+
+  </g>
+</svg>

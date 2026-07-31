@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844" style="background:#0F172A; font-family:'Inter', system-ui, sans-serif;">
+  <!-- Frame Background -->
+  <rect width="390" height="844" rx="40" fill="#0F172A" stroke="#334155" stroke-width="4"/>
+  <!-- Dynamic Notch / Island -->
+  <rect x="135" y="12" width="120" height="30" rx="15" fill="#000000"/>
+  <!-- Status Bar -->
+  <text x="32" y="32" fill="#94A3B8" font-size="12" font-weight="600">09:41</text>
+  <text x="310" y="32" fill="#94A3B8" font-size="11">5G 🔋</text>
+
+  <!-- Screen Header -->
+  <rect x="0" y="50" width="390" height="60" fill="#1E293B"/>
+  <text x="20" y="86" fill="#F8FAFC" font-size="18" font-weight="700">PayHere Gateway Checkout</text>
+
+  <!-- Content Layer -->
+  <g transform="translate(0, 110)">
+    
+  <!-- Fine Summary Box -->
+  <rect x="20" y="10" width="350" height="120" rx="16" fill="#1E293B"/>
+  <text x="40" y="38" fill="#94A3B8" font-size="12">Fine Ticket #FT-2026-8891</text>
+  <text x="40" y="65" fill="#F8FAFC" font-size="18" font-weight="800">Total: LKR 5,000.00</text>
+  <text x="40" y="90" fill="#22C55E" font-size="12">Offense: Speeding (>20km/h)</text>
+
+  <!-- PayHere Webview Container -->
+  <rect x="20" y="150" width="350" height="430" rx="16" fill="#FFFFFF"/>
+  <rect x="20" y="150" width="350" height="50" rx="16" fill="#003366"/>
+  <text x="40" y="181" fill="#FFFFFF" font-size="16" font-weight="800">PayHere Sandbox Checkout</text>
+
+  <!-- Card Form Inputs -->
+  <text x="40" y="230" fill="#334155" font-size="12" font-weight="600">Cardholder Name</text>
+  <rect x="40" y="240" width="310" height="40" rx="8" fill="#F1F5F9" stroke="#CBD5E1"/>
+  <text x="55" y="265" fill="#0F172A" font-size="13">A. S. Perera</text>
+
+  <text x="40" y="300" fill="#334155" font-size="12" font-weight="600">Card Number</text>
+  <rect x="40" y="310" width="310" height="40" rx="8" fill="#F1F5F9" stroke="#CBD5E1"/>
+  <text x="55" y="335" fill="#0F172A" font-size="13">4532 •••• •••• 8812</text>
+
+  <text x="40" y="370" fill="#334155" font-size="12" font-weight="600">Expiry (MM/YY)</text>
+  <rect x="40" y="380" width="140" height="40" rx="8" fill="#F1F5F9" stroke="#CBD5E1"/>
+  <text x="55" y="405" fill="#0F172A" font-size="13">08/28</text>
+
+  <text x="210" y="370" fill="#334155" font-size="12" font-weight="600">CVV</text>
+  <rect x="210" y="380" width="140" height="40" rx="8" fill="#F1F5F9" stroke="#CBD5E1"/>
+  <text x="225" y="405" fill="#0F172A" font-size="13">•••</text>
+
+  <!-- Pay Button -->
+  <rect x="40" y="460" width="310" height="48" rx="10" fill="#003366"/>
+  <text x="195" y="490" fill="#FFFFFF" font-size="15" font-weight="800" text-anchor="middle">CONFIRM PAYMENT (LKR 5,000)</text>
+
+  <text x="195" y="540" fill="#64748B" font-size="11" text-anchor="middle">🔒 Encrypted 256-bit PayHere Payment Gateway</text>
+
+  </g>
+</svg>
