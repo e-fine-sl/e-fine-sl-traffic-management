@@ -227,73 +227,38 @@ flowchart LR
 
 ```mermaid
 classDiagram
+    direction LR
+
     class Driver {
         +ObjectId _id
-        +String name
-        +String nic
         +String licenseNumber
+        +String nic
         +String email
-        +String phone
-        +String password
-        +String role
         +Number demeritPoints
         +Number ratingScore
         +String licenseStatus
-        +String demeritLevel
-        +Date suspendedAt
-        +Boolean isVerified
         +Boolean kycVerified
-        +Boolean emailIsVerified
-        +String profileImage
-        +String licenseFrontImage
-        +String licenseBackImage
-        +String licenseExpiryDate
-        +String licenseIssueDate
-        +String dateOfBirth
-        +String vehicleNumber
-        +Array vehicleClasses
         +registerDriver()
-        +loginDriver()
         +verifyKYC()
     }
 
     class Police {
         +ObjectId _id
-        +String name
-        +String email
         +String badgeNumber
-        +String nic
-        +String phone
-        +String password
+        +String email
         +String policeStation
         +String position
-        +String profileImage
-        +String role
-        +String fcmToken
         +GeoJSON location
-        +Boolean isActive
         +String appState
-        +Date lastActiveTime
-        +Date lastLoginTime
-        +GeoJSON lastLoginLocation
-        +Date lastLogoutTime
         +registerPolice()
-        +loginPolice()
         +updatePresence()
     }
 
     class Admin {
         +ObjectId _id
-        +String name
         +String email
-        +String password
         +String role
-        +String phone
-        +Boolean isActive
-        +Date lastLogin
-        +String twoFactorSecret
         +Boolean isTwoFactorEnabled
-        +Boolean isTwoFactorVerified
         +adminLogin()
         +verify2FA()
     }
@@ -303,18 +268,9 @@ classDiagram
         +String licenseNumber
         +String vehicleNumber
         +ObjectId offenseId
-        +String offenseName
         +Number amount
-        +String place
-        +String province
-        +String district
-        +String policeStation
         +String policeOfficerId
         +String status
-        +String paymentId
-        +Date paidAt
-        +Number demeritPoints
-        +Date date
         +createFine()
         +markPaid()
     }
@@ -323,31 +279,17 @@ classDiagram
         +ObjectId _id
         +String offenseName
         +Number amount
-        +String description
         +String sectionOfAct
         +Number demeritValue
         +createOffense()
-        +updateOffense()
     }
 
     class AccidentReport {
         +ObjectId _id
         +String driverLicense
-        +String driverName
-        +String driverPhone
         +String accidentType
-        +String description
         +GeoJSON location
-        +String province
-        +String district
-        +String policeDivision
-        +String locationAddress
-        +Number officersNotified
-        +String stationNotified
         +String status
-        +Array statusHistory
-        +Array images
-        +Date reportedAt
         +createReport()
         +updateStatus()
     }
@@ -357,21 +299,16 @@ classDiagram
         +String stationCode
         +String name
         +String district
-        +String province
         +String officialEmail
-        +GeoJSON location
         +findNearestStation()
     }
 
     class SystemConfig {
         +ObjectId _id
         +Number accidentNotificationRadiusKm
-        +Number officerLogoutGracePeriodMinutes
         +Number defaultDemeritPoints
         +Number monthlyRecoveryPoints
-        +Number recoveryPeriodMonths
         +Boolean recoveryEnabled
-        +Date lastRecoveryRunAt
         +updateConfig()
     }
 
