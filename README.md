@@ -11,6 +11,27 @@
 
 ---
 
+---
+
+### 📥 System Design Diagrams Download Center
+
+You can view and download high-resolution PNG and vector SVG versions of all system design diagrams without interactive zoom buttons:
+
+| Diagram # | Diagram Name | Static Image View | Download Links |
+| :--- | :--- | :--- | :--- |
+| **4.1.2** | High-Level System Architecture | Clean Image | [📥 High-Res PNG](docs/diagrams/01_high_level_system_architecture.png) | [📐 Vector SVG](docs/diagrams/01_high_level_system_architecture.svg) |
+| **4.2.1** | System Use Case Diagram | Clean Image | [📥 High-Res PNG](docs/diagrams/02_system_use_case_diagram.png) | [📐 Vector SVG](docs/diagrams/02_system_use_case_diagram.svg) |
+| **4.2.2** | Unified System Class Diagram | Clean Image | [📥 High-Res PNG](docs/diagrams/03_unified_system_class_diagram.png) | [📐 Vector SVG](docs/diagrams/03_unified_system_class_diagram.svg) |
+| **4.2.3.1** | Sequence: KYC & License OCR | Clean Image | [📥 High-Res PNG](docs/diagrams/04_sequence_kyc_ocr_liveness.png) | [📐 Vector SVG](docs/diagrams/04_sequence_kyc_ocr_liveness.svg) |
+| **4.2.3.2** | Sequence: Fine Issuance & Demerits | Clean Image | [📥 High-Res PNG](docs/diagrams/05_sequence_fine_issuance_demerits.png) | [📐 Vector SVG](docs/diagrams/05_sequence_fine_issuance_demerits.svg) |
+| **4.2.3.3** | Sequence: PayHere Settlement | Clean Image | [📥 High-Res PNG](docs/diagrams/06_sequence_payhere_settlement.png) | [📐 Vector SVG](docs/diagrams/06_sequence_payhere_settlement.svg) |
+| **4.2.3.4** | Sequence: Emergency SOS Dispatch | Clean Image | [📥 High-Res PNG](docs/diagrams/07_sequence_emergency_sos_dispatch.png) | [📐 Vector SVG](docs/diagrams/07_sequence_emergency_sos_dispatch.svg) |
+| **4.2.4.1** | Activity: KYC Liveness Flow | Clean Image | [📥 High-Res PNG](docs/diagrams/08_activity_kyc_verification_flow.png) | [📐 Vector SVG](docs/diagrams/08_activity_kyc_verification_flow.svg) |
+| **4.2.4.2** | Activity: Fine Issuance & Suspension | Clean Image | [📥 High-Res PNG](docs/diagrams/09_activity_fine_issuance_suspension.png) | [📐 Vector SVG](docs/diagrams/09_activity_fine_issuance_suspension.svg) |
+| **4.2.4.3** | Activity: Demerit Recovery Cron | Clean Image | [📥 High-Res PNG](docs/diagrams/10_activity_demerit_recovery_cron.png) | [📐 Vector SVG](docs/diagrams/10_activity_demerit_recovery_cron.svg) |
+| **4.4.1** | Entity Relationship Diagram (ERD) | Clean Image | [📥 High-Res PNG](docs/diagrams/11_entity_relationship_diagram_erd.png) | [📐 Vector SVG](docs/diagrams/11_entity_relationship_diagram_erd.svg) |
+
+
 ## 📌 Executive Table of Contents
 
 - [4.1 Introduction](#41-introduction)
@@ -51,6 +72,14 @@ Traditional traffic enforcement in Sri Lanka relies on paper-based fine tickets,
 ### 4.1.2 High-Level System Architecture
 
 The system follows a modern **Decoupled Client-Server Micro-capable Architecture** with real-time geospatial processing and asynchronous background engines.
+
+
+![High-Level System Architecture Diagram](docs/diagrams/01_high_level_system_architecture.png)
+
+> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/01_high_level_system_architecture.png) | [Vector SVG (Scalable)](docs/diagrams/01_high_level_system_architecture.svg)
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 graph TD
@@ -113,6 +142,9 @@ graph TD
     CronJob -->|Monthly Auto-Recovery| FineCtrl
 ```
 
+</details>
+
+
 ---
 
 ### 4.1.3 Core Stakeholder Roles & Access Matrices
@@ -135,6 +167,14 @@ The system implements Role-Based Access Control (RBAC) across 6 distinct user pe
 ### 4.2.1 Use Case Diagrams & Detailed Specifications
 
 #### System Use Case Diagram
+
+
+![System Use Case Diagram](docs/diagrams/02_system_use_case_diagram.png)
+
+> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/02_system_use_case_diagram.png) | [Vector SVG (Scalable)](docs/diagrams/02_system_use_case_diagram.svg)
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 flowchart LR
@@ -180,6 +220,9 @@ flowchart LR
     UC6 -. "<<include>>" .-> UC2
 ```
 
+</details>
+
+
 #### Detailed Use Case Specifications
 
 ##### UC-01: Citizen Driver Registration & KYC Liveness Verification
@@ -224,6 +267,14 @@ flowchart LR
 ---
 
 ### 4.2.2 Unified System Class Diagram
+
+
+![Unified System Class Diagram](docs/diagrams/03_unified_system_class_diagram.png)
+
+> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/03_unified_system_class_diagram.png) | [Vector SVG (Scalable)](docs/diagrams/03_unified_system_class_diagram.svg)
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 classDiagram
@@ -320,11 +371,22 @@ classDiagram
     AccidentReport "0..*" -- "1" Station : notifies
 ```
 
+</details>
+
+
 ---
 
 ### 4.2.3 Sequence Diagrams
 
 #### Sequence 1: Driver KYC Liveness & License Scanning Workflow
+
+
+![Sequence Diagram 1: Driver KYC Liveness & License OCR](docs/diagrams/04_sequence_kyc_ocr_liveness.png)
+
+> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/04_sequence_kyc_ocr_liveness.png) | [Vector SVG (Scalable)](docs/diagrams/04_sequence_kyc_ocr_liveness.svg)
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 sequenceDiagram
@@ -349,7 +411,18 @@ sequenceDiagram
     Backend-->>Driver: 200 OK (KYC Verification Successful)
 ```
 
+</details>
+
+
 #### Sequence 2: Roadside Fine Issuance & Demerit Point Deduction
+
+
+![Sequence Diagram 2: Roadside Fine Issuance & Demerit Deduction](docs/diagrams/05_sequence_fine_issuance_demerits.png)
+
+> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/05_sequence_fine_issuance_demerits.png) | [Vector SVG (Scalable)](docs/diagrams/05_sequence_fine_issuance_demerits.svg)
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 sequenceDiagram
@@ -380,7 +453,18 @@ sequenceDiagram
     API-->>App: 201 Created (Fine Issued Successfully & Demerits Deducted)
 ```
 
+</details>
+
+
 #### Sequence 3: Fine Payment via PayHere Gateway & Webhook Reconciliation
+
+
+![Sequence Diagram 3: Fine Payment via PayHere Gateway](docs/diagrams/06_sequence_payhere_settlement.png)
+
+> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/06_sequence_payhere_settlement.png) | [Vector SVG (Scalable)](docs/diagrams/06_sequence_payhere_settlement.svg)
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 sequenceDiagram
@@ -413,7 +497,18 @@ sequenceDiagram
     PayHere-->>App: Redirect Payment Success Screen
 ```
 
+</details>
+
+
 #### Sequence 4: Emergency SOS Alert Broadcast (10km Geospatial Radius)
+
+
+![Sequence Diagram 4: Emergency SOS Alert Broadcast](docs/diagrams/07_sequence_emergency_sos_dispatch.png)
+
+> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/07_sequence_emergency_sos_dispatch.png) | [Vector SVG (Scalable)](docs/diagrams/07_sequence_emergency_sos_dispatch.svg)
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 sequenceDiagram
@@ -437,11 +532,22 @@ sequenceDiagram
     API-->>App: 200 OK (SOS Broadcasted to N Active Officers)
 ```
 
+</details>
+
+
 ---
 
 ### 4.2.4 Activity Diagrams
 
 #### Activity 1: Driver Signup & KYC Liveness Verification Workflow
+
+
+![Activity Diagram 1: Driver Signup & KYC Liveness Verification](docs/diagrams/08_activity_kyc_verification_flow.png)
+
+> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/08_activity_kyc_verification_flow.png) | [Vector SVG (Scalable)](docs/diagrams/08_activity_kyc_verification_flow.svg)
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 stateDiagram-v2
@@ -473,7 +579,18 @@ stateDiagram-v2
     AccountActivated --> [*]
 ```
 
+</details>
+
+
 #### Activity 2: Traffic Fine Issuance & Demerit Point Deduction Logic
+
+
+![Activity Diagram 2: Traffic Fine Issuance & Demerit Deduction](docs/diagrams/09_activity_fine_issuance_suspension.png)
+
+> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/09_activity_fine_issuance_suspension.png) | [Vector SVG (Scalable)](docs/diagrams/09_activity_fine_issuance_suspension.svg)
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 stateDiagram-v2
@@ -501,7 +618,18 @@ stateDiagram-v2
     TriggerPushNotification --> [*]
 ```
 
+</details>
+
+
 #### Activity 3: Automated Monthly Demerit Point Reinstatement Cron Execution
+
+
+![Activity Diagram 3: Monthly Demerit Point Reinstatement Cron](docs/diagrams/10_activity_demerit_recovery_cron.png)
+
+> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/10_activity_demerit_recovery_cron.png) | [Vector SVG (Scalable)](docs/diagrams/10_activity_demerit_recovery_cron.svg)
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 stateDiagram-v2
@@ -527,6 +655,9 @@ stateDiagram-v2
     SkipExecution --> [*]
     UpdateLastRunAt --> [*]
 ```
+
+</details>
+
 
 ---
 
@@ -620,6 +751,14 @@ The interface design of e-Fine SL adheres to 6 core human-centered design princi
 ## 4.4 Database Design
 
 ### 4.4.1 Entity Relationship Diagram (ERD)
+
+
+![Entity Relationship Diagram (ERD)](docs/diagrams/11_entity_relationship_diagram_erd.png)
+
+> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/11_entity_relationship_diagram_erd.png) | [Vector SVG (Scalable)](docs/diagrams/11_entity_relationship_diagram_erd.svg)
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 erDiagram
@@ -718,6 +857,9 @@ erDiagram
         date expiresAt
     }
 ```
+
+</details>
+
 
 ---
 
