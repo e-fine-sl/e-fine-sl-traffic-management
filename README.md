@@ -131,25 +131,26 @@ The system implements Role-Based Access Control (RBAC) across 6 distinct user pe
 #### System Use Case Diagram
 
 ```mermaid
-usecaseDiagram
-    actor CitizenDriver as "Citizen Driver"
-    actor TrafficOfficer as "Traffic Police Officer"
-    actor StationOIC as "Station OIC"
-    actor SystemAdmin as "System Administrator"
-    actor CronEngine as "Automated System Engine"
+flowchart LR
+    subgraph Boundary ["e-Fine SL Core System Boundary"]
+        direction TB
+        UC1(["UC-01: Register & Perform KYC Liveness"])
+        UC2(["UC-02: Authenticate & Manage Session"])
+        UC3(["UC-03: Scan Driving License (OCR)"])
+        UC4(["UC-04: Issue Traffic Fine & Deduct Demerits"])
+        UC5(["UC-05: Settle Fine via PayHere Gateway"])
+        UC6(["UC-06: Broadcast Emergency SOS Alert"])
+        UC7(["UC-07: Report Road Accident with Geotag"])
+        UC8(["UC-08: Verify Officer Registration (OTP)"])
+        UC9(["UC-09: Auto-Recover Monthly Demerit Points"])
+        UC10(["UC-10: Audit System Sessions & Configure Token"])
+    end
 
-    package "e-Fine SL Core System Boundary" {
-        usecase UC1 as "UC-01: Register & Perform KYC Liveness"
-        usecase UC2 as "UC-02: Authenticate & Manage Session"
-        usecase UC3 as "UC-03: Scan Driving License (OCR)"
-        usecase UC4 as "UC-04: Issue Traffic Fine & Deduct Demerits"
-        usecase UC5 as "UC-05: Settle Fine via PayHere Gateway"
-        usecase UC6 as "UC-06: Broadcast Emergency SOS Alert"
-        usecase UC7 as "UC-07: Report Road Accident with Geotag"
-        usecase UC8 as "UC-08: Verify Officer Registration (OTP)"
-        usecase UC9 as "UC-09: Auto-Recover Monthly Demerit Points"
-        usecase UC10 as "UC-10: Audit System Sessions & Configure Token"
-    }
+    CitizenDriver["👤 Citizen Driver"]
+    TrafficOfficer["👮 Traffic Police Officer"]
+    StationOIC["🏢 Station OIC"]
+    SystemAdmin["⚙️ System Administrator"]
+    CronEngine["🤖 Automated System Engine"]
 
     CitizenDriver --> UC1
     CitizenDriver --> UC2
@@ -168,9 +169,9 @@ usecaseDiagram
 
     CronEngine --> UC9
 
-    UC4 ..> UC3 : <<include>>
-    UC5 ..> UC4 : <<extends>>
-    UC6 ..> UC2 : <<include>>
+    UC4 -. "<<include>>" .-> UC3
+    UC5 -. "<<extends>>" .-> UC4
+    UC6 -. "<<include>>" .-> UC2
 ```
 
 #### Detailed Use Case Specifications
