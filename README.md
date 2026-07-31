@@ -54,19 +54,19 @@ The system follows a modern **Decoupled Client-Server Micro-capable Architecture
 
 ```mermaid
 graph TD
-    subgraph Client Layer (Presentation)
+    subgraph ClientLayer ["Client Layer (Presentation)"]
         FlutterDriver["Flutter Mobile App (Driver Module)"]
         FlutterPolice["Flutter Mobile App (Police Officer Module)"]
         WebAdmin["React / Vue Web Admin Portal"]
     end
 
-    subgraph Security & API Gateway Layer
+    subgraph GatewayLayer ["Security & API Gateway Layer"]
         CorsAuth["CORS & Security Middleware"]
         JWTAuth["JWT Access Token / Refresh Token Engine"]
         CryptoService["RSA Key Exchange (public.pem / Private Key)"]
     end
 
-    subgraph Monolithic Backend API Layer (Node.js + Express)
+    subgraph ApiLayer ["Monolithic Backend API Layer (Node.js + Express)"]
         AuthCtrl["Auth & Verification Controller"]
         FineCtrl["Fine & Demerit Controller"]
         AccidentCtrl["Accident & Incident Controller"]
@@ -75,13 +75,13 @@ graph TD
         PaymentCtrl["PayHere Payment Gateway Controller"]
     end
 
-    subgraph Asynchronous Engines & Background Jobs
+    subgraph AsyncLayer ["Asynchronous Engines & Background Jobs"]
         CronJob["Node-Cron Demerit Recovery Engine"]
         FCMService["Firebase Admin SDK (FCM Push Service)"]
         EmailService["Nodemailer (SendGrid / SMTP Gateway)"]
     end
 
-    subgraph Data & Persistence Layer
+    subgraph DataLayer ["Data & Persistence Layer"]
         MongoDB[(MongoDB Primary Cluster)]
         GeoIndex["MongoDB 2dsphere Spatial Index"]
     end
@@ -92,7 +92,13 @@ graph TD
 
     CorsAuth --> JWTAuth
     JWTAuth --> CryptoService
-    CryptoService --> AuthCtrl & FineCtrl & AccidentCtrl & SOSCtrl & AdminCtrl & PaymentCtrl
+
+    CryptoService --> AuthCtrl
+    CryptoService --> FineCtrl
+    CryptoService --> AccidentCtrl
+    CryptoService --> SOSCtrl
+    CryptoService --> AdminCtrl
+    CryptoService --> PaymentCtrl
 
     AuthCtrl --> MongoDB
     FineCtrl --> MongoDB
@@ -146,11 +152,11 @@ flowchart LR
         UC10(["UC-10: Audit System Sessions & Configure Token"])
     end
 
-    CitizenDriver["👤 Citizen Driver"]
-    TrafficOfficer["👮 Traffic Police Officer"]
-    StationOIC["🏢 Station OIC"]
-    SystemAdmin["⚙️ System Administrator"]
-    CronEngine["🤖 Automated System Engine"]
+    CitizenDriver["Citizen Driver"]
+    TrafficOfficer["Traffic Police Officer"]
+    StationOIC["Station OIC"]
+    SystemAdmin["System Administrator"]
+    CronEngine["Automated System Engine"]
 
     CitizenDriver --> UC1
     CitizenDriver --> UC2
