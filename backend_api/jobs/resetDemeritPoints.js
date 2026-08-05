@@ -67,13 +67,19 @@ cron.schedule(CRON.MONTHLY_RESET, async () => {
       }
     }
 
-    // ── 4. Fetch eligible drivers ────────────────────────────────────────────
+    // ── 4. Fetch eligible drivers (Must have no recent offenses within clean period) ──
     const recoveryPoints = config.monthlyRecoveryPoints;
     const ceiling = config.defaultDemeritPoints;
+    const cleanPeriodDays = config.cleanRecordDays || 30;
+    const cleanCutoffDate = new Date(Date.now() - cleanPeriodDays * 24 * 60 * 60 * 1000);
 
     const driversToUpdate = await Driver.find({
       licenseStatus: LICENSE_STATUS.ACTIVE,
-      demeritPoints: { $lt: ceiling }
+      demeritPoints: { $lt: ceiling },
+      $or: [
+        { lastOffenseDate: null },
+        { lastOffenseDate: { $lt: cleanCutoffDate } }
+      ]
     });
 
     if (driversToUpdate.length === 0) {

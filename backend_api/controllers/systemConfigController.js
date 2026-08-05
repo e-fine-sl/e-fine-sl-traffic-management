@@ -15,6 +15,7 @@ const getOrCreateConfig = async () => {
       defaultDemeritPoints: 24,
       monthlyRecoveryPoints: 2,
       recoveryPeriodMonths: 1,
+      cleanRecordDays: 30,
       recoveryEnabled: true,
       lastRecoveryRunAt: null
     });
@@ -49,7 +50,8 @@ const updateSystemConfig = async (req, res) => {
       officerLogoutGracePeriodMinutes,
       defaultDemeritPoints,
       monthlyRecoveryPoints,
-      recoveryPeriodMonths
+      recoveryPeriodMonths,
+      cleanRecordDays
     } = req.body;
 
     // ── Field-level validation ───────────────────────────────────────────────
@@ -86,6 +88,13 @@ const updateSystemConfig = async (req, res) => {
       }
     }
 
+    if (cleanRecordDays !== undefined) {
+      const v = Number(cleanRecordDays);
+      if (isNaN(v) || v < 0 || v > 365) {
+        return res.status(400).json({ success: false, message: 'Clean record period must be between 0 and 365 days' });
+      }
+    }
+
     const config = await getOrCreateConfig();
     const oldDefaultPoints = config.defaultDemeritPoints;
 
@@ -95,6 +104,7 @@ const updateSystemConfig = async (req, res) => {
     if (defaultDemeritPoints !== undefined)            config.defaultDemeritPoints            = Number(defaultDemeritPoints);
     if (monthlyRecoveryPoints !== undefined)           config.monthlyRecoveryPoints           = Number(monthlyRecoveryPoints);
     if (recoveryPeriodMonths !== undefined)            config.recoveryPeriodMonths            = Number(recoveryPeriodMonths);
+    if (cleanRecordDays !== undefined)                 config.cleanRecordDays                 = Number(cleanRecordDays);
 
     await config.save();
 

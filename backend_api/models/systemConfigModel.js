@@ -59,6 +59,17 @@ const systemConfigSchema = new mongoose.Schema({
   },
 
   /**
+   * Number of days a driver must have no new offenses before being eligible for demerit point recovery.
+   */
+  cleanRecordDays: {
+    type: Number,
+    required: true,
+    default: 30,
+    min: 0,
+    max: 365
+  },
+
+  /**
    * Master switch for the monthly recovery job.
    * When false the cron runs but performs no updates.
    */

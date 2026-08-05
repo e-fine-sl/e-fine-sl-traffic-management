@@ -65,6 +65,7 @@
     "home_invalid_qr": "වලංගු නොවන QR කේතය: මෙය රියදුරු බලපත්‍රයක් නොවේ.",
     "home_qr_error": "QR දත්ත කියවීමේ දෝෂයකි.",
     "new_fine_appbar_title": "නව දඩය නිකුත් කරන්න",
+    "new_fine_suspended_warning": "අනතුරු ඇඟවීමයි: රියදුරු බලපත්‍රය අත්හිටුවා ඇත!\nභෞතික රියදුරු බලපත්‍රය වහාම භාරයට ගන්න.",
     "new_fine_details_section": "විස්තර",
     "new_fine_offense_section": "වරද",
     "new_fine_license_label": "බලපත්‍ර අංකය",

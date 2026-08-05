@@ -74,6 +74,9 @@ exports.applyDemeritPoints = async (licenseNumber, offenseId) => {
     driver.suspendedAt = new Date();
   }
 
+  // Record timestamp of latest offense for good-behavior recovery period tracking
+  driver.lastOffenseDate = new Date();
+
   await driver.save();
 
   return {

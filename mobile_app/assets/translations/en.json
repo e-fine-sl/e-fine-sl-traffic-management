@@ -65,6 +65,7 @@
     "home_invalid_qr": "Invalid QR Code: This is not a driver license.",
     "home_qr_error": "Error reading QR Data.",
     "new_fine_appbar_title": "Issue New Fine",
+    "new_fine_suspended_warning": "WARNING: DRIVER LICENSE IS SUSPENDED!\nConfiscate physical driving license immediately.",
     "new_fine_details_section": "Details",
     "new_fine_offense_section": "Offense",
     "new_fine_license_label": "License Number",
