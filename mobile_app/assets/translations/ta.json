@@ -64,6 +64,7 @@
     "home_invalid_qr": "தவறான QR குறியீடு: இது ஓட்டுனர் உரிமம் அல்ல.",
     "home_qr_error": "QR தரவு படிக்கும் பிழை.",
     "new_fine_appbar_title": "புதிய அபராதம் வழங்கு",
+    "new_fine_suspended_warning": "எச்சரிக்கை: ஓட்டுநர் உரிமம் இடைநிறுத்தப்பட்டுள்ளது!\nபௌதிக ஓட்டுநர் உரிமத்தை உடனடியாகக் கைப்பற்றுங்கள்.",
     "new_fine_details_section": "விவரங்கள்",
     "new_fine_offense_section": "குற்றம்",
     "new_fine_license_label": "உரிம எண்",

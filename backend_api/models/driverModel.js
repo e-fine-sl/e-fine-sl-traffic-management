@@ -22,6 +22,7 @@ const driverSchema = mongoose.Schema(
     },
     demeritLevel: { type: String, enum: ['EXCELLENT', 'GOOD', 'FAIR', 'WARNING', 'DANGER', LICENSE_STATUS.SUSPENDED], default: 'EXCELLENT' },
     suspendedAt: { type: Date, default: null },
+    lastOffenseDate: { type: Date, default: null },
 
     isVerified: { type: Boolean, default: false },
     kycVerified: { type: Boolean, default: false }, // KYC face-match verification status
