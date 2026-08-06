@@ -77,6 +77,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _loadUserData();
     _loadReadFines();
     _loadDriverStatus();
+    AuthService().syncFcmToken();
     // Initialize without notification
     FineService().getDriverPendingFines().then((fines) {
        if(mounted) {

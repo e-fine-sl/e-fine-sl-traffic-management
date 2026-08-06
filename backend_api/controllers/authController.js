@@ -420,7 +420,7 @@ const registerDriver = async (req, res) => {
 // @route   POST /api/auth/login
 // --- THIS FUNCTION IS UPDATED ---
 const loginUser = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, fcmToken } = req.body;
 
   try {
     let user = null;
@@ -439,6 +439,12 @@ const loginUser = async (req, res) => {
     }
 
     if (user && (await bcrypt.compare(password, user.password))) {
+      // Save FCM token if provided
+      if (fcmToken) {
+        user.fcmToken = fcmToken;
+        await user.save();
+      }
+
       let defaultPoints = DEMERIT.DEFAULT_POINTS;
       try {
         const sysConfig = await SystemConfig.findOne();
@@ -483,6 +489,36 @@ const loginUser = async (req, res) => {
     }
   } catch (error) {
     res.status(HTTP.SERVER_ERROR).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Update FCM Token for logged in Driver / Police Officer
+// @route   PUT /api/auth/fcm-token
+// @access  Private
+const updateFcmToken = async (req, res) => {
+  try {
+    const { fcmToken } = req.body;
+    if (!fcmToken) {
+      return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'fcmToken is required' });
+    }
+
+    let user = await Driver.findById(req.user.id);
+    if (!user) {
+      user = await Police.findById(req.user.id);
+    }
+
+    if (!user) {
+      return res.status(HTTP.NOT_FOUND).json({ success: false, message: 'User not found' });
+    }
+
+    user.fcmToken = fcmToken;
+    await user.save();
+
+    console.log(`[authController] Successfully updated FCM token for ${user.name}`);
+    res.status(HTTP.OK).json({ success: true, message: 'FCM token updated successfully' });
+  } catch (error) {
+    console.error('[updateFcmToken] Error:', error);
+    res.status(HTTP.SERVER_ERROR).json({ success: false, message: 'Server Error', error: error.message });
   }
 };
 
@@ -1155,4 +1191,5 @@ module.exports = {
   lookupDriverByLicense,
   verifyLicenseScan,
   resetPasswordByLicense,
+  updateFcmToken,
 };

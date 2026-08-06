@@ -23,6 +23,7 @@ const {
   verifyLicenseScan,
   resetPasswordByLicense,
   verifyWithDMT,
+  updateFcmToken,
 } = require('../controllers/authController');
 
 
@@ -61,5 +62,6 @@ router.get('/me', protect, getMe);
 router.put('/verify-driver', protect, verifyDriver);
 router.put('/update-profile-image', protect, updateProfileImage);
 router.put('/update-profile', protect, updateProfile);
+router.put('/fcm-token', protect, updateFcmToken);
 
 module.exports = router;
