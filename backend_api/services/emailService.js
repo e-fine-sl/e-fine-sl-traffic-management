@@ -1,8 +1,9 @@
 const nodemailer = require('nodemailer');
 const { APP, LICENSE_STATUS, EMAIL } = require('../config/constants');
+const sendEmail = require('../utils/sendEmail');
 
 /**
- * Creates a reusable nodemailer transporter.
+ * Creates a reusable nodemailer transporter with short connection timeouts.
  */
 const createTransporter = () => {
   return nodemailer.createTransport({
@@ -11,6 +12,9 @@ const createTransporter = () => {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    connectionTimeout: 5000, // 5s timeout to prevent hanging on cloud servers
+    greetingTimeout: 5000,
+    socketTimeout: 5000,
   });
 };
 
@@ -32,7 +36,6 @@ const formatDate = (date) => {
  * @param {string|null} reasonNote - Optional note explaining the suspension
  */
 const sendLicenseStatusEmail = async (driver, newStatus, reasonNote = null) => {
-  const transporter = createTransporter();
   const today = formatDate(new Date());
   const isActive = newStatus === LICENSE_STATUS.ACTIVE;
 
@@ -44,12 +47,34 @@ const sendLicenseStatusEmail = async (driver, newStatus, reasonNote = null) => {
     ? buildActivationEmail(driver, today)
     : buildSuspensionEmail(driver, today, reasonNote);
 
-  await transporter.sendMail({
-    from: `"e-Fine SL" <${process.env.EMAIL_USER}>`,
-    to: driver.email,
-    subject,
-    html,
-  });
+  // 1. Try SendGrid HTTPS API first (Bypasses Render.com SMTP Port 587/465 blocks)
+  if (process.env.SENDGRID_API_KEY) {
+    try {
+      await sendEmail({
+        email: driver.email,
+        subject,
+        html,
+      });
+      console.log(`[EmailService] License status email sent via SendGrid HTTPS to ${driver.email}`);
+      return;
+    } catch (sgError) {
+      console.warn('[EmailService] SendGrid API send failed, trying Nodemailer SMTP fallback:', sgError.message);
+    }
+  }
+
+  // 2. Fallback to Nodemailer SMTP with 5s connection timeout
+  try {
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: `"e-Fine SL" <${process.env.EMAIL_USER}>`,
+      to: driver.email,
+      subject,
+      html,
+    });
+    console.log(`[EmailService] License status email sent via Nodemailer to ${driver.email}`);
+  } catch (smtpError) {
+    console.error(`[EmailService] Could not send email to ${driver.email}:`, smtpError.message);
+  }
 };
 
 // ─── ACTIVATION EMAIL TEMPLATE ──────────────────────────────────────
