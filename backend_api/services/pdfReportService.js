@@ -237,6 +237,173 @@ class PdfReportService {
                );
         }
     }
+
+    /**
+     * Build Official Single-Page e-Fine SL Digital Fine Receipt with Embedded QR Verification
+     */
+    static buildReceipt(doc, { fine, driver, qrBuffer }) {
+        const pageWidth = doc.page.width;
+        const margin = doc.page.margins.left;
+        const contentWidth = pageWidth - (margin * 2);
+
+        // 1. Top Brand Banner
+        doc.rect(0, 0, pageWidth, 75).fill(this.COLORS.PRIMARY_DARK);
+        doc.rect(0, 75, pageWidth, 4).fill(this.COLORS.ACCENT_EMERALD);
+
+        doc.fillColor(this.COLORS.WHITE)
+           .font('Helvetica-Bold')
+           .fontSize(16)
+           .text('e-Fine SL', margin, 18);
+
+        doc.fillColor(this.COLORS.ACCENT_EMERALD)
+           .font('Helvetica')
+           .fontSize(9)
+           .text('TRAFFIC MANAGEMENT AUTHORITY — SRI LANKA', margin, 38);
+
+        doc.fillColor(this.COLORS.WHITE)
+           .font('Helvetica-Bold')
+           .fontSize(10)
+           .text('DIGITAL FINE RECEIPT', margin, 24, { align: 'right', width: contentWidth });
+
+        const fineIdShort = (fine._id || '').toString().slice(-8).toUpperCase();
+        doc.fillColor(this.COLORS.BORDER_LIGHT)
+           .font('Helvetica')
+           .fontSize(8)
+           .text(`Ref: SL-FINE-${fineIdShort}`, margin, 38, { align: 'right', width: contentWidth });
+
+        doc.y = 95;
+
+        // 2. Receipt Status Header Box
+        const isPaid = String(fine.status).toUpperCase() === 'PAID';
+        const statusBg = isPaid ? '#ECFDF5' : '#FEF2F2';
+        const statusBorder = isPaid ? '#10B981' : '#EF4444';
+        const statusText = isPaid ? '#047857' : '#B91C1C';
+        const statusLabel = isPaid ? 'PAID / CLEARED' : 'UNPAID / PENDING';
+
+        doc.roundedRect(margin, doc.y, contentWidth, 50, 6)
+           .fillAndStroke(statusBg, statusBorder);
+
+        const cardY = doc.y + 10;
+
+        doc.fillColor(statusText)
+           .font('Helvetica-Bold')
+           .fontSize(12)
+           .text(statusLabel, margin + 14, cardY);
+
+        doc.fillColor(this.COLORS.TEXT_MUTED)
+           .font('Helvetica')
+           .fontSize(8.5)
+           .text(`FINE AMOUNT`, margin + 300, cardY);
+
+        const formattedAmount = `LKR ${Number(fine.amount || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })}`;
+        doc.fillColor(this.COLORS.PRIMARY_DARK)
+           .font('Helvetica-Bold')
+           .fontSize(14)
+           .text(formattedAmount, margin + 300, cardY + 12);
+
+        doc.y = cardY + 45;
+
+        // 3. Section 1: Offense & Fine Details
+        this.buildSectionHeader(doc, 'Fine & Offense Information');
+
+        const detailsY = doc.y;
+        const colWidth = (contentWidth - 20) / 2;
+
+        doc.roundedRect(margin, detailsY, contentWidth, 125, 6)
+           .fillAndStroke(this.COLORS.BG_LIGHT, this.COLORS.BORDER_LIGHT);
+
+        const row1 = detailsY + 12;
+        const row2 = detailsY + 48;
+        const row3 = detailsY + 84;
+
+        // Col 1 Details
+        doc.fillColor(this.COLORS.TEXT_MUTED).font('Helvetica').fontSize(8).text('OFFENSE TYPE', margin + 12, row1);
+        doc.fillColor(this.COLORS.TEXT_DARK).font('Helvetica-Bold').fontSize(10).text(fine.offenseName || 'Traffic Offense', margin + 12, row1 + 10);
+
+        doc.fillColor(this.COLORS.TEXT_MUTED).font('Helvetica').fontSize(8).text('VEHICLE REGISTRATION NO', margin + 12, row2);
+        doc.fillColor(this.COLORS.TEXT_DARK).font('Helvetica-Bold').fontSize(10).text((fine.vehicleNumber || 'N/A').toUpperCase(), margin + 12, row2 + 10);
+
+        doc.fillColor(this.COLORS.TEXT_MUTED).font('Helvetica').fontSize(8).text('LOCATION / PLACE', margin + 12, row3);
+        doc.fillColor(this.COLORS.TEXT_DARK).font('Helvetica-Bold').fontSize(9).text(fine.place || 'Sri Lanka', margin + 12, row3 + 10, { width: colWidth - 10 });
+
+        // Col 2 Details
+        doc.fillColor(this.COLORS.TEXT_MUTED).font('Helvetica').fontSize(8).text('DATE & TIME', margin + colWidth + 20, row1);
+        const fineDate = fine.date ? new Date(fine.date).toLocaleString('en-US', { timeZone: 'Asia/Colombo' }) : 'N/A';
+        doc.fillColor(this.COLORS.TEXT_DARK).font('Helvetica-Bold').fontSize(9.5).text(fineDate, margin + colWidth + 20, row1 + 10);
+
+        doc.fillColor(this.COLORS.TEXT_MUTED).font('Helvetica').fontSize(8).text('ISSUING POLICE OFFICER BADGE', margin + colWidth + 20, row2);
+        doc.fillColor(this.COLORS.TEXT_DARK).font('Helvetica-Bold').fontSize(10).text(fine.policeOfficerId || 'N/A', margin + colWidth + 20, row2 + 10);
+
+        doc.fillColor(this.COLORS.TEXT_MUTED).font('Helvetica').fontSize(8).text('DEMERIT POINTS DEDUCTED', margin + colWidth + 20, row3);
+        const ptsDeducted = fine.demeritPoints || 0;
+        doc.fillColor(ptsDeducted > 0 ? this.COLORS.ACCENT_RED : this.COLORS.TEXT_DARK)
+           .font('Helvetica-Bold')
+           .fontSize(10)
+           .text(`-${ptsDeducted} Points`, margin + colWidth + 20, row3 + 10);
+
+        doc.y = detailsY + 135 + 10;
+
+        // 4. Section 2: Driver & Demerit Rating Status
+        this.buildSectionHeader(doc, 'Driver Identification & Rating');
+
+        const driverY = doc.y;
+        doc.roundedRect(margin, driverY, contentWidth, 75, 6)
+           .fillAndStroke(this.COLORS.BG_LIGHT, this.COLORS.BORDER_LIGHT);
+
+        const dRow = driverY + 12;
+
+        doc.fillColor(this.COLORS.TEXT_MUTED).font('Helvetica').fontSize(8).text('DRIVER NAME', margin + 12, dRow);
+        doc.fillColor(this.COLORS.TEXT_DARK).font('Helvetica-Bold').fontSize(10).text(driver?.name || 'Registered Driver', margin + 12, dRow + 10);
+
+        doc.fillColor(this.COLORS.TEXT_MUTED).font('Helvetica').fontSize(8).text('DRIVING LICENSE NUMBER', margin + 12, dRow + 36);
+        doc.fillColor(this.COLORS.TEXT_DARK).font('Helvetica-Bold').fontSize(10).text((fine.licenseNumber || 'N/A').toUpperCase(), margin + 12, dRow + 46);
+
+        doc.fillColor(this.COLORS.TEXT_MUTED).font('Helvetica').fontSize(8).text('CURRENT LICENSE STATUS', margin + colWidth + 20, dRow);
+        const licStatus = (driver?.licenseStatus || 'ACTIVE').toUpperCase();
+        doc.fillColor(licStatus === 'SUSPENDED' ? this.COLORS.ACCENT_RED : this.COLORS.ACCENT_EMERALD)
+           .font('Helvetica-Bold')
+           .fontSize(10)
+           .text(licStatus, margin + colWidth + 20, dRow + 10);
+
+        doc.fillColor(this.COLORS.TEXT_MUTED).font('Helvetica').fontSize(8).text('REMAINING DEMERIT POINTS', margin + colWidth + 20, dRow + 36);
+        const remPts = driver?.demeritPoints !== undefined ? driver.demeritPoints : 24;
+        doc.fillColor(this.COLORS.TEXT_DARK)
+           .font('Helvetica-Bold')
+           .fontSize(10)
+           .text(`${remPts} / 24 Points (${driver?.demeritLevel || 'FAIR'})`, margin + colWidth + 20, dRow + 46);
+
+        doc.y = driverY + 85 + 10;
+
+        // 5. Verification QR Code Section
+        if (qrBuffer) {
+            const qrY = doc.y;
+            doc.roundedRect(margin, qrY, contentWidth, 90, 6)
+               .fillAndStroke('#F1F5F9', this.COLORS.BORDER_LIGHT);
+
+            // Embed QR Code Image
+            doc.image(qrBuffer, margin + 12, qrY + 10, { width: 70, height: 70 });
+
+            doc.fillColor(this.COLORS.PRIMARY_DARK)
+               .font('Helvetica-Bold')
+               .fontSize(10)
+               .text('Official QR Verification Stamp', margin + 95, qrY + 16);
+
+            doc.fillColor(this.COLORS.TEXT_MUTED)
+               .font('Helvetica')
+               .fontSize(8)
+               .text('Scan this QR code using the e-Fine SL Mobile App or law enforcement scanner to verify the authenticity of this digital fine receipt.', margin + 95, qrY + 32, { width: contentWidth - 110 });
+
+            doc.fillColor(this.COLORS.ACCENT_BLUE)
+               .font('Helvetica-Bold')
+               .fontSize(8)
+               .text('VERIFIED DIGITAL DOCUMENT — TRAFFIC POLICE SRI LANKA', margin + 95, qrY + 62);
+
+            doc.y = qrY + 100;
+        }
+
+        // 6. Footer
+        this.buildFooter(doc);
+    }
 }
 
 module.exports = PdfReportService;

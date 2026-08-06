@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'api_logger.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -312,6 +313,30 @@ class FineService {
       return null;
     } catch (e) {
       debugPrint('Error fetching driver status by license: $e');
+      return null;
+    }
+  }
+
+  // Fetch downloadable e-Fine SL Digital Fine Receipt PDF bytes
+  Future<Uint8List?> getFinePdfBytes(String fineId) async {
+    try {
+      String? token = await _authService.getToken();
+      if (token == null) return null;
+
+      final uri = Uri.parse('$baseUrl/fines/$fineId/pdf');
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching fine PDF bytes: $e');
       return null;
     }
   }

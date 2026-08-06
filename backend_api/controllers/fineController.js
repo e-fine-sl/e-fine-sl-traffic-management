@@ -248,6 +248,60 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
+// @desc    Generate and stream downloadable e-Fine SL Digital Fine Receipt (PDF)
+// @route   GET /api/fines/:id/pdf
+const generateFinePdf = async (req, res) => {
+  try {
+    const QRCode = require('qrcode');
+    const Driver = require('../models/driverModel');
+    const PdfReportService = require('../services/pdfReportService');
+
+    const { id } = req.params;
+    const fine = await IssuedFine.findById(id);
+
+    if (!fine) {
+      return res.status(HTTP.NOT_FOUND).json({ message: 'Fine record not found' });
+    }
+
+    const driver = await Driver.findOne({
+      licenseNumber: { $regex: new RegExp(`^${fine.licenseNumber}$`, 'i') }
+    });
+
+    // Generate Verification QR Code Buffer
+    const qrData = JSON.stringify({
+      receiptRef: `SL-FINE-${fine._id.toString().slice(-8).toUpperCase()}`,
+      fineId: fine._id,
+      licenseNumber: fine.licenseNumber,
+      amount: fine.amount,
+      status: fine.status,
+      verifyUrl: `https://efine.gov.lk/verify/${fine._id}`
+    });
+
+    const qrBuffer = await QRCode.toBuffer(qrData, {
+      width: 250,
+      margin: 1,
+      color: { dark: '#0F172A', light: '#FFFFFF' }
+    });
+
+    // Set Response Headers for Direct PDF Download
+    const fileName = `e-Fine-Receipt-${fine._id.toString().slice(-8).toUpperCase()}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    const doc = PdfReportService.createDocument();
+    doc.pipe(res);
+
+    PdfReportService.buildReceipt(doc, { fine, driver, qrBuffer });
+    doc.end();
+
+  } catch (error) {
+    console.error('[generateFinePdf] Error:', error);
+    if (!res.headersSent) {
+      res.status(HTTP.SERVER_ERROR).json({ message: 'Failed to generate fine receipt PDF', error: error.message });
+    }
+  }
+};
+
 module.exports = {
   getOffenses,
   addOffense,
@@ -256,5 +310,6 @@ module.exports = {
   getDriverPendingFines,
   payFine,
   getDriverPaidHistory,
-  getDashboardStats
+  getDashboardStats,
+  generateFinePdf
 };
