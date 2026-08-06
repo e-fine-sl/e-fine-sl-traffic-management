@@ -22,6 +22,8 @@ const driverSchema = mongoose.Schema(
     },
     demeritLevel: { type: String, enum: ['EXCELLENT', 'GOOD', 'FAIR', 'WARNING', 'DANGER', LICENSE_STATUS.SUSPENDED], default: 'EXCELLENT' },
     suspendedAt: { type: Date, default: null },
+    suspensionReason: { type: String, default: null },
+    fcmToken: { type: String, default: null },
     lastOffenseDate: { type: Date, default: null },
 
     isVerified: { type: Boolean, default: false },

@@ -140,8 +140,9 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
 
   @override
   Widget build(BuildContext context) {
-    final color = _getStatusColor(widget.points);
-    final label = widget.status == AppStatus.suspended
+    final bool isSuspended = widget.status == AppStatus.suspended || widget.points <= 0;
+    final Color color = isSuspended ? AppColors.errorRed : _getStatusColor(widget.points);
+    final String label = isSuspended
         ? 'demerit_suspended'.tr()
         : _getStatusLabel(widget.points);
     final ratingPoints = _calculateRatingPoints(widget.points);
@@ -180,7 +181,7 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
               animation: _animation,
               builder: (context, _) {
                 final displayPts = (_animation.value * _maxPoints).round();
-                final animColor = _getStatusColor(displayPts);
+                final animColor = isSuspended ? AppColors.errorRed : _getStatusColor(displayPts);
                 return SizedBox(
                   width: 180,
                   height: 180,
@@ -228,8 +229,9 @@ class _DemeritStatusCardState extends State<DemeritStatusCard>
               label,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
+                fontSize: 18,
                 color: color,
+                letterSpacing: 0.5,
               ),
             ),
 

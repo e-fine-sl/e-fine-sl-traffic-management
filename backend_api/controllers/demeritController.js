@@ -68,16 +68,43 @@ exports.applyDemeritPoints = async (licenseNumber, offenseId) => {
   driver.ratingScore = calculateRating(driver.demeritPoints, maxPoints);
   driver.demeritLevel = calculateLevel(driver.demeritPoints, maxPoints);
 
+  let newlySuspended = false;
   // Check for suspension threshold
   if (driver.demeritPoints <= DEMERIT.SUSPENSION_THRESHOLD && driver.licenseStatus !== LICENSE_STATUS.SUSPENDED) {
     driver.licenseStatus = LICENSE_STATUS.SUSPENDED;
     driver.suspendedAt = new Date();
+    driver.suspensionReason = 'Demerit points reduced to 0 due to traffic violations.';
+    newlySuspended = true;
   }
 
   // Record timestamp of latest offense for good-behavior recovery period tracking
   driver.lastOffenseDate = new Date();
 
   await driver.save();
+
+  // If newly suspended automatically, send Email and Push Notification
+  if (newlySuspended) {
+    try {
+      const { sendLicenseStatusEmail } = require('../services/emailService');
+      const { sendToToken } = require('../services/fcmService');
+
+      await sendLicenseStatusEmail(driver, 'SUSPENDED', driver.suspensionReason);
+
+      if (driver.fcmToken) {
+        await sendToToken(driver.fcmToken, {
+          title: 'LICENSE SUSPENDED',
+          body: `Your driving license (${driver.licenseNumber}) has been SUSPENDED. Reason: ${driver.suspensionReason}`,
+          data: {
+            type: 'DRIVER_SUSPENDED',
+            licenseNumber: driver.licenseNumber,
+            reason: driver.suspensionReason
+          }
+        });
+      }
+    } catch (notifyErr) {
+      console.error('[demeritController] Error sending suspension notification:', notifyErr.message);
+    }
+  }
 
   return {
     remainingPoints: driver.demeritPoints,
