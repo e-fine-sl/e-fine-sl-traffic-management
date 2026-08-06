@@ -25,6 +25,7 @@ import 'package:pointycastle/asn1/primitives/asn1_integer.dart';
 import 'package:pointycastle/asn1/primitives/asn1_sequence.dart';
 import 'package:pointycastle/api.dart';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'api_logger.dart' as http;
 import '../config/app_constants.dart';
 // Note: BiometricService is NOT imported here to avoid a circular dependency.
@@ -155,11 +156,16 @@ class AuthService {
   ///   4. Store access_token, refresh_token, session_token securely
   ///   5. Return the user map (role, name, etc.) for navigation
   Future<Map<String, dynamic>> login(String email, String password) async {
-    // Step 1: Fetch RSA public key
-    final publicKey = await _fetchPublicKey();
-
     // Step 2: Encrypt password (never sent in plain text)
     final encryptedPassword = _encryptPassword(password, publicKey);
+
+    // Fetch FCM Push Token
+    String? fcmToken;
+    try {
+      fcmToken = await FirebaseMessaging.instance.getToken();
+    } catch (e) {
+      debugPrint('[AuthService] Error getting FCM token during login: $e');
+    }
 
     // Step 3: Send login request to auth-service
     final response = await http.post(
@@ -168,6 +174,7 @@ class AuthService {
       body: jsonEncode({
         'email':             email,
         'encryptedPassword': encryptedPassword,
+        if (fcmToken != null) 'fcmToken': fcmToken,
       }),
     );
 
@@ -213,6 +220,29 @@ class AuthService {
     } else {
       final body = jsonDecode(response.body);
       throw Exception(body['message'] ?? 'Login Failed');
+    }
+  }
+
+  /// Syncs Firebase Push Notification Token with backend server
+  Future<void> syncFcmToken() async {
+    try {
+      final String? fcmToken = await FirebaseMessaging.instance.getToken();
+      final String? token = await getToken();
+      if (fcmToken != null && fcmToken.isNotEmpty && token != null) {
+        final response = await http.put(
+          Uri.parse('$_authUrl/auth/fcm-token'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({'fcmToken': fcmToken}),
+        );
+        if (response.statusCode == 200) {
+          debugPrint('[AuthService] FCM Push Token registered successfully: $fcmToken');
+        }
+      }
+    } catch (e) {
+      debugPrint('[AuthService] Error syncing FCM Push Token: $e');
     }
   }
 
