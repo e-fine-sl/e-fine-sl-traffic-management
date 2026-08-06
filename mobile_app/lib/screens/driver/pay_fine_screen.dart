@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_logger.dart' as http;
 import 'package:mobile_app/services/fine_service.dart';
 import 'dart:convert';
@@ -91,7 +92,22 @@ class _PayFineScreenState extends State<PayFineScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
+            // Download e-Fine Receipt Button
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () => _downloadFinePdf(fineId),
+                icon: const Icon(Icons.picture_as_pdf, color: AppColors.primaryGreen),
+                label: const Text("Download e-Fine Receipt (PDF)", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.primaryGreen)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.primaryGreen, width: 1.5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 15),
           ],
         ),
       ),
@@ -109,6 +125,25 @@ class _PayFineScreenState extends State<PayFineScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _downloadFinePdf(String fineId) async {
+    final Uri url = Uri.parse('${ApiConstants.baseUrl}/fines/$fineId/pdf');
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open e-Fine receipt PDF URL.')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error downloading receipt: $e')),
+      );
+    }
   }
 
   Future<void> _startPayHerePayment(double amount, String item, String orderId) async {

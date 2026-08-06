@@ -10,7 +10,8 @@ const {
     getDriverPendingFines,
     payFine,
     getDriverPaidHistory,
-    getDashboardStats
+    getDashboardStats,
+    generateFinePdf
 } = require('../controllers/fineController');
 
 // Public / Authenticated read for offenses list
@@ -21,6 +22,7 @@ router.get('/dashboard-stats', protect, getDashboardStats);
 router.get('/history', protect, getFineHistory);
 router.get('/pending', protect, getDriverPendingFines);
 router.get('/driver-history', protect, getDriverPaidHistory);
+router.get('/:id/pdf', protect, generateFinePdf);
 router.post('/:id/pay', protect, payFine);
 
 module.exports = router;
