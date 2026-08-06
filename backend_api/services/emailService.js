@@ -29,8 +29,9 @@ const formatDate = (date) => {
  * Sends a license status change email to the driver.
  * @param {Object} driver - Driver document { name, email, licenseNumber }
  * @param {'ACTIVE'|'SUSPENDED'} newStatus - The new license status
+ * @param {string|null} reasonNote - Optional note explaining the suspension
  */
-const sendLicenseStatusEmail = async (driver, newStatus) => {
+const sendLicenseStatusEmail = async (driver, newStatus, reasonNote = null) => {
   const transporter = createTransporter();
   const today = formatDate(new Date());
   const isActive = newStatus === LICENSE_STATUS.ACTIVE;
@@ -41,7 +42,7 @@ const sendLicenseStatusEmail = async (driver, newStatus) => {
 
   const html = isActive
     ? buildActivationEmail(driver, today)
-    : buildSuspensionEmail(driver, today);
+    : buildSuspensionEmail(driver, today, reasonNote);
 
   await transporter.sendMail({
     from: `"e-Fine SL" <${process.env.EMAIL_USER}>`,
@@ -119,7 +120,8 @@ function buildActivationEmail(driver, today) {
 }
 
 // ─── SUSPENSION EMAIL TEMPLATE ──────────────────────────────────────
-function buildSuspensionEmail(driver, today) {
+function buildSuspensionEmail(driver, today, reasonNote) {
+  const reasonText = reasonNote || driver.suspensionReason || 'Accumulated Demerit Points Exhausted (0 Points)';
   return `
 <!DOCTYPE html>
 <html>
@@ -152,16 +154,16 @@ function buildSuspensionEmail(driver, today) {
       <p style="margin:0 0 16px;color:#333;font-size:16px;">Dear <strong>${driver.name}</strong>,</p>
       <p style="margin:0 0 20px;color:#555;font-size:14px;line-height:1.7;">
         We regret to inform you that your driving license has been
-        <strong style="color:#F44336;">SUSPENDED</strong> by the traffic authority
-        due to accumulated demerit points or traffic violations.
+        <strong style="color:#F44336;">SUSPENDED</strong> by the traffic authority.
       </p>
 
       <!-- INFO BOX -->
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFEBEE;border-radius:8px;border-left:4px solid #F44336;margin:0 0 16px;">
         <tr><td style="padding:16px 20px;">
-          <p style="margin:0 0 6px;font-size:14px;color:#333;"><strong>Status:</strong> � SUSPENDED</p>
+          <p style="margin:0 0 6px;font-size:14px;color:#333;"><strong>Status:</strong> SUSPENDED</p>
           <p style="margin:0 0 6px;font-size:14px;color:#333;"><strong>Effective:</strong> ${today}</p>
-          <p style="margin:0;font-size:14px;color:#333;"><strong>License No:</strong> ${driver.licenseNumber}</p>
+          <p style="margin:0 0 6px;font-size:14px;color:#333;"><strong>License No:</strong> ${driver.licenseNumber}</p>
+          <p style="margin:0;font-size:14px;color:#D32F2F;"><strong>Reason / Note:</strong> ${reasonText}</p>
         </td></tr>
       </table>
 

@@ -607,17 +607,32 @@ const suspendDriver = async (req, res) => {
             return res.status(HTTP.BAD_REQUEST).json({ message: 'License is already suspended' });
         }
 
+        const reasonNote = req.body.reason || req.body.note || 'Suspended by Traffic Management Authority Administrator';
+
         // Update license status
         driver.licenseStatus = 'SUSPENDED';
         driver.demeritLevel = 'SUSPENDED';
         driver.suspendedAt = new Date();
+        driver.suspensionReason = reasonNote;
         await driver.save();
 
-        // Send email notification
+        // Send email notification & push notification
         try {
-            await sendLicenseStatusEmail(driver, 'SUSPENDED');
+            await sendLicenseStatusEmail(driver, 'SUSPENDED', reasonNote);
+            if (driver.fcmToken) {
+                const { sendToToken } = require('../services/fcmService');
+                await sendToToken(driver.fcmToken, {
+                    title: 'LICENSE SUSPENDED',
+                    body: `Your driving license (${driver.licenseNumber}) has been SUSPENDED. Reason: ${reasonNote}`,
+                    data: {
+                        type: 'DRIVER_SUSPENDED',
+                        licenseNumber: driver.licenseNumber,
+                        reason: reasonNote
+                    }
+                });
+            }
         } catch (emailError) {
-            console.error('Email send error:', emailError);
+            console.error('Notification error on suspend:', emailError);
         }
 
         res.json({
