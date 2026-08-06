@@ -156,6 +156,9 @@ class AuthService {
   ///   4. Store access_token, refresh_token, session_token securely
   ///   5. Return the user map (role, name, etc.) for navigation
   Future<Map<String, dynamic>> login(String email, String password) async {
+    // Step 1: Fetch RSA public key
+    final publicKey = await _fetchPublicKey();
+
     // Step 2: Encrypt password (never sent in plain text)
     final encryptedPassword = _encryptPassword(password, publicKey);
 
