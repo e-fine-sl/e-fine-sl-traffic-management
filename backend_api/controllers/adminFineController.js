@@ -301,9 +301,15 @@ const createFine = async (req, res) => {
             });
         }
 
-        // Check Driver
-        const driver = await Driver.findOne({ licenseNumber: licenseNumber.toUpperCase().trim() });
-        const demeritDeduction = offense.demeritPoints || 0;
+        // Check Driver (case-insensitive)
+        const driver = await Driver.findOne({
+            licenseNumber: { $regex: new RegExp(`^${licenseNumber.trim()}$`, 'i') }
+        });
+
+        // Demerit deduction from offense model (demeritValue field in schema)
+        const demeritDeduction = offense.demeritValue !== undefined
+            ? offense.demeritValue
+            : (offense.demeritPoints || 0);
 
         const newFine = await IssuedFine.create({
             licenseNumber: licenseNumber.toUpperCase().trim(),
@@ -320,31 +326,58 @@ const createFine = async (req, res) => {
             paymentNotes: notes ? notes.trim() : undefined
         });
 
-        // Deduct demerit points from driver if driver exists
-        if (driver && demeritDeduction > 0) {
+        // Deduct demerit points from driver if driver exists in system
+        if (driver) {
             const currentPoints = driver.demeritPoints ?? 24;
             const updatedPoints = Math.max(0, currentPoints - demeritDeduction);
             driver.demeritPoints = updatedPoints;
             driver.demeritLevel = calculateDemeritLevel(updatedPoints);
             driver.ratingScore = parseFloat(((updatedPoints / 24) * 5.0).toFixed(1));
             driver.lastOffenseDate = new Date();
+
+            // Auto-suspend driver if demerit balance is reduced to 0
+            if (updatedPoints === 0 && driver.licenseStatus !== 'SUSPENDED') {
+                driver.licenseStatus = 'SUSPENDED';
+                driver.suspendedAt = new Date();
+                driver.suspensionReason = `Demerit balance reduced to 0 following traffic fine #${newFine._id.toString().slice(-8).toUpperCase()}`;
+            }
+
             await driver.save();
+            console.log(`[createFine] Deducted ${demeritDeduction} demerit points from driver ${driver.licenseNumber}. Remaining: ${driver.demeritPoints}`);
         }
 
-        // Dispatch FCM Push notification to Driver's Mobile App
+        // 1. Dispatch Email Notice to Driver
+        if (driver && driver.email) {
+            try {
+                const { sendFineIssuedEmail } = require('../services/emailService');
+                await sendFineIssuedEmail(
+                    driver,
+                    newFine,
+                    { sectionOfAct: offense.sectionOfAct, description: offense.description },
+                    demeritDeduction,
+                    driver.demeritPoints ?? 24
+                );
+            } catch (emailErr) {
+                console.error('[createFine] Email send error:', emailErr);
+            }
+        }
+
+        // 2. Dispatch FCM Push notification to Driver's Mobile App
         if (driver && driver.fcmToken) {
             try {
                 const { sendToToken } = require('../services/fcmService');
                 await sendToToken(driver.fcmToken, {
-                    title: 'New Traffic Citation Issued',
-                    body: `Citation #${newFine._id.toString().slice(-8).toUpperCase()} for "${newFine.offenseName}" (LKR ${newFine.amount.toLocaleString()}) has been issued at ${newFine.place}.`,
+                    title: 'Traffic Fine Issued',
+                    body: `Fine #${newFine._id.toString().slice(-8).toUpperCase()} for "${newFine.offenseName}" (LKR ${newFine.amount.toLocaleString()}) has been issued at ${newFine.place}. -${demeritDeduction} demerit pts.`,
+                    channelId: 'traffic_alerts',
                     data: {
                         type: 'NEW_FINE_ISSUED',
                         fineId: newFine._id.toString(),
                         licenseNumber: newFine.licenseNumber,
                         amount: String(newFine.amount),
                         offenseName: newFine.offenseName,
-                        place: newFine.place
+                        place: newFine.place,
+                        demeritDeduction: String(demeritDeduction)
                     }
                 });
             } catch (fcmError) {
@@ -354,7 +387,7 @@ const createFine = async (req, res) => {
 
         res.status(HTTP.CREATED).json({
             success: true,
-            message: `Traffic citation #${newFine._id.toString().slice(-8).toUpperCase()} issued successfully`,
+            message: `Traffic fine #${newFine._id.toString().slice(-8).toUpperCase()} issued successfully (-${demeritDeduction} Demerit Points)`,
             data: newFine
         });
 
