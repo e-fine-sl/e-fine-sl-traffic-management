@@ -4,6 +4,7 @@ const { protectAdmin, requireRole } = require('../middleware/adminMiddleware');
 const PreApprovedOfficer = require('../models/preApprovedOfficerModel');
 const { getOffenses, addOffense } = require('../controllers/fineController');
 const {
+    getStations,
     createStation,
     updateStation,
     deleteStation
@@ -219,6 +220,7 @@ router.post('/register/complete', protectAdmin, requireRole('super_admin'), comp
 router.delete('/fines/offenses/:id', protectAdmin, requireRole('super_admin'), deleteOffense);
 
 // Station management
+router.get('/stations', protectAdmin, getStations);
 router.post('/stations', protectAdmin, requireRole('super_admin'), createStation);
 router.put('/stations/:id', protectAdmin, requireRole('super_admin'), updateStation);
 router.delete('/stations/:id', protectAdmin, requireRole('super_admin'), deleteStation);
