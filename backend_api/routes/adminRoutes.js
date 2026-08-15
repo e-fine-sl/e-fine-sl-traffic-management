@@ -18,10 +18,6 @@ const {
     suspendDriver,
     activateDriver,
     deleteDriver,
-    getAllOfficers,
-    createOfficer,
-    updateOfficer,
-    deleteOfficer,
     getAllIssuedFines,
     deleteFine,
     updateOffense,
@@ -42,6 +38,18 @@ const {
     updateAdmin,
     deleteAdmin
 } = require('../controllers/adminController');
+const {
+    getAllOfficers,
+    getOfficerMetrics,
+    getOfficerById,
+    createOfficer,
+    updateOfficer,
+    toggleOfficerStatus,
+    transferOfficerStation,
+    resetOfficerCredentials,
+    exportOfficers,
+    deleteOfficer
+} = require('../controllers/adminOfficerController');
 const {
     getAllPayments,
     getPaymentMetrics,
@@ -118,7 +126,16 @@ router.get('/dashboard/stats', protectAdmin, getDashboardStats);
 router.get('/drivers', protectAdmin, getAllDrivers);
 router.get('/drivers/:id', protectAdmin, getDriverDetails);
 
-// Officers - View only
+// Police Officer Workforce Management Suite
+router.get('/officers/metrics', protectAdmin, getOfficerMetrics);
+router.get('/officers/export', protectAdmin, exportOfficers);
+router.get('/officers/:id', protectAdmin, getOfficerById);
+router.post('/officers', protectAdmin, requireRole('admin_officer', 'super_admin'), createOfficer);
+router.put('/officers/:id', protectAdmin, requireRole('admin_officer', 'super_admin'), updateOfficer);
+router.patch('/officers/:id/status', protectAdmin, requireRole('admin_officer', 'super_admin'), toggleOfficerStatus);
+router.post('/officers/:id/transfer', protectAdmin, requireRole('admin_officer', 'super_admin'), transferOfficerStation);
+router.post('/officers/:id/reset-credentials', protectAdmin, requireRole('super_admin'), resetOfficerCredentials);
+router.delete('/officers/:id', protectAdmin, requireRole('super_admin', 'admin_officer'), deleteOfficer);
 router.get('/officers', protectAdmin, getAllOfficers);
 
 // Fines - View only
@@ -150,10 +167,6 @@ router.put('/drivers/:id/suspend', protectAdmin, requireRole('admin_officer', 's
 router.put('/drivers/:id/activate', protectAdmin, requireRole('admin_officer', 'super_admin'), activateDriver);
 router.delete('/drivers/:id', protectAdmin, requireRole('admin_officer', 'super_admin'), deleteDriver);
 
-// Officer management
-router.post('/officers', protectAdmin, requireRole('admin_officer', 'super_admin'), createOfficer);
-router.put('/officers/:id', protectAdmin, requireRole('admin_officer', 'super_admin'), updateOfficer);
-
 // Offense management
 router.get('/fines/offenses', protectAdmin, getOffenses);
 router.post('/fines/offenses', protectAdmin, requireRole('admin_officer', 'super_admin'), addOffense);
@@ -176,7 +189,6 @@ router.post('/register/init', protectAdmin, requireRole('super_admin'), initAdmi
 router.post('/register/complete', protectAdmin, requireRole('super_admin'), completeAdminRegistration);
 
 // Delete operations
-router.delete('/officers/:id', protectAdmin, requireRole('super_admin', 'admin_officer'), deleteOfficer);
 router.delete('/fines/offenses/:id', protectAdmin, requireRole('super_admin'), deleteOffense);
 router.delete('/fines/:id', protectAdmin, requireRole('super_admin'), deleteFine);
 
