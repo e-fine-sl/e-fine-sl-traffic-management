@@ -551,51 +551,48 @@ const exportOfficers = async (req, res) => {
             const stationsCount = new Set(officers.map(o => o.policeStation)).size;
 
             PdfReportService.buildHeader(doc, {
-                title: 'Police Officer Duty & Roster Directory',
+                title: 'Police Officer Directory & Personnel List',
                 subtitle: 'Official Sri Lanka Traffic Police Personnel Registry',
                 dateRange: `Station: ${station || 'All Stations'} | Rank: ${position || 'All Ranks'}`
             });
 
             PdfReportService.buildKPICards(doc, [
-                { label: 'Total Officers', value: totalOfficersCount.toString(), subtext: 'Registered Roster', color: '#2563EB' },
-                { label: 'Active Status', value: activeOfficersCount.toString(), subtext: 'Authorized for Duty', color: '#10B981' },
-                { label: 'Stations Covered', value: stationsCount.toString(), subtext: 'Divisional Commands', color: '#8B5CF6' }
+                { label: 'Total Officers', value: totalOfficersCount.toString(), subtext: 'Total Personnel', color: '#2563EB' },
+                { label: 'Active Personnel', value: activeOfficersCount.toString(), subtext: 'Active Duty', color: '#16A34A' },
+                { label: 'Stations Covered', value: stationsCount.toString(), subtext: 'Command Divisions', color: '#9333EA' }
             ]);
 
-            PdfReportService.buildSectionHeader(doc, 'Personnel Roster Listing');
+            doc.moveDown(1.5);
 
-            const tableRows = officers.slice(0, 500).map(o => [
-                o.badgeNumber || 'N/A',
-                o.name || 'Officer',
-                o.position || 'Constable',
-                o.policeStation || 'HQ',
-                o.phone || 'N/A',
-                o.nic || 'N/A',
-                o.isActive ? 'ACTIVE' : 'SUSPENDED'
-            ]);
-
-            const tableData = {
-                headers: ["Badge No", "Officer Name", "Position / Rank", "Assigned Station", "Phone", "NIC", "Status"],
-                rows: tableRows.length > 0 ? tableRows : [["-", "-", "No officers found matching filter", "-", "-", "-", "-"]]
+            const table = {
+                title: 'Police Officer Personnel Directory',
+                headers: ['Badge No', 'Officer Name', 'Rank / Position', 'Station', 'Contact Phone', 'NIC', 'Status'],
+                rows: officers.map(o => [
+                    o.badgeNumber || 'N/A',
+                    o.name || 'N/A',
+                    o.position || 'Constable',
+                    o.policeStation || 'Unassigned',
+                    o.phone || 'N/A',
+                    o.nic || 'N/A',
+                    o.isActive ? 'ACTIVE' : 'SUSPENDED'
+                ])
             };
 
-            await doc.table(tableData, {
-                prepareHeader: () => doc.font("Helvetica-Bold").fontSize(8),
-                prepareRow: () => doc.font("Helvetica").fontSize(7.5)
+            await doc.table(table, {
+                prepareHeader: () => doc.font('Helvetica-Bold').fontSize(8),
+                prepareRow: (row, indexColumn, indexRow, rect, rowHeight) => {
+                    doc.font('Helvetica').fontSize(7.5);
+                }
             });
 
-            PdfReportService.buildFooter(doc, {
-                generatedBy: req.user?.name || req.user?.email || 'Traffic Police Admin',
-                reportId: `OFFICER-ROSTER-${Date.now().toString().slice(-8)}`
-            });
-
+            PdfReportService.buildFooter(doc, 'e-Fine SL • Official Police Officer Personnel Directory');
             doc.end();
 
             return new Promise((resolve) => {
                 doc.on('end', () => {
                     const pdfData = Buffer.concat(buffers);
                     res.setHeader('Content-Type', 'application/pdf');
-                    res.setHeader('Content-Disposition', `attachment; filename="eFine-Officer-Roster-${new Date().toISOString().slice(0, 10)}.pdf"`);
+                    res.setHeader('Content-Disposition', `attachment; filename="eFine-Officer-List-${new Date().toISOString().slice(0, 10)}.pdf"`);
                     res.status(HTTP.OK).send(pdfData);
                     resolve();
                 });
@@ -618,7 +615,7 @@ const exportOfficers = async (req, res) => {
         ]);
 
         const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-        const fileName = `eFine-Officer-Roster-${new Date().toISOString().slice(0, 10)}.csv`;
+        const fileName = `eFine-Officer-List-${new Date().toISOString().slice(0, 10)}.csv`;
 
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
