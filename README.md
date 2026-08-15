@@ -12,6 +12,26 @@
 
 ---
 
+## 📥 System Architecture & Design Diagrams Download Center
+
+All system design diagrams are rendered on a **solid, high-contrast pure white canvas (`#ffffff`)** with optimized user-visible dimensions. You can view or download each diagram individually in **High-Resolution PNG** or **Scalable Vector SVG** format:
+
+| # | Section | Diagram Title | Direct Image Preview | Individual Download Options |
+| :---: | :--- | :--- | :---: | :--- |
+| **01** | **4.1.2** | High-Level 3-Tier System Architecture | [🔍 View](docs/diagrams/01_high_level_system_architecture.png) | [📥 High-Res PNG](docs/diagrams/01_high_level_system_architecture.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/01_high_level_system_architecture.svg) |
+| **02** | **4.2.1** | System Use Case Diagram | [🔍 View](docs/diagrams/02_system_use_case_diagram.png) | [📥 High-Res PNG](docs/diagrams/02_system_use_case_diagram.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/02_system_use_case_diagram.svg) |
+| **03** | **4.2.2** | Unified System Class Diagram | [🔍 View](docs/diagrams/03_unified_system_class_diagram.png) | [📥 High-Res PNG](docs/diagrams/03_unified_system_class_diagram.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/03_unified_system_class_diagram.svg) |
+| **04** | **4.2.3.1**| Sequence: Driver KYC Liveness & OCR | [🔍 View](docs/diagrams/04_sequence_kyc_ocr_liveness.png) | [📥 High-Res PNG](docs/diagrams/04_sequence_kyc_ocr_liveness.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/04_sequence_kyc_ocr_liveness.svg) |
+| **05** | **4.2.3.2**| Sequence: Roadside Spot Fine & Demerits | [🔍 View](docs/diagrams/05_sequence_fine_issuance_demerits.png) | [📥 High-Res PNG](docs/diagrams/05_sequence_fine_issuance_demerits.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/05_sequence_fine_issuance_demerits.svg) |
+| **06** | **4.2.3.3**| Sequence: Fine Settlement via PayHere | [🔍 View](docs/diagrams/06_sequence_payhere_settlement.png) | [📥 High-Res PNG](docs/diagrams/06_sequence_payhere_settlement.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/06_sequence_payhere_settlement.svg) |
+| **07** | **4.2.3.4**| Sequence: Geospatial Emergency SOS (10km) | [🔍 View](docs/diagrams/07_sequence_emergency_sos_dispatch.png) | [📥 High-Res PNG](docs/diagrams/07_sequence_emergency_sos_dispatch.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/07_sequence_emergency_sos_dispatch.svg) |
+| **08** | **4.2.4.1**| Activity: KYC Liveness State Machine | [🔍 View](docs/diagrams/08_activity_kyc_verification_flow.png) | [📥 High-Res PNG](docs/diagrams/08_activity_kyc_verification_flow.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/08_activity_kyc_verification_flow.svg) |
+| **09** | **4.2.4.2**| Activity: Fine Issuance & Auto-Suspension | [🔍 View](docs/diagrams/09_activity_fine_issuance_suspension.png) | [📥 High-Res PNG](docs/diagrams/09_activity_fine_issuance_suspension.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/09_activity_fine_issuance_suspension.svg) |
+| **10** | **4.2.4.3**| Activity: Demerit Recovery Engine Cron | [🔍 View](docs/diagrams/10_activity_demerit_recovery_cron.png) | [📥 High-Res PNG](docs/diagrams/10_activity_demerit_recovery_cron.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/10_activity_demerit_recovery_cron.svg) |
+| **11** | **4.4.1** | Entity Relationship Diagram (ERD) | [🔍 View](docs/diagrams/11_entity_relationship_diagram_erd.png) | [📥 High-Res PNG](docs/diagrams/11_entity_relationship_diagram_erd.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/11_entity_relationship_diagram_erd.svg) |
+
+---
+
 ## 📌 Table of Contents
 
 - [4.1 Introduction](#41-introduction)
@@ -70,7 +90,20 @@ Traditional traffic enforcement in Sri Lanka relies on paper-based carbon ticket
 
 The system follows a modern **Decoupled 3-Tier Enterprise Architecture** with asynchronous background workers, dual notification channels (Firebase Cloud Messaging + SendGrid Email), and geospatial processing engines.
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/01_high_level_system_architecture.png" alt="High-Level System Architecture Diagram" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/01_high_level_system_architecture.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/01_high_level_system_architecture.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 graph TD
     subgraph ClientLayer ["Client Layer (Presentation Layer)"]
         FlutterDriver["Flutter Mobile App (Driver Module)"]
@@ -136,6 +169,8 @@ graph TD
     CronJob -->|Monthly Auto-Recovery| DriverCtrl
 ```
 
+</details>
+
 ---
 
 ### 4.1.3 Core Stakeholder Roles & Access Control Matrices (RBAC)
@@ -159,7 +194,20 @@ The system enforces strict Role-Based Access Control (RBAC) across distinct stak
 
 #### System Use Case Diagram
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/02_system_use_case_diagram.png" alt="System Use Case Diagram" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/02_system_use_case_diagram.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/02_system_use_case_diagram.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 flowchart LR
     subgraph Boundary ["e-Fine SL Core System Boundary"]
         direction TB
@@ -206,6 +254,8 @@ flowchart LR
     UC10 -. "<<include>>" .-> UC02
     UC11 -. "<<include>>" .-> UC02
 ```
+
+</details>
 
 #### Detailed Use Case Specifications
 
@@ -272,7 +322,20 @@ flowchart LR
 
 ### 4.2.2 Unified System Class Diagram
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/03_unified_system_class_diagram.png" alt="Unified System Class Diagram" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/03_unified_system_class_diagram.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/03_unified_system_class_diagram.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 classDiagram
     direction LR
 
@@ -421,13 +484,28 @@ classDiagram
     Admin "1" -- "1" SystemConfig : configures
 ```
 
+</details>
+
 ---
 
 ### 4.2.3 Sequence Diagrams
 
 #### Sequence 1: Driver KYC Facial Liveness & License OCR Verification
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/04_sequence_kyc_ocr_liveness.png" alt="Sequence 1: Driver KYC Facial Liveness & License OCR" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/04_sequence_kyc_ocr_liveness.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/04_sequence_kyc_ocr_liveness.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 sequenceDiagram
     autonumber
     actor Driver as Driver Mobile App
@@ -450,9 +528,24 @@ sequenceDiagram
     Backend-->>Driver: 200 OK (KYC Verified & Initial Demerits Active)
 ```
 
+</details>
+
 #### Sequence 2: Roadside Fine Issuance, Demerit Deduction & Dual Alert Dispatch
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/05_sequence_fine_issuance_demerits.png" alt="Sequence 2: Roadside Spot Fine Issuance & Demerits" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/05_sequence_fine_issuance_demerits.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/05_sequence_fine_issuance_demerits.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 sequenceDiagram
     autonumber
     actor Officer as Traffic Police Officer
@@ -486,9 +579,24 @@ sequenceDiagram
     API-->>App: 201 Created (Fine Issued Successfully)
 ```
 
+</details>
+
 #### Sequence 3: Fine Payment Settlement via PayHere Gateway & Webhook Signature Verification
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/06_sequence_payhere_settlement.png" alt="Sequence 3: Fine Settlement via PayHere" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/06_sequence_payhere_settlement.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/06_sequence_payhere_settlement.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 sequenceDiagram
     autonumber
     actor Driver as Citizen Driver
@@ -519,9 +627,24 @@ sequenceDiagram
     PayHere-->>App: Redirect Payment Success Screen
 ```
 
+</details>
+
 #### Sequence 4: Geospatial Emergency SOS Alert Broadcast (10km Spatial Query)
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/07_sequence_emergency_sos_dispatch.png" alt="Sequence 4: Geospatial Emergency SOS Broadcast" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/07_sequence_emergency_sos_dispatch.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/07_sequence_emergency_sos_dispatch.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 sequenceDiagram
     autonumber
     actor Driver as Citizen Driver
@@ -543,9 +666,12 @@ sequenceDiagram
     API-->>App: 200 OK (SOS Dispatched to N Nearby Officers)
 ```
 
+</details>
+
 #### Sequence 5: Administrative Driver Dossier Management & License Suspension
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 sequenceDiagram
     autonumber
     actor Admin as Super Admin / Admin Officer
@@ -578,6 +704,7 @@ sequenceDiagram
 #### Sequence 6: Automated Monthly Demerit Point Recovery Cron Job
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 sequenceDiagram
     autonumber
     participant Cron as Node-Cron Engine (0 0 1 * *)
@@ -613,7 +740,20 @@ sequenceDiagram
 
 #### Activity 1: Driver Signup & KYC Liveness Verification State Machine
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/08_activity_kyc_verification_flow.png" alt="Activity 1: Driver KYC Verification Flow" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/08_activity_kyc_verification_flow.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/08_activity_kyc_verification_flow.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 stateDiagram-v2
     [*] --> StartRegistration
     StartRegistration --> FillDriverForm: Enter Name, NIC, License No, Email, Phone
@@ -643,9 +783,24 @@ stateDiagram-v2
     AccountActivated --> [*]
 ```
 
+</details>
+
 #### Activity 2: Traffic Fine Issuance & Auto-Suspension Logic
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/09_activity_fine_issuance_suspension.png" alt="Activity 2: Traffic Fine Issuance & Auto-Suspension" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/09_activity_fine_issuance_suspension.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/09_activity_fine_issuance_suspension.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 stateDiagram-v2
     [*] --> SelectDriverAndOffense
     SelectDriverAndOffense --> ValidateInputs: Validate License, Vehicle, Offense, Place
@@ -671,9 +826,12 @@ stateDiagram-v2
     DispatchDualAlerts --> [*]
 ```
 
+</details>
+
 #### Activity 3: Online Payment Checkout & Webhook Reconciliation Flow
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 stateDiagram-v2
     [*] --> SelectUnpaidFine
     SelectUnpaidFine --> RequestCheckout: POST /api/payment/checkout
@@ -700,7 +858,20 @@ stateDiagram-v2
 
 #### Activity 4: Demerit Point Recovery Engine (Automated & On-Demand)
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/10_activity_demerit_recovery_cron.png" alt="Activity 4: Demerit Recovery Engine Cron" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/10_activity_demerit_recovery_cron.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/10_activity_demerit_recovery_cron.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 stateDiagram-v2
     [*] --> TriggerEvent: Cron Trigger (1st of Month) OR Manual Trigger (Admin)
     TriggerEvent --> CheckMasterSwitch: Query SystemConfig.recoveryEnabled
@@ -722,9 +893,12 @@ stateDiagram-v2
     UpdateLastRunAt --> [*]
 ```
 
+</details>
+
 #### Activity 5: Geospatial Emergency SOS Broadcast & Officer Siren Dispatch
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 stateDiagram-v2
     [*] --> DriverPressesSOS: Tap Emergency SOS on Mobile App
     DriverPressesSOS --> FetchGPSCoordinates: Capture Real-Time Latitude & Longitude
@@ -903,7 +1077,20 @@ The interface architecture of **e-Fine SL** adheres to 6 core human-centered eng
 
 ### 4.4.1 Entity Relationship Diagram (ERD)
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/11_entity_relationship_diagram_erd.png" alt="Entity Relationship Diagram (ERD)" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/11_entity_relationship_diagram_erd.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/11_entity_relationship_diagram_erd.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 erDiagram
     DRIVERS ||--o{ ISSUED_FINES : "incurs"
     POLICE ||--o{ ISSUED_FINES : "issues"
@@ -1035,6 +1222,8 @@ erDiagram
         boolean isValid
     }
 ```
+
+</details>
 
 ---
 
