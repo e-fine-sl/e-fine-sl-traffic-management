@@ -1,54 +1,50 @@
 ![e-Fine SL Logo](mobile_app/assets/icons/app_icon/app_logo.png)
 
 # e-Fine SL Traffic Management & Automated Enforcement System
-### Senior Systems Architecture & System Design Documentation
+### Senior Systems Architecture & Comprehensive System Design Documentation
 
-[![Status](https://img.shields.io/badge/System%20Design-Architecture%20Complete-success?style=for-the-badge&logo=architecture)](https://github.com/your-repo)
+[![Status](https://img.shields.io/badge/System%20Design-Architecture%20Complete-success?style=for-the-badge&logo=architecture)](https://github.com/e-fine-sl)
 [![Backend](https://img.shields.io/badge/Node.js-18.x%20%7C%20Express-339933?style=for-the-badge&logo=nodedotjs)](https://nodejs.org)
+[![Admin Portal](https://img.shields.io/badge/Next.js-14.x%20%7C%20React%2018-000000?style=for-the-badge&logo=nextdotjs)](https://nextjs.org)
 [![Mobile](https://img.shields.io/badge/Flutter-3.x%20%7C%20Dart-02569B?style=for-the-badge&logo=flutter)](https://flutter.dev)
 [![Database](https://img.shields.io/badge/MongoDB-Geospatial%202dsphere-47A248?style=for-the-badge&logo=mongodb)](https://mongodb.com)
-[![License](https://img.shields.io/badge/License-Sri%20Lanka%20Police%20%26%20DMT-blue?style=for-the-badge)](#)
+[![Notifications](https://img.shields.io/badge/Firebase%20FCM-Push%20%2B%20SendGrid-FFCA28?style=for-the-badge&logo=firebase)](https://firebase.google.com)
 
 ---
 
----
-
-### 📥 System Design Diagrams Download Center
-
-You can view and download high-resolution PNG and vector SVG versions of all system design diagrams without interactive zoom buttons:
-
-| Diagram # | Diagram Name | Static Image View | Download Links |
-| :--- | :--- | :--- | :--- |
-| **4.1.2** | High-Level System Architecture | Clean Image | [📥 High-Res PNG](docs/diagrams/01_high_level_system_architecture.png) | [📐 Vector SVG](docs/diagrams/01_high_level_system_architecture.svg) |
-| **4.2.1** | System Use Case Diagram | Clean Image | [📥 High-Res PNG](docs/diagrams/02_system_use_case_diagram.png) | [📐 Vector SVG](docs/diagrams/02_system_use_case_diagram.svg) |
-| **4.2.2** | Unified System Class Diagram | Clean Image | [📥 High-Res PNG](docs/diagrams/03_unified_system_class_diagram.png) | [📐 Vector SVG](docs/diagrams/03_unified_system_class_diagram.svg) |
-| **4.2.3.1** | Sequence: KYC & License OCR | Clean Image | [📥 High-Res PNG](docs/diagrams/04_sequence_kyc_ocr_liveness.png) | [📐 Vector SVG](docs/diagrams/04_sequence_kyc_ocr_liveness.svg) |
-| **4.2.3.2** | Sequence: Fine Issuance & Demerits | Clean Image | [📥 High-Res PNG](docs/diagrams/05_sequence_fine_issuance_demerits.png) | [📐 Vector SVG](docs/diagrams/05_sequence_fine_issuance_demerits.svg) |
-| **4.2.3.3** | Sequence: PayHere Settlement | Clean Image | [📥 High-Res PNG](docs/diagrams/06_sequence_payhere_settlement.png) | [📐 Vector SVG](docs/diagrams/06_sequence_payhere_settlement.svg) |
-| **4.2.3.4** | Sequence: Emergency SOS Dispatch | Clean Image | [📥 High-Res PNG](docs/diagrams/07_sequence_emergency_sos_dispatch.png) | [📐 Vector SVG](docs/diagrams/07_sequence_emergency_sos_dispatch.svg) |
-| **4.2.4.1** | Activity: KYC Liveness Flow | Clean Image | [📥 High-Res PNG](docs/diagrams/08_activity_kyc_verification_flow.png) | [📐 Vector SVG](docs/diagrams/08_activity_kyc_verification_flow.svg) |
-| **4.2.4.2** | Activity: Fine Issuance & Suspension | Clean Image | [📥 High-Res PNG](docs/diagrams/09_activity_fine_issuance_suspension.png) | [📐 Vector SVG](docs/diagrams/09_activity_fine_issuance_suspension.svg) |
-| **4.2.4.3** | Activity: Demerit Recovery Cron | Clean Image | [📥 High-Res PNG](docs/diagrams/10_activity_demerit_recovery_cron.png) | [📐 Vector SVG](docs/diagrams/10_activity_demerit_recovery_cron.svg) |
-| **4.4.1** | Entity Relationship Diagram (ERD) | Clean Image | [📥 High-Res PNG](docs/diagrams/11_entity_relationship_diagram_erd.png) | [📐 Vector SVG](docs/diagrams/11_entity_relationship_diagram_erd.svg) |
-
-
-## 📌 Executive Table of Contents
+## 📌 Table of Contents
 
 - [4.1 Introduction](#41-introduction)
   - [4.1.1 System Overview & Domain Context](#411-system-overview--domain-context)
   - [4.1.2 High-Level System Architecture](#412-high-level-system-architecture)
-  - [4.1.3 Core Stakeholder Roles & Access Matrices](#413-core-stakeholder-roles--access-matrices)
+  - [4.1.3 Core Stakeholder Roles & Access Control Matrices (RBAC)](#413-core-stakeholder-roles--access-control-matrices-rbac)
 - [4.2 System Design Process](#42-system-design-process)
   - [4.2.1 Use Case Diagrams & Detailed Specifications](#421-use-case-diagrams--detailed-specifications)
   - [4.2.2 Unified System Class Diagram](#422-unified-system-class-diagram)
   - [4.2.3 Sequence Diagrams](#423-sequence-diagrams)
+    - [Sequence 1: Driver KYC Facial Liveness & OCR Verification](#sequence-1-driver-kyc-facial-liveness--license-ocr-verification)
+    - [Sequence 2: Roadside Fine Issuance, Demerit Deduction & Dual Alert Dispatch](#sequence-2-roadside-fine-issuance-demerit-deduction--dual-alert-dispatch)
+    - [Sequence 3: Fine Payment Settlement via PayHere Gateway & Webhook Signature Verification](#sequence-3-fine-payment-settlement-via-payhere-gateway--webhook-signature-verification)
+    - [Sequence 4: Geospatial Emergency SOS Alert Broadcast (10km Spatial Query)](#sequence-4-geospatial-emergency-sos-alert-broadcast-10km-spatial-query)
+    - [Sequence 5: Administrative Driver Dossier Management & License Suspension](#sequence-5-administrative-driver-dossier-management--license-suspension)
+    - [Sequence 6: Automated Monthly Demerit Point Recovery Cron Job](#sequence-6-automated-monthly-demerit-point-recovery-cron-job)
   - [4.2.4 Activity Diagrams](#424-activity-diagrams)
+    - [Activity 1: Driver Signup & KYC Liveness Verification State Machine](#activity-1-driver-signup--kyc-liveness-verification-state-machine)
+    - [Activity 2: Traffic Fine Issuance & Auto-Suspension Logic](#activity-2-traffic-fine-issuance--auto-suspension-logic)
+    - [Activity 3: Online Payment Checkout & Webhook Reconciliation Flow](#activity-3-online-payment-checkout--webhook-reconciliation-flow)
+    - [Activity 4: Demerit Point Recovery Engine (Automated & On-Demand)](#activity-4-demerit-point-recovery-engine-automated--on-demand)
+    - [Activity 5: Geospatial Emergency SOS Broadcast & Officer Siren Dispatch](#activity-5-geospatial-emergency-sos-broadcast--officer-siren-dispatch)
 - [4.3 Interface Design](#43-interface-design)
   - [4.3.1 Architectural UI/UX Design Principles](#431-architectural-uiux-design-principles)
-  - [4.3.2 Screen-by-Screen Layout & Wireframe Specifications](#432-screen-by-screen-layout--wireframe-specifications)
+  - [4.3.2 Actual Screens & Wireframes of the System](#432-actual-screens--wireframes-of-the-system)
+    - [Screen 1: Citizen Driver Home Dashboard & Demerit Scorecard](#screen-1-citizen-driver-home-dashboard--demerit-scorecard)
+    - [Screen 2: Police Roadside Spot Fine Issuance Screen](#screen-2-police-roadside-spot-fine-issuance-screen)
+    - [Screen 3: Admin Portal Fines Management & Citation Dossier](#screen-3-admin-portal-fines-management--citation-dossier)
+    - [Screen 4: Admin Portal Driver Dossier & License Suspension Modal](#screen-4-admin-portal-driver-dossier--license-suspension-modal)
+    - [Screen 5: Admin Portal System Configuration & Diagnostics Center](#screen-5-admin-portal-system-configuration--diagnostics-center)
 - [4.4 Database Design](#44-database-design)
   - [4.4.1 Entity Relationship Diagram (ERD)](#441-entity-relationship-diagram-erd)
-  - [4.4.2 Comprehensive Normalization Analysis (1NF to BCNF & Denormalization)](#442-comprehensive-normalization-analysis-1nf-to-bcnf--denormalization)
+  - [4.4.2 Comprehensive Normalization Analysis (1NF to BCNF & MongoDB Pragmatic Denormalization)](#442-comprehensive-normalization-analysis-1nf-to-bcnf--mongodb-pragmatic-denormalization)
   - [4.4.3 Complete Relational Schema & Data Dictionary](#443-complete-relational-schema--data-dictionary)
 
 ---
@@ -56,74 +52,69 @@ You can view and download high-resolution PNG and vector SVG versions of all sys
 ## 4.1 Introduction
 
 ### 4.1.1 System Overview & Domain Context
-The **e-Fine SL Traffic Management System** is a next-generation enterprise traffic law enforcement, digital fine ticketing, and driver safety ecosystem engineered specifically for the Sri Lanka Police Department and the Department of Motor Traffic (DMT). 
+The **e-Fine SL Traffic Management System** is a mission-critical digital transformation and enforcement ecosystem developed for the Sri Lanka Police Department and the Department of Motor Traffic (DMT). 
 
-Traditional traffic enforcement in Sri Lanka relies on paper-based fine tickets, physical license retention, manual bank/post office payments, and disconnected driver record keeping. This creates severe operational bottlenecks, delays in fine collection, revenue leakage, and inability to enforce real-time penalty point deductions or emergency roadside assistance.
+Traditional traffic enforcement in Sri Lanka relies on paper-based carbon tickets, physical license impoundment, manual postal payments, and disconnected regional driver records. This creates significant delays in fine settlement, high revenue leakage, and inability to enforce real-time penalty point deductions or provide swift emergency roadside assistance.
 
 **e-Fine SL** digitizes the entire lifecycle of traffic law enforcement through:
-1. **Real-time Mobile Spot Fines:** Traffic officers issue digitized fines roadside via Flutter mobile app with automated license/vehicle OCR text recognition.
-2. **Dynamic Demerit Point Engine:** Driver starting points (default: 24) are automatically deducted based on offense severity levels (P1-P4). Driving licenses are auto-suspended upon reaching 0 points.
-3. **KYC & Liveness Verification:** AI-driven facial liveness verification ("blink & smile" detection via Google ML Kit) prevents identity fraud during citizen registration.
-4. **Instant Payment Gateway:** Integration with PayHere Sandbox PG enables drivers to settle fines online via credit card/digital wallet without visiting post offices.
-5. **Geospatial Emergency SOS & Accident Reporting:** Citizens broadcast live location alerts ($near queries in 10km radius) directly to active police officers and stations via WebSockets & Firebase FCM.
+1. **Real-time Mobile Spot Fines:** Traffic officers issue digitized citations roadside via the Flutter Mobile App with automated driving license OCR scanning and instant penalty calculation.
+2. **Dynamic Demerit Point Engine:** Driver starting points (default: 24) are automatically deducted based on offense severity levels (P1=1, P2=2, P3=3, P4=4). Licenses are auto-suspended upon reaching 0 points.
+3. **KYC & Liveness Verification:** AI-driven facial liveness detection (Blink & Smile tracking via Google ML Kit) prevents identity spoofing during motorist onboarding.
+4. **Instant Payment Gateway:** Integration with PayHere PG enables motorists to settle citations online via credit card/digital wallet within a statutory 14-day window.
+5. **Geospatial Emergency SOS & Incident Reporting:** Motorists broadcast live coordinates ($near spatial queries within 10km radius) directly to active duty traffic police and stations.
+6. **Unified Enterprise Admin Portal:** Built on Next.js 14, providing administrative oversight over driver dossiers, fine dispute workflows, financial aggregation, and system configuration.
 
 ---
 
 ### 4.1.2 High-Level System Architecture
 
-The system follows a modern **Decoupled Client-Server Micro-capable Architecture** with real-time geospatial processing and asynchronous background engines.
-
-
-![High-Level System Architecture Diagram](docs/diagrams/01_high_level_system_architecture.png)
-
-> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/01_high_level_system_architecture.png) | [Vector SVG (Scalable)](docs/diagrams/01_high_level_system_architecture.svg)
-
-<details>
-<summary>🔍 Click to view Mermaid Source Code</summary>
+The system follows a modern **Decoupled 3-Tier Enterprise Architecture** with asynchronous background workers, dual notification channels (Firebase Cloud Messaging + SendGrid Email), and geospatial processing engines.
 
 ```mermaid
 graph TD
-    subgraph ClientLayer ["Client Layer (Presentation)"]
+    subgraph ClientLayer ["Client Layer (Presentation Layer)"]
         FlutterDriver["Flutter Mobile App (Driver Module)"]
         FlutterPolice["Flutter Mobile App (Police Officer Module)"]
-        WebAdmin["React / Vue Web Admin Portal"]
+        WebAdmin["Next.js 14 React Admin Portal"]
     end
 
-    subgraph GatewayLayer ["Security & API Gateway Layer"]
-        CorsAuth["CORS & Security Middleware"]
-        JWTAuth["JWT Access Token / Refresh Token Engine"]
-        CryptoService["RSA Key Exchange (public.pem / Private Key)"]
+    subgraph GatewayLayer ["Security, Gateway & Middleware Layer"]
+        CorsMiddleware["CORS & Request Sanitization"]
+        JWTMiddleware["JWT Authentication & RBAC Filter"]
+        CryptoService["RSA / AES Crypto & Payload Signatures"]
     end
 
-    subgraph ApiLayer ["Monolithic Backend API Layer (Node.js + Express)"]
-        AuthCtrl["Auth & Verification Controller"]
-        FineCtrl["Fine & Demerit Controller"]
-        AccidentCtrl["Accident & Incident Controller"]
-        SOSCtrl["Geospatial SOS Engine"]
-        AdminCtrl["Admin & System Config Controller"]
+    subgraph ApiLayer ["Backend Application & Service Layer (Node.js + Express)"]
+        AuthCtrl["Authentication & KYC Controller"]
+        FineCtrl["Fine Issuance & Citations Controller"]
+        DriverCtrl["Driver Dossier & Demerit Controller"]
+        AccidentCtrl["Accident & Hazard Incident Controller"]
+        SOSCtrl["Geospatial Emergency SOS Engine"]
+        AdminCtrl["Admin Suite & System Config Controller"]
         PaymentCtrl["PayHere Payment Gateway Controller"]
     end
 
-    subgraph AsyncLayer ["Asynchronous Engines & Background Jobs"]
+    subgraph AsyncLayer ["Asynchronous Notification & Scheduling Engines"]
         CronJob["Node-Cron Demerit Recovery Engine"]
-        FCMService["Firebase Admin SDK (FCM Push Service)"]
-        EmailService["Nodemailer (SendGrid / SMTP Gateway)"]
+        FCMService["Firebase Admin SDK (FCM High-Priority Push)"]
+        EmailService["Nodemailer & SendGrid HTTPS Dispatcher"]
     end
 
     subgraph DataLayer ["Data & Persistence Layer"]
-        MongoDB[(MongoDB Primary Cluster)]
-        GeoIndex["MongoDB 2dsphere Spatial Index"]
+        MongoDB[(MongoDB Primary Replica Set)]
+        Geo2DSphere["MongoDB 2dsphere Spatial Geospatial Index"]
     end
 
-    FlutterDriver -->|HTTPS / REST API| CorsAuth
-    FlutterPolice -->|HTTPS / REST API| CorsAuth
-    WebAdmin -->|HTTPS / REST API| CorsAuth
+    FlutterDriver -->|HTTPS / REST API| CorsMiddleware
+    FlutterPolice -->|HTTPS / REST API| CorsMiddleware
+    WebAdmin -->|HTTPS / REST API| CorsMiddleware
 
-    CorsAuth --> JWTAuth
-    JWTAuth --> CryptoService
+    CorsMiddleware --> JWTMiddleware
+    JWTMiddleware --> CryptoService
 
     CryptoService --> AuthCtrl
     CryptoService --> FineCtrl
+    CryptoService --> DriverCtrl
     CryptoService --> AccidentCtrl
     CryptoService --> SOSCtrl
     CryptoService --> AdminCtrl
@@ -131,34 +122,34 @@ graph TD
 
     AuthCtrl --> MongoDB
     FineCtrl --> MongoDB
+    DriverCtrl --> MongoDB
     AccidentCtrl --> MongoDB
-    SOSCtrl --> GeoIndex
+    SOSCtrl --> Geo2DSphere
     AdminCtrl --> MongoDB
     PaymentCtrl --> MongoDB
 
+    FineCtrl --> FCMService
+    FineCtrl --> EmailService
+    DriverCtrl --> FCMService
+    DriverCtrl --> EmailService
     SOSCtrl --> FCMService
-    AccidentCtrl --> EmailService
-    AuthCtrl --> EmailService
-    CronJob -->|Monthly Auto-Recovery| FineCtrl
+    CronJob -->|Monthly Auto-Recovery| DriverCtrl
 ```
-
-</details>
-
 
 ---
 
-### 4.1.3 Core Stakeholder Roles & Access Matrices
+### 4.1.3 Core Stakeholder Roles & Access Control Matrices (RBAC)
 
-The system implements Role-Based Access Control (RBAC) across 6 distinct user personas:
+The system enforces strict Role-Based Access Control (RBAC) across distinct stakeholder personas:
 
 | Role Code | Role Name | Primary Interface | Access Capabilities & Scopes |
 | :--- | :--- | :--- | :--- |
-| `ROLES.DRIVER` | Citizen Driver | Driver Mobile App | Account signup (KYC required), view license status & demerits, view/pay issued fines, report roadside accidents, trigger Emergency SOS. |
-| `ROLES.OFFICER` | Police Traffic Officer | Police Mobile App | Duty presence toggle (GPS), scan driving licenses (OCR), issue spot fines, view daily statistics, receive nearby SOS & accident alerts. |
-| `ROLES.OIC` | Police Station OIC | Police App / Web | Officer registration verification (OTP generation), station fine analytics, accident report acknowledgment & assignment. |
-| `ROLES.ADMIN_OFFICER` | Admin Officer | Admin Web Portal | System configuration management, station registry maintenance, offense catalog CRUD, driver/officer audit log inspection. |
-| `ROLES.FINANCE_OFFICER` | Financial Auditor | Admin Web Portal | Fine payment revenue aggregation, PayHere transaction reconciliation, unpaid fine escalation reports. |
-| `ROLES.SUPER_ADMIN` | System Super Admin | Admin Web Portal | Full system control, 2FA admin management, JWT token duration configuration, session token revocation, system reset capability. |
+| `ROLES.DRIVER` | Citizen Driver | Driver Mobile App | Account registration (KYC required), view live license status & demerit balance, view/pay issued fines via PayHere, report accidents, trigger Emergency SOS. |
+| `ROLES.POLICE` | Traffic Police Officer | Police Mobile App | Duty presence toggle (GPS), scan driving licenses (OCR), issue roadside spot fines, view daily statistics, receive nearby SOS alerts and accident notifications. |
+| `ROLES.STATION_OIC` | Police Station OIC | Police App / Web | Officer registration verification (OTP generation), station fine analytics, accident report acknowledgment & assignment. |
+| `ROLES.ADMIN_OFFICER` | Admin Officer | Admin Web Portal | Driver registry search, fine inspection & dispute review, police station registry management, offense catalog CRUD. |
+| `ROLES.FINANCE_OFFICER`| Financial Auditor | Admin Web Portal | Fine payment revenue aggregation, PayHere transaction reconciliation, collection rate analytics, export financial ledgers. |
+| `ROLES.SUPER_ADMIN` | System Super Admin | Admin Web Portal | Full system control, 2FA admin management, session timeout policy, system diagnostics, on-demand manual demerit recovery trigger. |
 
 ---
 
@@ -168,60 +159,53 @@ The system implements Role-Based Access Control (RBAC) across 6 distinct user pe
 
 #### System Use Case Diagram
 
-
-![System Use Case Diagram](docs/diagrams/02_system_use_case_diagram.png)
-
-> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/02_system_use_case_diagram.png) | [Vector SVG (Scalable)](docs/diagrams/02_system_use_case_diagram.svg)
-
-<details>
-<summary>🔍 Click to view Mermaid Source Code</summary>
-
 ```mermaid
 flowchart LR
     subgraph Boundary ["e-Fine SL Core System Boundary"]
         direction TB
-        UC1(["UC-01: Register & Perform KYC Liveness"])
-        UC2(["UC-02: Authenticate & Manage Session"])
-        UC3(["UC-03: Scan Driving License (OCR)"])
-        UC4(["UC-04: Issue Traffic Fine & Deduct Demerits"])
-        UC5(["UC-05: Settle Fine via PayHere Gateway"])
-        UC6(["UC-06: Broadcast Emergency SOS Alert"])
-        UC7(["UC-07: Report Road Accident with Geotag"])
-        UC8(["UC-08: Verify Officer Registration (OTP)"])
-        UC9(["UC-09: Auto-Recover Monthly Demerit Points"])
-        UC10(["UC-10: Audit System Sessions & Configure Token"])
+        UC01(["UC-01: Register & Perform KYC Liveness Verification"])
+        UC02(["UC-02: Authenticate & Manage Session"])
+        UC03(["UC-03: Scan Driving License (ML Kit OCR)"])
+        UC04(["UC-04: Issue Traffic Fine & Deduct Demerits"])
+        UC05(["UC-05: Settle Fine via PayHere Gateway Sandbox"])
+        UC06(["UC-06: Broadcast Emergency SOS Alert (10km Radius)"])
+        UC07(["UC-07: Report Road Accident with Geotag & Photos"])
+        UC08(["UC-08: Verify Officer Registration via OTP Secret"])
+        UC09(["UC-09: Auto-Recover Good-Behavior Demerit Points"])
+        UC10(["UC-10: Manage Driver Dossier & Suspend License"])
+        UC11(["UC-11: Configure System Rules & Trigger Manual Recovery"])
     end
 
     CitizenDriver["Citizen Driver"]
     TrafficOfficer["Traffic Police Officer"]
     StationOIC["Station OIC"]
-    SystemAdmin["System Administrator"]
-    CronEngine["Automated System Engine"]
+    SystemAdmin["System Super Admin"]
+    CronEngine["Automated System Cron"]
 
-    CitizenDriver --> UC1
-    CitizenDriver --> UC2
-    CitizenDriver --> UC5
-    CitizenDriver --> UC6
-    CitizenDriver --> UC7
+    CitizenDriver --> UC01
+    CitizenDriver --> UC02
+    CitizenDriver --> UC05
+    CitizenDriver --> UC06
+    CitizenDriver --> UC07
 
-    TrafficOfficer --> UC2
-    TrafficOfficer --> UC3
-    TrafficOfficer --> UC4
+    TrafficOfficer --> UC02
+    TrafficOfficer --> UC03
+    TrafficOfficer --> UC04
 
-    StationOIC --> UC8
+    StationOIC --> UC08
 
-    SystemAdmin --> UC2
+    SystemAdmin --> UC02
     SystemAdmin --> UC10
+    SystemAdmin --> UC11
 
-    CronEngine --> UC9
+    CronEngine --> UC09
 
-    UC4 -. "<<include>>" .-> UC3
-    UC5 -. "<<extends>>" .-> UC4
-    UC6 -. "<<include>>" .-> UC2
+    UC04 -. "<<include>>" .-> UC03
+    UC05 -. "<<extends>>" .-> UC04
+    UC06 -. "<<include>>" .-> UC02
+    UC10 -. "<<include>>" .-> UC02
+    UC11 -. "<<include>>" .-> UC02
 ```
-
-</details>
-
 
 #### Detailed Use Case Specifications
 
@@ -231,28 +215,28 @@ flowchart LR
 - **Main Success Scenario:**
   1. Driver inputs personal metadata (NIC, Name, Email, Phone, License No, Vehicle Class).
   2. System captures Front and Back images of the Sri Lankan Driving License.
-  3. System initiates OCR processing via ML Kit to extract Document Date of Issue (4a) and Expiry (11).
+  3. System initiates OCR processing via Google ML Kit to extract Document Date of Issue (4a) and Expiry (11).
   4. System prompts driver for real-time selfie video stream.
   5. Google ML Kit evaluates Liveness Detection parameters (Blink Detection Probability > 0.7, Smile Probability > 0.6).
   6. Backend hashes password using Bcrypt (salt round 10) and stores driver record with `kycVerified: true`.
 - **Post-conditions:** Driver account activated with initial 24 demerit points and 5.0 Rating Score.
 
 ##### UC-04: Roadside Spot Fine Issuance & Automated Demerit Deduction
-- **Primary Actor:** Traffic Police Officer
+- **Primary Actor:** Traffic Police Officer / Admin Desk
 - **Pre-conditions:** Officer logged in with active duty presence (`appState: 'FOREGROUND'`).
 - **Main Success Scenario:**
   1. Officer inputs or scans Driver License Number and Vehicle Registration Number.
-  2. Officer selects one or multiple traffic offenses from the Offense Catalog (e.g., Speeding, No Helmet).
-  3. Backend fetches Offense Demerit Value (P1=1, P2=2, P3=3, P4=4) and fine amount.
-  4. System calculates total demerit points to deduct and updates Driver `demeritPoints`.
-  5. System calculates new Driver `ratingScore` (Scale 0.0 - 5.0 stars).
-  6. If `demeritPoints` reaches 0, system sets `licenseStatus: 'SUSPENDED'` and records `suspendedAt`.
-  7. System writes `IssuedFine` document with status `UNPAID` and sends real-time push alert to driver.
-- **Post-conditions:** Fine recorded, driver demerits updated, push notification dispatched.
+  2. Officer selects one or multiple traffic offenses from the Offense Catalog (e.g., Speeding, Crossing Double Line).
+  3. Backend fetches Offense Demerit Value (`demeritValue`: 1, 2, 3, or 4) and fine amount (LKR).
+  4. System calculates total demerit points to deduct and updates Driver `demeritPoints` and `ratingScore`.
+  5. If `demeritPoints` reaches 0, system sets `licenseStatus: 'SUSPENDED'` and records `suspendedAt` and `suspensionReason`.
+  6. System creates `IssuedFine` record with status `UNPAID`.
+  7. System dispatches real-time **FCM Push Notification** to the driver's mobile phone and sends an **Official Fine Notice Email** with full citation breakdown.
+- **Post-conditions:** Fine recorded, driver demerits deducted, dual push and email notifications delivered.
 
 ##### UC-05: Fine Settlement via PayHere Payment Gateway Sandbox
 - **Primary Actor:** Citizen Driver
-- **Pre-conditions:** Driver has unpaid fine linked to their driving license.
+- **Pre-conditions:** Driver has unpaid citation linked to their driving license.
 - **Main Success Scenario:**
   1. Driver views fine list on mobile app and selects "Pay Now".
   2. App requests checkout payload from `/api/payment/checkout`.
@@ -264,17 +248,29 @@ flowchart LR
   8. System updates `IssuedFine` status to `PAID`, sets `paidAt`, and records `paymentId`.
 - **Post-conditions:** Fine status marked `PAID`, transaction log finalized.
 
+##### UC-10: Administrative Driver Dossier Management & License Suspension
+- **Primary Actor:** System Super Admin / Admin Officer
+- **Pre-conditions:** Admin authenticated with JWT and valid session token.
+- **Main Success Scenario:**
+  1. Admin searches and opens driver dossier by License Number or NIC.
+  2. Admin modifies profile particulars, adjusts demerit points manually, or suspends/restores driving license.
+  3. Backend updates MongoDB `Driver` document.
+  4. System dispatches real-time **FCM Push Notification** (`traffic_alerts`) and an **Official HTML Email Notice** to the driver explaining the action taken.
+- **Post-conditions:** Driver record updated, audit log written, driver informed via dual channels.
+
+##### UC-11: System Configuration & On-Demand Manual Recovery
+- **Primary Actor:** System Super Admin
+- **Pre-conditions:** Super Admin authenticated.
+- **Main Success Scenario:**
+  1. Super Admin navigates to System Configuration suite.
+  2. Admin updates operational parameters across 5 modules (Alerts, Demerit Rules, Payment Policy, Security Rules).
+  3. Admin can trigger `triggerManualRecovery` on-demand to reward clean drivers with recovery points.
+  4. System updates eligible driver points, recalculates safety ratings, and dispatches email + FCM notifications.
+- **Post-conditions:** SystemConfig updated, recovery executed, drivers notified.
+
 ---
 
 ### 4.2.2 Unified System Class Diagram
-
-
-![Unified System Class Diagram](docs/diagrams/03_unified_system_class_diagram.png)
-
-> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/03_unified_system_class_diagram.png) | [Vector SVG (Scalable)](docs/diagrams/03_unified_system_class_diagram.svg)
-
-<details>
-<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 classDiagram
@@ -282,35 +278,54 @@ classDiagram
 
     class Driver {
         +ObjectId _id
-        +String licenseNumber
         +String nic
+        +String licenseNumber
+        +String name
         +String email
+        +String phone
+        +String password
         +Number demeritPoints
         +Number ratingScore
         +String licenseStatus
+        +String demeritLevel
         +Boolean kycVerified
+        +String fcmToken
+        +Date lastOffenseDate
+        +Date suspendedAt
+        +String suspensionReason
         +registerDriver()
         +verifyKYC()
+        +updateProfile()
     }
 
     class Police {
         +ObjectId _id
         +String badgeNumber
+        +String name
         +String email
+        +String nic
+        +String phone
         +String policeStation
         +String position
+        +String role
         +GeoJSON location
         +String appState
-        +registerPolice()
-        +updatePresence()
+        +Boolean isActive
+        +String fcmToken
+        +updateLocation()
+        +setAppState()
     }
 
     class Admin {
         +ObjectId _id
+        +String name
         +String email
+        +String password
         +String role
         +Boolean isTwoFactorEnabled
-        +adminLogin()
+        +String twoFactorSecret
+        +Date lastLoginAt
+        +authenticate()
         +verify2FA()
     }
 
@@ -319,10 +334,19 @@ classDiagram
         +String licenseNumber
         +String vehicleNumber
         +ObjectId offenseId
+        +String offenseName
         +Number amount
+        +String place
+        +String policeStation
         +String policeOfficerId
         +String status
+        +String paymentId
+        +Date paidAt
+        +Number demeritPoints
+        +Date date
+        +String paymentNotes
         +createFine()
+        +updateStatus()
         +markPaid()
     }
 
@@ -330,9 +354,12 @@ classDiagram
         +ObjectId _id
         +String offenseName
         +Number amount
+        +String description
         +String sectionOfAct
         +Number demeritValue
+        +String category
         +createOffense()
+        +updateOffense()
     }
 
     class AccidentReport {
@@ -340,9 +367,17 @@ classDiagram
         +String driverLicense
         +String accidentType
         +GeoJSON location
+        +String placeDescription
+        +String province
+        +String district
+        +String policeStation
         +String status
+        +String severity
+        +Array images
+        +Array statusHistory
         +createReport()
-        +updateStatus()
+        +acknowledgeReport()
+        +resolveReport()
     }
 
     class Station {
@@ -350,314 +385,363 @@ classDiagram
         +String stationCode
         +String name
         +String district
+        +String province
         +String officialEmail
+        +String phoneNumber
+        +GeoJSON location
         +findNearestStation()
     }
 
     class SystemConfig {
         +ObjectId _id
         +Number accidentNotificationRadiusKm
+        +Number emergencySosRadiusKm
+        +Number officerLogoutGracePeriodMinutes
         +Number defaultDemeritPoints
         +Number monthlyRecoveryPoints
+        +Number cleanRecordDays
+        +Number recoveryPeriodMonths
         +Boolean recoveryEnabled
+        +Date lastRecoveryRunAt
+        +Number finePaymentGraceDays
+        +Boolean enableOnlinePayments
+        +Boolean allowDisputeSubmissions
+        +Number sessionTimeoutMinutes
+        +Number maxFailedLoginAttempts
         +updateConfig()
+        +triggerManualRecovery()
     }
 
     Driver "1" -- "0..*" IssuedFine : incurs
     Police "1" -- "0..*" IssuedFine : issues
     Offense "1" -- "0..*" IssuedFine : categorizes
     Driver "1" -- "0..*" AccidentReport : reports
-    Station "1" -- "0..*" Police : assigns
+    Station "1" -- "0..*" Police : stations
     AccidentReport "0..*" -- "1" Station : notifies
+    Admin "1" -- "1" SystemConfig : configures
 ```
-
-</details>
-
 
 ---
 
 ### 4.2.3 Sequence Diagrams
 
-#### Sequence 1: Driver KYC Liveness & License Scanning Workflow
-
-
-![Sequence Diagram 1: Driver KYC Liveness & License OCR](docs/diagrams/04_sequence_kyc_ocr_liveness.png)
-
-> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/04_sequence_kyc_ocr_liveness.png) | [Vector SVG (Scalable)](docs/diagrams/04_sequence_kyc_ocr_liveness.svg)
-
-<details>
-<summary>🔍 Click to view Mermaid Source Code</summary>
+#### Sequence 1: Driver KYC Facial Liveness & License OCR Verification
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Driver as Driver Mobile App
     participant FlutterOCR as ML Kit OCR Engine
-    participant FlutterFace as ML Kit Liveness Detection
+    participant FlutterFace as ML Kit Liveness Tracker
     participant Backend as Node.js Backend API
     participant DB as MongoDB Cluster
 
     Driver->>FlutterOCR: Capture License Front & Back Images
-    FlutterOCR->>FlutterOCR: Process Anchor Extraction (Cols 4a & 11)
-    FlutterOCR-->>Driver: Return Issue & Expiry Dates
+    FlutterOCR->>FlutterOCR: Extract License Text (Issue Date 4a, Expiry 11, Class)
+    FlutterOCR-->>Driver: Extracted License Metadata
     
-    Driver->>FlutterFace: Initiate Face Liveness Video Stream
-    FlutterFace->>FlutterFace: Track Facial Landmarks (Blink > 0.7, Smile > 0.6)
-    FlutterFace-->>Driver: Liveness Verification Passed
+    Driver->>FlutterFace: Initiate Face Liveness Camera Stream
+    FlutterFace->>FlutterFace: Track Facial Landmarks (Blink Prob > 0.7, Smile > 0.6)
+    FlutterFace-->>Driver: Liveness Verification Challenge Passed
 
-    Driver->>Backend: POST /api/kyc/verify-liveness (Base64 Selfie + License Data)
+    Driver->>Backend: POST /api/kyc/verify-liveness (Selfie Base64 + License Data)
     Backend->>DB: Find Driver by License & Update kycVerified = true
-    DB-->>Backend: Driver Document Updated
-    Backend-->>Driver: 200 OK (KYC Verification Successful)
+    DB-->>Backend: Driver Document Persisted
+    Backend-->>Driver: 200 OK (KYC Verified & Initial Demerits Active)
 ```
 
-</details>
-
-
-#### Sequence 2: Roadside Fine Issuance & Demerit Point Deduction
-
-
-![Sequence Diagram 2: Roadside Fine Issuance & Demerit Deduction](docs/diagrams/05_sequence_fine_issuance_demerits.png)
-
-> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/05_sequence_fine_issuance_demerits.png) | [Vector SVG (Scalable)](docs/diagrams/05_sequence_fine_issuance_demerits.svg)
-
-<details>
-<summary>🔍 Click to view Mermaid Source Code</summary>
+#### Sequence 2: Roadside Fine Issuance, Demerit Deduction & Dual Alert Dispatch
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Police as Traffic Officer
+    actor Officer as Traffic Police Officer
     participant App as Police Mobile App
-    participant API as Backend REST API
-    participant DB as MongoDB Database
-    participant FCM as Firebase Push Service
+    participant API as Node.js Backend API
+    participant DB as MongoDB Cluster
+    participant FCM as Firebase Cloud Messaging
+    participant Email as SendGrid / Nodemailer Gateway
+    actor Driver as Citizen Driver
 
-    Police->>App: Input Driver License, Vehicle No & Select Offenses
-    App->>API: POST /api/fines/issue (License, Vehicle, OffenseIDs, Location)
-    API->>DB: Query Driver Record by License Number
-    DB-->>API: Return Current Demerit Points (e.g., 24)
-    
-    API->>DB: Query Offense Details (Amount, Demerit Value)
-    DB-->>API: Offense Data (Amount: Rs.5000, Demerit: 4)
+    Officer->>App: Input/Scan Driver License, Vehicle Plate & Select Offense
+    App->>API: POST /api/fines/issue (License, Vehicle, OffenseId, Location)
+    API->>DB: Query Driver by License & Query Offense Details
+    DB-->>API: Driver (Demerits: 24) & Offense (DemeritValue: 2, Amount: LKR 2000)
 
-    API->>API: Calculate New Demerits = 24 - 4 = 20
-    API->>API: Calculate New Rating Score = (20 / 24) * 5.0 = 4.17 Stars
+    API->>API: Calculate New Demerits = 24 - 2 = 22 pts
+    API->>API: Calculate New Rating Score = (22 / 24) * 5.0 = 4.6 Stars
     
-    API->>DB: Create IssuedFine (status: UNPAID)
-    API->>DB: Update Driver (demeritPoints: 20, ratingScore: 4.17)
+    API->>DB: Create IssuedFine (status: UNPAID, demeritPoints: 2)
+    API->>DB: Update Driver (demeritPoints: 22, ratingScore: 4.6, lastOffenseDate: Now)
     DB-->>API: Transaction Committed
 
-    API->>FCM: Dispatch Push Notification to Driver Device
-    FCM-->>API: Message Sent Confirmation
-    API-->>App: 201 Created (Fine Issued Successfully & Demerits Deducted)
-```
-
-</details>
-
-
-#### Sequence 3: Fine Payment via PayHere Gateway & Webhook Reconciliation
-
-
-![Sequence Diagram 3: Fine Payment via PayHere Gateway](docs/diagrams/06_sequence_payhere_settlement.png)
-
-> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/06_sequence_payhere_settlement.png) | [Vector SVG (Scalable)](docs/diagrams/06_sequence_payhere_settlement.svg)
-
-<details>
-<summary>🔍 Click to view Mermaid Source Code</summary>
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Driver as Driver User
-    participant App as Driver Mobile App
-    participant API as Backend API
-    participant PayHere as PayHere Gateway Sandbox
-    participant DB as MongoDB Database
-
-    Driver->>App: Click "Pay Fine" (Fine ID)
-    App->>API: POST /api/payment/checkout (Fine ID)
-    API->>API: Generate MD5 Merchant Signature Hash
-    API-->>App: Return Checkout Params (Merchant ID, Hash, Amount)
-
-    App->>PayHere: Open PayHere Web SDK / Webview
-    Driver->>PayHere: Enter Card Payment Details & Confirm
-    PayHere->>PayHere: Process Sandbox Transaction
-
-    PayHere->>API: POST /api/payment/notify (Webhook Event Data + MD5 Sig)
-    API->>API: Re-calculate & Verify PayHere MD5 Signature
-    alt Signature Valid
-        API->>DB: Update IssuedFine (status: 'PAID', paidAt: Date, paymentId)
-        DB-->>API: Document Updated
-        API-->>PayHere: HTTP 200 OK ACK
-    else Signature Invalid
-        API-->>PayHere: HTTP 400 Bad Request (Fraud Attempt Rejected)
+    par Dual Notification Dispatch
+        API->>FCM: sendToToken(driver.fcmToken, { title: 'Traffic Fine Issued', channelId: 'traffic_alerts' })
+        FCM->>Driver: Push Banner Alert on Phone (-2 Demerit pts)
+    and
+        API->>Email: sendFineIssuedEmail(driver, fine, offense, demeritDeduction: 2, remaining: 22)
+        Email->>Driver: Official Traffic Citation Notice Email Delivered
     end
 
-    PayHere-->>App: Redirect Payment Success Screen
+    API-->>App: 201 Created (Fine Issued Successfully)
 ```
 
-</details>
-
-
-#### Sequence 4: Emergency SOS Alert Broadcast (10km Geospatial Radius)
-
-
-![Sequence Diagram 4: Emergency SOS Alert Broadcast](docs/diagrams/07_sequence_emergency_sos_dispatch.png)
-
-> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/07_sequence_emergency_sos_dispatch.png) | [Vector SVG (Scalable)](docs/diagrams/07_sequence_emergency_sos_dispatch.svg)
-
-<details>
-<summary>🔍 Click to view Mermaid Source Code</summary>
+#### Sequence 3: Fine Payment Settlement via PayHere Gateway & Webhook Signature Verification
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Driver as Citizen Driver
     participant App as Driver Mobile App
-    participant API as Backend API
+    participant API as Node.js Backend API
+    participant PayHere as PayHere Payment Gateway
+    participant DB as MongoDB Cluster
+
+    Driver->>App: Select Unpaid Citation & Tap "Pay Fine"
+    App->>API: POST /api/payment/checkout (Fine ID)
+    API->>API: Generate MD5 Hash Signature (Merchant ID, Order ID, Amount, Currency, Secret)
+    API-->>App: Return Checkout Parameters + MD5 Signature Hash
+
+    App->>PayHere: Launch PayHere Web SDK / Webview Checkout
+    Driver->>PayHere: Enter Card/Wallet Details & Submit
+    PayHere->>PayHere: Authorize & Process Transaction
+
+    PayHere->>API: POST /api/payment/notify (Webhook Payload + MD5 Sig)
+    API->>API: Re-calculate MD5 Hash & Verify Authenticity
+    alt Signature Valid & Status == 2 (SUCCESS)
+        API->>DB: Update IssuedFine (status: 'PAID', paidAt: Date, paymentId: PayHereID)
+        DB-->>API: Document Updated
+        API-->>PayHere: HTTP 200 OK ACK
+    else Signature Invalid / Hash Mismatch
+        API-->>PayHere: HTTP 400 Bad Request (Fraud Attempt Dropped)
+    end
+
+    PayHere-->>App: Redirect Payment Success Screen
+```
+
+#### Sequence 4: Geospatial Emergency SOS Alert Broadcast (10km Spatial Query)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Driver as Citizen Driver
+    participant App as Driver Mobile App
+    participant API as Node.js Backend API
     participant DB as MongoDB (2dsphere Index)
-    participant FCM as Firebase Push Service
-    actor Officers as Nearby Traffic Officers
+    participant FCM as Firebase Cloud Messaging
+    actor Officers as Nearby Active Police Officers
 
     Driver->>App: Tap "EMERGENCY SOS" Button
     App->>API: POST /api/sos/trigger (Latitude, Longitude, Driver Info)
     
-    API->>DB: Query Police Collection with $near Spatial Query
+    API->>DB: Query Police Collection with $near Spatial Operator
     Note over API,DB: $near: [lng, lat], $maxDistance: 10,000m, appState: FOREGROUND/BACKGROUND
     DB-->>API: Return Array of Active Officer FCM Tokens within 10km
 
-    API->>FCM: Send High-Priority FCM Push Broadcast with GPS Coordinates
-    FCM->>Officers: Trigger Loud Emergency Siren & Map Overlay on Officer Devices
-    API-->>App: 200 OK (SOS Broadcasted to N Active Officers)
+    API->>FCM: Broadcast High-Priority SOS Payload (channelId: 'sos_alerts', siren sound)
+    FCM->>Officers: Trigger Emergency Audio Siren & Map Coordinate Overlay
+    API-->>App: 200 OK (SOS Dispatched to N Nearby Officers)
 ```
 
-</details>
+#### Sequence 5: Administrative Driver Dossier Management & License Suspension
 
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin as Super Admin / Admin Officer
+    participant Portal as Next.js Admin Portal
+    participant API as Node.js Backend API
+    participant DB as MongoDB Cluster
+    participant FCM as Firebase Cloud Messaging
+    participant Email as SendGrid / Nodemailer Gateway
+    actor Driver as Citizen Driver
+
+    Admin->>Portal: Search Driver & Click "Suspend License"
+    Admin->>Portal: Input Suspension Reason (e.g. "Dangerous Driving") & Confirm
+    Portal->>API: PUT /api/admin/drivers/:id/suspend { reason }
+
+    API->>DB: Find Driver & Set licenseStatus = 'SUSPENDED', suspendedAt = Now
+    DB-->>API: Driver Updated
+
+    par Dual Notification Dispatch
+        API->>FCM: sendToToken(driver.fcmToken, { title: 'DRIVING LICENSE SUSPENDED', reason })
+        FCM->>Driver: Immediate Push Notification on Mobile Phone
+    and
+        API->>Email: sendLicenseStatusEmail(driver, 'SUSPENDED', reason)
+        Email->>Driver: Official Legal License Suspension Email Notice
+    end
+
+    API-->>Portal: 200 OK (Driver Suspended Successfully)
+    Portal-->>Admin: Display Toast & Refresh Driver Badge to SUSPENDED
+```
+
+#### Sequence 6: Automated Monthly Demerit Point Recovery Cron Job
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Cron as Node-Cron Engine (0 0 1 * *)
+    participant Config as SystemConfig in DB
+    participant DB as MongoDB Cluster
+    participant FCM as Firebase Cloud Messaging
+    participant Email as SendGrid / Nodemailer Gateway
+    actor Driver as Clean-Record Driver
+
+    Cron->>Config: Fetch SystemConfig (recoveryEnabled, monthlyRecoveryPoints: 2, cleanDays: 30)
+    Config-->>Cron: Active Rules Configuration
+
+    Cron->>DB: Query Active Drivers with demerits < 24 & lastOffenseDate older than cleanDays
+    DB-->>Cron: List of Eligible Drivers
+
+    loop For Each Eligible Driver
+        Cron->>DB: Update demeritPoints = min(24, current + 2), recalculate ratingScore
+        par Notify Driver
+            Cron->>FCM: sendToToken (Good Driver Demerit Recovery +2 pts)
+            FCM->>Driver: Push Notification on Phone
+        and
+            Cron->>Email: sendDemeritAdjustmentEmail (Good Driver Conduct +2 pts)
+            Email->>Driver: Demerit Reinstatement Email Notice
+        end
+    end
+
+    Cron->>Config: Update lastRecoveryRunAt = Now
+```
 
 ---
 
 ### 4.2.4 Activity Diagrams
 
-#### Activity 1: Driver Signup & KYC Liveness Verification Workflow
-
-
-![Activity Diagram 1: Driver Signup & KYC Liveness Verification](docs/diagrams/08_activity_kyc_verification_flow.png)
-
-> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/08_activity_kyc_verification_flow.png) | [Vector SVG (Scalable)](docs/diagrams/08_activity_kyc_verification_flow.svg)
-
-<details>
-<summary>🔍 Click to view Mermaid Source Code</summary>
+#### Activity 1: Driver Signup & KYC Liveness Verification State Machine
 
 ```mermaid
 stateDiagram-v2
     [*] --> StartRegistration
-    StartRegistration --> FillDriverForm: Enter Metadata
-    FillDriverForm --> CaptureLicenseImages: Front & Back Capture
-    CaptureLicenseImages --> ProcessOCR: Execute ML Kit Text Recognition
+    StartRegistration --> FillDriverForm: Enter Name, NIC, License No, Email, Phone
+    FillDriverForm --> CaptureLicenseImages: Capture Front & Back of License
+    CaptureLicenseImages --> ProcessOCR: Execute Google ML Kit Text Recognition
     
     state ProcessOCR {
-        [*] --> ExtractDates
+        [*] --> ExtractDates: Parse Date of Issue (4a) & Expiry (11)
         ExtractDates --> ValidateFormat
     }
     
-    ProcessOCR --> LaunchLiveness: OCR Complete
-    LaunchLiveness --> DetectFacialLandmarks: Stream Camera Frame
+    ProcessOCR --> LaunchLiveness: OCR Complete & Verified
+    LaunchLiveness --> DetectFacialLandmarks: Stream Camera Video Frames
     
     state DetectFacialLandmarks {
-        [*] --> CheckBlink: Blink Prob > 0.7
-        CheckBlink --> CheckSmile: Smile Prob > 0.6
+        [*] --> CheckBlink: Blink Probability > 0.7
+        CheckBlink --> CheckSmile: Smile Probability > 0.6
     }
 
     DetectFacialLandmarks --> VerificationCheck
-    VerificationCheck --> PassKYC: Both Conditions Met
-    VerificationCheck --> FailKYC: Condition Timed Out / Failed
+    VerificationCheck --> PassKYC: Both Liveness Actions Verified
+    VerificationCheck --> FailKYC: Challenge Timed Out / Incomplete
 
-    FailKYC --> LaunchLiveness: Retry Frame Stream
+    FailKYC --> LaunchLiveness: Retry Liveness Challenge
     PassKYC --> SubmitBackend: POST /api/kyc/verify-liveness
-    SubmitBackend --> AccountActivated: Set kycVerified = true
+    SubmitBackend --> AccountActivated: Set kycVerified = true & demeritPoints = 24
     AccountActivated --> [*]
 ```
 
-</details>
-
-
-#### Activity 2: Traffic Fine Issuance & Demerit Point Deduction Logic
-
-
-![Activity Diagram 2: Traffic Fine Issuance & Demerit Deduction](docs/diagrams/09_activity_fine_issuance_suspension.png)
-
-> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/09_activity_fine_issuance_suspension.png) | [Vector SVG (Scalable)](docs/diagrams/09_activity_fine_issuance_suspension.svg)
-
-<details>
-<summary>🔍 Click to view Mermaid Source Code</summary>
+#### Activity 2: Traffic Fine Issuance & Auto-Suspension Logic
 
 ```mermaid
 stateDiagram-v2
     [*] --> SelectDriverAndOffense
-    SelectDriverAndOffense --> ValidateInputs
-    ValidateInputs --> FetchCurrentDemerits: Query Driver Demerits
-    FetchCurrentDemerits --> CalculateDeduction: Sum Offense Demerit Values (P1-P4)
+    SelectDriverAndOffense --> ValidateInputs: Validate License, Vehicle, Offense, Place
+    ValidateInputs --> FetchCurrentDemerits: Query Driver Demerit Balance
+    FetchCurrentDemerits --> CalculateDeduction: Extract offense.demeritValue (P1-P4)
 
-    CalculateDeduction --> ComputeNewBalance: New Points = Current - Deduction
+    CalculateDeduction --> ComputeNewBalance: New Balance = max(0, Current - Deduction)
     
     state ComputeNewBalance {
         [*] --> EvaluateZero
     }
 
-    EvaluateZero --> PointsRemaining: Balance > 0
-    EvaluateZero --> PointsExhausted: Balance <= 0
+    EvaluateZero --> PointsRemaining: New Balance > 0
+    EvaluateZero --> PointsExhausted: New Balance == 0
 
-    PointsRemaining --> UpdateActiveDriver: Maintain ACTIVE Status
-    PointsExhausted --> SuspendDriver: Set licenseStatus = SUSPENDED & suspendedAt = Now
+    PointsRemaining --> UpdateActiveDriver: Status remains ACTIVE, Rating recalculated
+    PointsExhausted --> SuspendDriver: Set licenseStatus = SUSPENDED & Record Reason
 
-    UpdateActiveDriver --> SaveFineRecord
-    SuspendDriver --> SaveFineRecord
+    UpdateActiveDriver --> SaveFineRecord: Create IssuedFine with status UNPAID
+    SuspendDriver --> SaveFineRecord: Create IssuedFine with status UNPAID
 
-    SaveFineRecord --> TriggerPushNotification: Send Driver Alert
-    TriggerPushNotification --> [*]
+    SaveFineRecord --> DispatchDualAlerts: Trigger FCM Push + SendGrid Email
+    DispatchDualAlerts --> [*]
 ```
 
-</details>
-
-
-#### Activity 3: Automated Monthly Demerit Point Reinstatement Cron Execution
-
-
-![Activity Diagram 3: Monthly Demerit Point Reinstatement Cron](docs/diagrams/10_activity_demerit_recovery_cron.png)
-
-> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/10_activity_demerit_recovery_cron.png) | [Vector SVG (Scalable)](docs/diagrams/10_activity_demerit_recovery_cron.svg)
-
-<details>
-<summary>🔍 Click to view Mermaid Source Code</summary>
+#### Activity 3: Online Payment Checkout & Webhook Reconciliation Flow
 
 ```mermaid
 stateDiagram-v2
-    [*] --> CronTriggered: Monthly Cron (0 0 1 * *)
-    CronTriggered --> CheckConfig: Query SystemConfig.recoveryEnabled
+    [*] --> SelectUnpaidFine
+    SelectUnpaidFine --> RequestCheckout: POST /api/payment/checkout
+    RequestCheckout --> GenerateMD5: Backend Computes PayHere MD5 Signature
+    GenerateMD5 --> LaunchPayHereSDK: Open PayHere Web Checkout
 
-    state CheckConfig {
-        [*] --> IsEnabled
+    LaunchPayHereSDK --> ProcessPayment: Driver Enters Payment Credentials
+    ProcessPayment --> ReceiveWebhook: PayHere Dispatches POST /api/payment/notify
+    
+    state ReceiveWebhook {
+        [*] --> VerifySignature: Re-compute MD5 Hash & Check Match
     }
 
-    IsEnabled --> SkipExecution: recoveryEnabled == false
-    IsEnabled --> CheckElapsedMonths: recoveryEnabled == true
+    VerifySignature --> PaymentValid: MD5 Match & status_code == 2
+    VerifySignature --> PaymentFraud: MD5 Mismatch / Invalid Hash
 
-    CheckElapsedMonths --> ExecutionWindowCheck
-    ExecutionWindowCheck --> SkipExecution: Months Since Last Run < recoveryPeriodMonths
-    ExecutionWindowCheck --> ExecuteRecovery: Elapsed >= recoveryPeriodMonths
-
-    ExecuteRecovery --> QueryEligibleDrivers: Drivers with demeritPoints < defaultDemeritPoints
-    QueryEligibleDrivers --> BatchUpdate: Increment demeritPoints by monthlyRecoveryPoints (Max 24)
-    BatchUpdate --> RecalculateRatings: Recompute ratingScore (0.0 - 5.0 Stars)
-    RecalculateRatings --> UpdateLastRunAt: Set SystemConfig.lastRecoveryRunAt = Now
+    PaymentFraud --> RejectTransaction: Return HTTP 400 Bad Request
+    PaymentValid --> SettleCitation: Set IssuedFine status = PAID & Record paymentId
     
-    SkipExecution --> [*]
+    SettleCitation --> PaymentSuccessScreen: Display Green Receipt
+    RejectTransaction --> [*]
+    PaymentSuccessScreen --> [*]
+```
+
+#### Activity 4: Demerit Point Recovery Engine (Automated & On-Demand)
+
+```mermaid
+stateDiagram-v2
+    [*] --> TriggerEvent: Cron Trigger (1st of Month) OR Manual Trigger (Admin)
+    TriggerEvent --> CheckMasterSwitch: Query SystemConfig.recoveryEnabled
+
+    state CheckMasterSwitch {
+        [*] --> EvaluateSwitch
+    }
+
+    EvaluateSwitch --> AbortRun: recoveryEnabled == false
+    EvaluateSwitch --> CheckCleanPeriod: recoveryEnabled == true
+
+    CheckCleanPeriod --> QueryEligibleDrivers: Drivers with demerits < 24 & clean record >= 30 days
+    QueryEligibleDrivers --> ExecuteBatchUpdate: Add monthlyRecoveryPoints (Default: 2, Max: 24)
+    ExecuteBatchUpdate --> RecalculateScore: Update ratingScore (0.0 - 5.0) & demeritLevel
+    RecalculateScore --> NotifyDrivers: Dispatch Push Notification + Recovery Email
+    NotifyDrivers --> UpdateLastRunAt: Set SystemConfig.lastRecoveryRunAt = Now
+    
+    AbortRun --> [*]
     UpdateLastRunAt --> [*]
 ```
 
-</details>
+#### Activity 5: Geospatial Emergency SOS Broadcast & Officer Siren Dispatch
 
+```mermaid
+stateDiagram-v2
+    [*] --> DriverPressesSOS: Tap Emergency SOS on Mobile App
+    DriverPressesSOS --> FetchGPSCoordinates: Capture Real-Time Latitude & Longitude
+    FetchGPSCoordinates --> PostSOSToBackend: POST /api/sos/trigger
+    
+    PostSOSToBackend --> QueryNearbyOfficers: Execute MongoDB 2dsphere $near Spatial Query
+    
+    state QueryNearbyOfficers {
+        [*] --> FilterRadius: $maxDistance: 10,000m (10km)
+        FilterRadius --> FilterState: appState IN ('FOREGROUND', 'BACKGROUND')
+    }
+
+    QueryNearbyOfficers --> DiscoveredOfficers: Return Active Police FCM Tokens
+    DiscoveredOfficers --> BroadcastFCMPayload: High-Priority FCM Push with Emergency Sound
+    BroadcastFCMPayload --> TriggerSirenOnDevice: Police Device Plays Audio Siren & Shows Route Map
+    TriggerSirenOnDevice --> [*]
+```
 
 ---
 
@@ -665,85 +749,152 @@ stateDiagram-v2
 
 ### 4.3.1 Architectural UI/UX Design Principles
 
-The interface design of e-Fine SL adheres to 6 core human-centered design principles:
+The interface architecture of **e-Fine SL** adheres to 6 core human-centered engineering principles:
 
-1. **High-Contrast Roadside Duty Usability:** Police officer screens use deep high-contrast elements (#003366 Police Blue, #D9534F Alert Red, #5CB85C Success Green) optimized for direct sunlight during roadside vehicle inspections.
-2. **Minimal Cognitive Load:** The officer fine creation workflow requires at most 3 taps: OCR Scan $\rightarrow$ Offense Checklist $\rightarrow$ Issue Fine.
-3. **Real-time Visual Feedback:** Demerit scores are presented as radial gauges changing color dynamically:
-   - `20 - 24 Points`: Green (EXCELLENT / GOOD)
-   - `12 - 19 Points`: Yellow (FAIR / WARNING)
-   - `1 - 11 Points`: Orange (DANGER)
-   - `0 Points`: Flash Red (SUSPENDED)
-4. **Biometric Motion Guidance:** KYC screen features step-by-step visual animation prompts ("Blink Your Eyes", "Smile at Camera") with real-time confidence indicators.
-5. **Accessibility & Multi-Language Readiness:** All typography uses system scaleable fonts (`Inter` / `Roboto`) supporting Sinhala, Tamil, and English strings.
+1. **High-Contrast Roadside Duty Usability:** Police officer screens utilize deep high-contrast palettes (#003366 Police Blue, #DC2626 Alert Red, #16A34A Success Green) optimized for direct sunlight during roadside vehicle inspections.
+2. **Minimal Cognitive Load (3-Tap Enforcement):** The roadside fine issuance flow requires at most 3 physical interactions: Scan License $\rightarrow$ Offense Checklist Selection $\rightarrow$ Confirm & Issue.
+3. **Real-time Radial Demerit Gauges:** Demerit point balances are visualized as dynamic circular gauges with real-time color transitions:
+   - `20 - 24 Points`: Emerald Green (EXCELLENT / GOOD)
+   - `12 - 19 Points`: Amber Yellow (FAIR / WARNING)
+   - `1 - 11 Points`: Crimson Orange (DANGER)
+   - `0 Points`: Flashing Alert Red (SUSPENDED)
+4. **Biometric Motion Guidance:** KYC onboarding screens provide interactive visual animations ("Blink Eyes", "Smile at Camera") with real-time confidence indicators.
+5. **Accessibility & Multi-Language Readiness:** Clean typography utilizing `Inter` and `Roboto` supporting Sinhala, Tamil, and English localization strings.
+6. **2-Tier Structured Toolbars & Card Separation:** Admin portal interfaces implement strict layout boundaries, preventing button wrapping and ensuring clear data presentation.
 
 ---
 
-### 4.3.2 Screen-by-Screen Layout & Wireframe Specifications
+### 4.3.2 Actual Screens & Wireframes of the System
 
-#### Screen 1: Driver Home Dashboard Wireframe
-
-```
-+-------------------------------------------------------------+
-|  e-Fine SL                    [Driver Profile] [Notifications]|
-+-------------------------------------------------------------+
-|                                                             |
-|  +-------------------------------------------------------+  |
-|  |             DEMERIT POINT SCORECARD                   |  |
-|  |                                                       |  |
-|  |                      /-------\                        |  |
-|  |                     |  24/24  |                       |  |
-|  |                      \-------/                        |  |
-|  |                     DEMERIT PTS                       |  |
-|  |                                                       |  |
-|  |   Status: ACTIVE  |  Rating: 5.0 / 5.0 Stars (★★★★★)   |  |
-|  +-------------------------------------------------------+  |
-|                                                             |
-|  [ EMERGENCY SOS BUTTON (LOUD RED) ]                         |
-|  [ REPORT ROAD ACCIDENT / HAZARD   ]                         |
-|                                                             |
-|  RECENT UNPAID FINES                                        |
-|  +-------------------------------------------------------+  |
-|  | 🧾 Speeding (Exceeding 60km/h)           [UNPAID]      |  |
-|  |    Vehicle: ABC-1234  |  Location: Colombo 03         |  |
-|  |    Date: 21 Jul 2026  |  Amount: Rs. 5,000            |  |
-|  |    [ PAY NOW VIA PAYHERE ]                            |  |
-|  +-------------------------------------------------------+  |
-|                                                             |
-|  [Home]           [Fines]           [Wallet]       [Profile]|
-+-------------------------------------------------------------+
-```
-
-#### Screen 2: Police Duty Dashboard & Fine Issuance Screen Wireframe
+#### Screen 1: Citizen Driver Home Dashboard & Demerit Scorecard
 
 ```
-+-------------------------------------------------------------+
-|  Police Duty Portal - Badge #OP-1042        [Duty: ACTIVE🟢]|
-+-------------------------------------------------------------+
-|                                                             |
-|  TODAY'S ENFORCEMENT SUMMARY                                |
-|  +---------------------------+  +------------------------+  |
-|  | FINES ISSUED TODAY        |  | REVENUE COLLECTED      |  |
-|  |            14             |  |      Rs. 42,500        |  |
-|  +---------------------------+  +------------------------+  |
-|                                                             |
-|  [ 📷 SCAN DRIVING LICENSE (OCR) ]                           |
-|  [ 🔍 SEARCH DRIVER BY LICENSE / NIC ]                      |
-|                                                             |
-|  FINE ISSUANCE FORM                                         |
-|  +-------------------------------------------------------+  |
-|  | License No  : [ WP-987654321                         ] |  |
-|  | Vehicle No  : [ CAB-5544                             ] |  |
-|  | Location    : [ Galle Road, Kollupitiya (GPS Auto)   ] |  |
-|  | Offense     : [ [x] Speeding (>20km/h) - Demerit: 4  ] |  |
-|  |               [ [ ] Reckless Driving   - Demerit: 6  ] |  |
-|  | Total Fine  : Rs. 5,000   |  Demerit Deduction: -4 Pts |  |
-|  |                                                       |  |
-|  | [ CONFIRM & ISSUE SPOT FINE ]                         |  |
-|  +-------------------------------------------------------+  |
-|                                                             |
-|  [Dashboard]          [History]          [Alerts]  [Settings]|
-+-------------------------------------------------------------+
++-------------------------------------------------------------------+
+|  e-Fine SL                     [Driver Profile]   [🔔 Notifications]|
++-------------------------------------------------------------------+
+|                                                                   |
+|  +-------------------------------------------------------------+  |
+|  |                  DEMERIT SAFETY SCORECARD                   |  |
+|  |                                                             |  |
+|  |                           /-------\                         |  |
+|  |                          |  22/24  |                        |  |
+|  |                           \-------/                         |  |
+|  |                          DEMERIT PTS                        |  |
+|  |                                                             |  |
+|  |   Status: ACTIVE  |  Rating: 4.6 / 5.0 Stars (★★★★☆)         |  |
+|  +-------------------------------------------------------------+  |
+|                                                                   |
+|  [ 🚨 EMERGENCY SOS BROADCAST (10KM) ]                           |
+|  [ ⚠️ REPORT ROAD ACCIDENT / HAZARD ]                            |
+|                                                                   |
+|  RECENT CITATIONS                                                 |
+|  +-------------------------------------------------------------+  |
+|  | 🧾 Crossing Double Line (#53D73A21)               [UNPAID]  |  |
+|  |    Vehicle: BBM-3223   |  Location: Galle • Karapitiya      |  |
+|  |    Date: 15 Aug 2026   |  Amount: LKR 2,000 | -2 Demerit pts|  |
+|  |    [ 💳 PAY ONLINE VIA PAYHERE ]                            |  |
+|  +-------------------------------------------------------------+  |
+|                                                                   |
+|  [🏠 Home]          [🧾 Fines]          [📊 Demerits]    [👤 Profile]|
++-------------------------------------------------------------------+
+```
+
+#### Screen 2: Police Roadside Spot Fine Issuance Screen
+
+```
++-------------------------------------------------------------------+
+|  Police Duty Portal — Badge #WP-8821           [Duty: ACTIVE 🟢]  |
++-------------------------------------------------------------------+
+|                                                                   |
+|  ENFORCEMENT SUMMARY                                              |
+|  +-----------------------------+  +----------------------------+  |
+|  | CITATIONS ISSUED TODAY      |  | REVENUE ENFORCED           |  |
+|  |             18              |  |         LKR 54,000         |  |
+|  +-----------------------------+  +----------------------------+  |
+|                                                                   |
+|  [ 📷 SCAN DRIVER LICENSE (ML KIT OCR) ]                          |
+|  [ 🔍 SEARCH DRIVER BY LICENSE / NIC   ]                          |
+|                                                                   |
+|  SPOT CITATION FORM                                               |
+|  +-------------------------------------------------------------+  |
+|  | License No   : [ B5395114                                  ] |  |
+|  | Vehicle Plate: [ BBM-3223                                  ] |  |
+|  | Station      : [ Karapitiya Police Station                 ] |  |
+|  | Place        : [ Galle Junction Road                       ] |  |
+|  | Offense      : [ [x] Crossing Double Line (Sec 780) -2 pts ] |  |
+|  |                [ [ ] Speeding (>80 km/h)            -4 pts ] |  |
+|  | Penalty      : LKR 2,000     |  Demerit Deduction: -2 Pts   |  |
+|  |                                                             |  |
+|  | [ 🚀 ISSUE CITATION & DEDUCT DEMERITS ]                      |  |
+|  +-------------------------------------------------------------+  |
+|                                                                   |
+|  [Dashboard]          [History]          [SOS Alerts]    [Settings]|
++-------------------------------------------------------------------+
+```
+
+#### Screen 3: Admin Portal Fines Management & Citation Dossier
+
+```
++-----------------------------------------------------------------------------------------+
+|  e-Fine SL Admin Portal  |  Traffic Fines & Citations Management Suite                   |
++-----------------------------------------------------------------------------------------+
+|  [ Total Fines: 34 ]  |  [ Total Revenue: LKR 92,500 ]  |  [ Collection Rate: 78.4% ]   |
++-----------------------------------------------------------------------------------------+
+|  [🔍 Search License / Plate / Station...]  [Status: ALL▼]  [Offense: ALL▼]  [Export CSV/PDF]|
++-----------------------------------------------------------------------------------------+
+|  Citation ID | Driver License | Vehicle Plate | Offense Name          | Amount    | Status|
+|  #53D73A21   | B5395114       | BBM-3223      | Crossing Double Line  | LKR 2,000 | UNPAID|
+|  #6A80A37D   | B9999999       | WP-CAD-9999   | Speeding (>80 km/h)   | LKR 3,000 | PAID  |
+|  #3B901C12   | B1234356       | WP-KX-8821    | Disobey Traffic Light | LKR 2,500 | DISPUT|
++-----------------------------------------------------------------------------------------+
+|  [ + Issue Manual Citation ]   [ 📄 View Full Citation Dossier ]   [ 📥 Download PDF ]  |
++-----------------------------------------------------------------------------------------+
+```
+
+#### Screen 4: Admin Portal Driver Dossier & License Suspension Modal
+
+```
++-----------------------------------------------------------------------------------------+
+|  DRIVER DOSSIER: M A Shashimantha (License: B5395114)                 [Status: ACTIVE 🟢]|
++-----------------------------------------------------------------------------------------+
+|  NIC: 19985395114V  |  Email: akilamw772@gmail.com  |  Phone: +94 77 123 4567           |
+|  Demerit Balance: 22 / 24 Points (EXCELLENT)        |  Safety Rating: 4.6 / 5.0 Stars   |
++-----------------------------------------------------------------------------------------+
+|  [ ✏️ Edit Profile ]  [ ⚖️ Adjust Demerits ]  [ 🔑 Reset Password ]  [ ⛔ Suspend License ]|
++-----------------------------------------------------------------------------------------+
+|  +-----------------------------------------------------------------------------------+  |
+|  | MODAL: Suspend Driver License                                                     |  |
+|  | License: B5395114  |  Driver: M A Shashimantha                                    |  |
+|  | Suspension Reason / Grounds:                                                      |  |
+|  | [ Dangerous driving and excessive speeding violations under Section 140          ] |  |
+|  |                                                                                   |  |
+|  | ℹ️ Driver will be instantly notified via high-priority Push Notification & Email. |  |
+|  | [ Cancel ]                                         [ Confirm Immediate Suspension]|  |
+|  +-----------------------------------------------------------------------------------+  |
++-----------------------------------------------------------------------------------------+
+```
+
+#### Screen 5: Admin Portal System Configuration & Diagnostics Center
+
+```
++-----------------------------------------------------------------------------------------+
+|  SYSTEM CONFIGURATION & OPERATIONAL POLICY CENTER                                        |
++-----------------------------------------------------------------------------------------+
+|  [ 📡 Alerts & SOS ]  [ ⚖️ Demerit Rules ]  [ 💳 Payment Policy ]  [ 🔒 Security ] [ ❤️ Health]|
++-----------------------------------------------------------------------------------------+
+|  DEMERIT SYSTEM RULES:                                                                  |
+|  Default Initial Points Pool : [ 24  ] pts                                              |
+|  Monthly Recovery Points     : [ 2   ] pts per cycle                                    |
+|  Clean Record Conduct Days   : [ 30  ] days without offense                             |
+|  Recovery Period Interval    : [ 1   ] month(s)                                         |
+|  Master Recovery Switch      : [ ENABLED 🟢 ]                                           |
+|                                                                                         |
+|  [ ⚡ Trigger Manual Recovery Run On-Demand ]   [ 🔄 Save Demerit Configuration ]       |
++-----------------------------------------------------------------------------------------+
+|  SYSTEM HEALTH METRICS:                                                                 |
+|  MongoDB Cluster : CONNECTED (15ms latency)  |  FCM Service : INITIALIZED (e-fine-sl)   |
+|  Node.js Uptime  : 99.98%                    |  Memory Usage: 142 MB / 2048 MB          |
++-----------------------------------------------------------------------------------------+
 ```
 
 ---
@@ -751,14 +902,6 @@ The interface design of e-Fine SL adheres to 6 core human-centered design princi
 ## 4.4 Database Design
 
 ### 4.4.1 Entity Relationship Diagram (ERD)
-
-
-![Entity Relationship Diagram (ERD)](docs/diagrams/11_entity_relationship_diagram_erd.png)
-
-> **📥 Download Diagram:** [High-Res PNG (Image)](docs/diagrams/11_entity_relationship_diagram_erd.png) | [Vector SVG (Scalable)](docs/diagrams/11_entity_relationship_diagram_erd.svg)
-
-<details>
-<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 erDiagram
@@ -768,31 +911,40 @@ erDiagram
     DRIVERS ||--o{ ACCIDENT_REPORTS : "submits"
     STATIONS ||--o{ POLICE : "employs"
     STATIONS ||--o{ ACCIDENT_REPORTS : "receives"
-    POLICE ||--o{ OFFICER_SESSIONS : "logs"
     ADMINS ||--o{ ADMIN_SESSIONS : "initiates"
 
     DRIVERS {
         ObjectId _id PK
         string nic UK
         string licenseNumber UK
+        string name
         string email UK
         string phone
         string password
         number demeritPoints
         number ratingScore
         string licenseStatus
+        string demeritLevel
         boolean kycVerified
+        string fcmToken
+        date lastOffenseDate
+        date suspendedAt
+        string suspensionReason
     }
 
     POLICE {
         ObjectId _id PK
         string badgeNumber UK
+        string name
         string email UK
         string nic UK
         string policeStation FK
         string position
+        string role
         GeoJSON location
         string appState
+        boolean isActive
+        string fcmToken
     }
 
     ISSUED_FINES {
@@ -802,18 +954,25 @@ erDiagram
         ObjectId offenseId FK
         string offenseName
         number amount
+        string place
+        string policeStation
         string policeOfficerId FK
         string status
         string paymentId
         date paidAt
+        number demeritPoints
+        date date
+        string paymentNotes
     }
 
     OFFENSES {
         ObjectId _id PK
         string offenseName UK
         number amount
+        string description
         string sectionOfAct
         number demeritValue
+        string category
     }
 
     ACCIDENT_REPORTS {
@@ -821,7 +980,12 @@ erDiagram
         string driverLicense FK
         string accidentType
         GeoJSON location
+        string placeDescription
+        string province
+        string district
+        string policeStation
         string status
+        string severity
         date reportedAt
     }
 
@@ -830,23 +994,36 @@ erDiagram
         string stationCode UK
         string name
         string district
+        string province
         string officialEmail
+        string phoneNumber
         GeoJSON location
     }
 
-    OFFICER_SESSIONS {
+    SYSTEM_CONFIGS {
         ObjectId _id PK
-        string badgeNumber FK
-        date loginTime
-        date logoutTime
-        number sessionDurationMinutes
+        number accidentNotificationRadiusKm
+        number emergencySosRadiusKm
+        number officerLogoutGracePeriodMinutes
+        number defaultDemeritPoints
+        number monthlyRecoveryPoints
+        number cleanRecordDays
+        number recoveryPeriodMonths
+        boolean recoveryEnabled
+        date lastRecoveryRunAt
+        number finePaymentGraceDays
+        boolean enableOnlinePayments
+        number sessionTimeoutMinutes
     }
 
     ADMINS {
         ObjectId _id PK
+        string name
         string email UK
+        string password
         string role
         boolean isTwoFactorEnabled
+        date lastLoginAt
     }
 
     ADMIN_SESSIONS {
@@ -855,39 +1032,37 @@ erDiagram
         string sessionToken UK
         string refreshTokenHash
         date expiresAt
+        boolean isValid
     }
 ```
 
-</details>
-
-
 ---
 
-### 4.4.2 Comprehensive Normalization Analysis (1NF to BCNF & Denormalization)
+### 4.4.2 Comprehensive Normalization Analysis (1NF to BCNF & MongoDB Pragmatic Denormalization)
 
 #### 1. Unnormalized Form (UNF)
-In a raw non-relational spreadsheet format, fine data, driver details, offense categories, and officer stations are merged in a single flat structure containing repeating groups (e.g. multi-valued offense names, vehicle classes array).
+In a raw non-relational spreadsheet format, fine data, driver details, offense categories, and officer stations are merged in a single flat structure containing repeating groups (multi-valued offense names, vehicle classes array, nested station locations).
 
 #### 2. First Normal Form (1NF)
-- **Requirement:** Elimination of repeating groups; all fields contain atomic values.
-- **Transformation:** Extracted `vehicleClasses` array in `Driver` into uniform sub-document structures (`category`, `issueDate`, `expiryDate`). Split multi-offense issuance into discrete `IssuedFine` records referencing individual single `offenseId` entries.
+- **Requirement:** Elimination of repeating groups; all attributes must contain atomic values.
+- **Transformation:** Extracted multi-offense spot fines into discrete `IssuedFine` records referencing atomic `offenseId` entries. Standardized driver metadata into discrete atomic fields (`licenseNumber`, `nic`, `email`, `phone`).
 
 #### 3. Second Normal Form (2NF)
-- **Requirement:** Meets 1NF; all non-key attributes must be fully functionally dependent on the primary key (no partial dependencies).
-- **Transformation:** Separated `Offense` attributes (`amount`, `sectionOfAct`, `demeritValue`) from `IssuedFine`. `IssuedFine` references `offenseId` as foreign key, ensuring fine catalog metadata depends strictly on `offenseId`.
+- **Requirement:** Meets 1NF; all non-key attributes must be fully functionally dependent on the primary key (no partial functional dependencies).
+- **Transformation:** Separated `Offense` attributes (`amount`, `sectionOfAct`, `demeritValue`) from `IssuedFine`. `IssuedFine` references `offenseId` as foreign key, ensuring statutory fine metadata depends strictly on `offenseId`.
 
 #### 4. Third Normal Form (3NF)
-- **Requirement:** Meets 2NF; no transitive dependencies exist (non-key attributes depend *only* on the primary key).
-- **Transformation:** Separated `Police` officer metadata from `Station` metadata. The `Police` document stores `policeStation` code rather than embedding full station address, province, district, and official email details, removing transitive dependency `BadgeNumber -> PoliceStation -> StationEmail`.
+- **Requirement:** Meets 2NF; no transitive dependencies exist (non-key attributes depend *only* on candidate keys).
+- **Transformation:** Separated `Police` officer records from `Station` registry. The `Police` document references `policeStation` code rather than embedding full station district, province, and official email, eliminating the transitive dependency `badgeNumber -> policeStation -> stationEmail`.
 
 #### 5. Boyce-Codd Normal Form (BCNF)
 - **Requirement:** Every determinant is a candidate key.
-- **Transformation:** Enforced candidate key uniqueness constraints (`unique: true`) on `badgeNumber`, `licenseNumber`, `nic`, `email`, and `stationCode`.
+- **Transformation:** Enforced unique candidate key index constraints (`unique: true`) on `badgeNumber`, `licenseNumber`, `nic`, `email`, and `stationCode`.
 
 #### 6. Strategic Pragmatic Denormalization in MongoDB
-While relational principles dictate strict 3NF/BCNF, high-performance NoSQL MongoDB document databases benefit from intentional denormalization:
-- **`offenseName` stored in `IssuedFine`:** Avoiding mandatory `$lookup` aggregates on every roadside fine list query on mobile devices.
-- **`policeOfficerId` stored directly in `IssuedFine`:** Enables fast filtering by badge ID without querying the `Police` collection.
+While relational principles dictate strict 3NF/BCNF, high-throughput NoSQL MongoDB applications benefit from strategic denormalization:
+- **`offenseName` stored in `IssuedFine`:** Prevents mandatory `$lookup` database joins during high-frequency mobile fine listings and receipt rendering.
+- **`policeOfficerId` stored directly in `IssuedFine`:** Enables instantaneous filtering by issuing officer badge ID without querying the `polices` collection.
 
 ---
 
@@ -902,17 +1077,20 @@ While relational principles dictate strict 3NF/BCNF, high-performance NoSQL Mong
 | `name` | String | NOT NULL | - | Full legal driver name |
 | `nic` | String | UNIQUE, NOT NULL | - | Sri Lankan National ID |
 | `licenseNumber` | String | UNIQUE, NOT NULL | - | Driving License Number |
-| `email` | String | UNIQUE, NOT NULL | - | Email address |
-| `phone` | String | NOT NULL | - | Phone number |
-| `password` | String | NOT NULL | - | Bcrypt hashed password |
+| `email` | String | UNIQUE, NOT NULL | - | Driver Email Address |
+| `phone` | String | NOT NULL | - | Contact phone number |
+| `password` | String | NOT NULL | - | Bcrypt hashed password (salt 10) |
 | `role` | String | CONST | `'driver'` | User access role |
-| `demeritPoints` | Number | MIN: 0, MAX: 100 | `24` | Active demerit points |
-| `ratingScore` | Number | MIN: 0.0, MAX: 5.0 | `5.0` | Driver safety rating |
+| `demeritPoints` | Number | MIN: 0, MAX: 100 | `24` | Active demerit points balance |
+| `ratingScore` | Number | MIN: 0.0, MAX: 5.0 | `5.0` | Driver safety rating score |
 | `licenseStatus` | String | ENUM | `'ACTIVE'` | `'ACTIVE'` or `'SUSPENDED'` |
 | `demeritLevel` | String | ENUM | `'EXCELLENT'`| EXCELLENT/GOOD/FAIR/WARNING/DANGER/SUSPENDED |
-| `kycVerified` | Boolean | NOT NULL | `false` | Liveness KYC verification status |
-| `profileImage` | String | Base64 / URL | null | Profile image from KYC |
-| `createdAt` | Date | TIMESTAMP | Auto | Account creation timestamp |
+| `kycVerified` | Boolean | NOT NULL | `false` | Liveness KYC verification flag |
+| `vehicleNumber` | String | NULLABLE | null | Registered vehicle plate |
+| `fcmToken` | String | NULLABLE | null | Firebase FCM Device Token |
+| `lastOffenseDate`| Date | NULLABLE | null | Timestamp of most recent violation |
+| `suspendedAt` | Date | NULLABLE | null | License suspension timestamp |
+| `suspensionReason`| String | NULLABLE | null | Official grounds for suspension |
 
 #### 2. Collection: `polices`
 *Primary Key:* `_id` (ObjectId) | *Unique Indexes:* `badgeNumber`, `email`, `nic` | *Spatial Index:* `location` (2dsphere)
@@ -921,34 +1099,37 @@ While relational principles dictate strict 3NF/BCNF, high-performance NoSQL Mong
 | :--- | :--- | :--- | :--- | :--- |
 | `_id` | ObjectId | PRIMARY KEY | Auto | Unique document ID |
 | `name` | String | NOT NULL | - | Police Officer Name |
-| `badgeNumber` | String | UNIQUE, NOT NULL | - | Official Badge ID |
+| `badgeNumber` | String | UNIQUE, NOT NULL | - | Official Police Badge ID |
 | `email` | String | UNIQUE, NOT NULL | - | Officer Official Email |
 | `nic` | String | UNIQUE, NOT NULL | - | National Identity Card |
 | `policeStation` | String | NOT NULL | - | Station Name / Code |
 | `position` | String | NOT NULL | - | OIC / Sergeant / Constable |
-| `fcmToken` | String | NULLABLE | null | Firebase FCM Device Token |
-| `location` | GeoJSON Point | 2DSPHERE INDEX | `[0.0, 0.0]` | Current GPS coordinates `[lng, lat]` |
+| `role` | String | ENUM | `'police'` | `'police'`, `'station_oic'`, `'admin'` |
+| `location` | GeoJSON Point | 2DSPHERE INDEX | `[0.0, 0.0]` | Live GPS coordinates `[lng, lat]` |
 | `appState` | String | ENUM | `'LOGGED_OUT'`| FOREGROUND / BACKGROUND / LOGGED_OUT |
 | `isActive` | Boolean | NOT NULL | `true` | Duty active flag |
+| `fcmToken` | String | NULLABLE | null | Firebase FCM Device Token |
 
 #### 3. Collection: `issuedfines`
-*Primary Key:* `_id` (ObjectId) | *Indexes:* `licenseNumber`, `policeOfficerId`, `status`
+*Primary Key:* `_id` (ObjectId) | *Indexes:* `licenseNumber`, `policeOfficerId`, `status`, `date`
 
 | Field Name | Datatype | Constraints | Default | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `_id` | ObjectId | PRIMARY KEY | Auto | Fine ticket ID |
-| `licenseNumber` | String | NOT NULL | - | Offending Driver License |
-| `vehicleNumber` | String | NOT NULL | - | Vehicle Registration No |
+| `_id` | ObjectId | PRIMARY KEY | Auto | Citation reference ID |
+| `licenseNumber` | String | NOT NULL | - | Offending Driver License Number |
+| `vehicleNumber` | String | NOT NULL | - | Vehicle Registration Plate |
 | `offenseId` | ObjectId | REF: Offense | REQUIRED | Foreign key to Offense catalog |
-| `offenseName` | String | NOT NULL | - | Denormalized offense name |
-| `amount` | Number | MIN: 0 | REQUIRED | Fine fine amount (LKR) |
-| `place` | String | NOT NULL | - | Location description |
+| `offenseName` | String | NOT NULL | - | Denormalized offense title |
+| `amount` | Number | MIN: 0 | REQUIRED | Statutory fine penalty (LKR) |
+| `place` | String | NOT NULL | - | Violation location description |
+| `policeStation` | String | NOT NULL | - | Issuing Police Station Command |
 | `policeOfficerId`| String | NOT NULL | - | Issuing Officer Badge Number |
-| `status` | String | ENUM | `'UNPAID'` | `'UNPAID'`, `'PAID'`, `'PENDING'` |
-| `paymentId` | String | NULLABLE | null | PayHere transaction ID |
+| `status` | String | ENUM | `'UNPAID'` | `'UNPAID'`, `'PAID'`, `'DISPUTED'`, `'REFUNDED'` |
+| `paymentId` | String | NULLABLE | null | PayHere transaction gateway ID |
 | `paidAt` | Date | NULLABLE | null | Fine payment timestamp |
-| `demeritPoints` | Number | NOT NULL | `0` | Demerits deducted for fine |
-| `date` | Date | TIMESTAMP | `Now` | Date fine was issued |
+| `demeritPoints` | Number | NOT NULL | `0` | Demerit points deducted for citation |
+| `date` | Date | TIMESTAMP | `Now` | Date citation was issued |
+| `paymentNotes` | String | NULLABLE | null | Administrative notes |
 
 #### 4. Collection: `offenses`
 *Primary Key:* `_id` (ObjectId) | *Unique Indexes:* `offenseName`
@@ -956,10 +1137,12 @@ While relational principles dictate strict 3NF/BCNF, high-performance NoSQL Mong
 | Field Name | Datatype | Constraints | Default | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | `_id` | ObjectId | PRIMARY KEY | Auto | Offense catalog ID |
-| `offenseName` | String | UNIQUE, NOT NULL | - | Name of traffic offense |
-| `amount` | Number | MIN: 0 | REQUIRED | Fine penalty amount |
+| `offenseName` | String | UNIQUE, NOT NULL | - | Title of traffic violation |
+| `amount` | Number | MIN: 0 | REQUIRED | Standard penalty amount (LKR) |
+| `description` | String | NULLABLE | null | Legal description of offense |
 | `sectionOfAct` | String | NULLABLE | null | Sri Lanka Motor Traffic Act section |
-| `demeritValue` | Number | MIN: 1, MAX: 4 | `1` | Demerit penalty level (P1-P4) |
+| `demeritValue` | Number | MIN: 1, MAX: 4 | `1` | Penalty points deducted (P1-P4) |
+| `category` | String | ENUM | `'GENERAL'` | SPEEDING/DOCUMENTATION/RECKLESS/HELMET |
 
 #### 5. Collection: `accidentreports`
 *Primary Key:* `_id` (ObjectId) | *Spatial Index:* `location` (2dsphere) | *Compound Indexes:* `(province, status)`, `(district, status)`
@@ -969,10 +1152,15 @@ While relational principles dictate strict 3NF/BCNF, high-performance NoSQL Mong
 | `_id` | ObjectId | PRIMARY KEY | Auto | Accident report ID |
 | `driverLicense` | String | NOT NULL | - | Reporting driver license |
 | `accidentType` | String | ENUM | REQUIRED | Collision / Pedestrian / Hit & Run / Hazard |
-| `location` | GeoJSON Point | 2DSPHERE INDEX | REQUIRED | Accident GPS `[lng, lat]` |
+| `location` | GeoJSON Point | 2DSPHERE INDEX | REQUIRED | Accident scene GPS `[lng, lat]` |
+| `placeDescription`| String | NOT NULL | - | Road / Landmark description |
+| `province` | String | NOT NULL | - | Administrative Province |
+| `district` | String | NOT NULL | - | Administrative District |
+| `policeStation` | String | NOT NULL | - | Jurisdictional Police Station |
 | `status` | String | ENUM | `'OPEN'` | OPEN / ACKNOWLEDGED / RESOLVED |
-| `images` | Array[String] | Base64/URLs | `[]` | Incident scene photographs |
-| `statusHistory` | Array[Schema] | Sub-document | `[]` | Status change audit trail |
+| `severity` | String | ENUM | `'MODERATE'`| MINOR / MODERATE / CRITICAL |
+| `images` | Array[String] | Base64/URLs | `[]` | Accident scene photographs |
+| `statusHistory` | Array[Schema] | Sub-document | `[]` | Audit trail of status transitions |
 
 #### 6. Collection: `stations`
 *Primary Key:* `_id` (ObjectId) | *Unique Indexes:* `stationCode` | *Spatial Index:* `location` (2dsphere)
@@ -980,29 +1168,64 @@ While relational principles dictate strict 3NF/BCNF, high-performance NoSQL Mong
 | Field Name | Datatype | Constraints | Default | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | `_id` | ObjectId | PRIMARY KEY | Auto | Station ID |
-| `stationCode` | String | UNIQUE, NOT NULL | - | Unique police station code |
-| `name` | String | NOT NULL | - | Station Name (e.g. Kollupitiya) |
-| `district` | String | NOT NULL | - | Administrative District |
-| `officialEmail` | String | NOT NULL | - | Station OIC Email for alerts |
+| `stationCode` | String | UNIQUE, NOT NULL | - | Police station unique code |
+| `name` | String | NOT NULL | - | Station Name (e.g. Karapitiya) |
+| `district` | String | NOT NULL | - | District |
+| `province` | String | NOT NULL | - | Province |
+| `officialEmail` | String | NOT NULL | - | Station OIC Email |
+| `phoneNumber` | String | NOT NULL | - | Station contact phone |
 | `location` | GeoJSON Point | 2DSPHERE INDEX | null | Station GPS coordinates |
 
 #### 7. Collection: `systemconfigs`
-*Primary Key:* `_id` (ObjectId) | *Single Config Instance*
+*Primary Key:* `_id` (ObjectId) | *Singleton Configuration Record*
 
 | Field Name | Datatype | Constraints | Default | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `accidentNotificationRadiusKm` | Number | MIN: 1, MAX: 100 | `10` | SOS & Accident alert radius (km) |
-| `officerLogoutGracePeriodMinutes`| Number | MIN: 5, MAX: 120 | `20` | Officer presence grace period |
+| `accidentNotificationRadiusKm` | Number | MIN: 1, MAX: 100 | `10` | Incident alert radius (km) |
+| `emergencySosRadiusKm` | Number | MIN: 1, MAX: 50 | `10` | SOS broadcast radius (km) |
+| `officerLogoutGracePeriodMinutes`| Number | MIN: 5, MAX: 120 | `20` | Officer presence timeout (mins) |
 | `defaultDemeritPoints` | Number | MIN: 1, MAX: 100 | `24` | Initial driver points pool |
-| `monthlyRecoveryPoints` | Number | MIN: 1, MAX: 10 | `2` | Monthly restored points |
+| `monthlyRecoveryPoints` | Number | MIN: 1, MAX: 10 | `2` | Points restored per cycle |
+| `cleanRecordDays` | Number | MIN: 1, MAX: 365 | `30` | Clean driving days required |
 | `recoveryPeriodMonths` | Number | MIN: 1, MAX: 12 | `1` | Interval between recoveries |
 | `recoveryEnabled` | Boolean | NOT NULL | `true` | Master cron recovery switch |
-| `lastRecoveryRunAt` | Date | NULLABLE | null | Timestamp of last cron execution |
+| `lastRecoveryRunAt` | Date | NULLABLE | null | Timestamp of last recovery run |
+| `finePaymentGraceDays` | Number | MIN: 1, MAX: 90 | `14` | Statutory payment window |
+| `enableOnlinePayments` | Boolean | NOT NULL | `true` | PayHere gateway master switch |
+| `sessionTimeoutMinutes` | Number | MIN: 5, MAX: 480 | `60` | Admin portal session timeout |
+
+#### 8. Collection: `admins`
+*Primary Key:* `_id` (ObjectId) | *Unique Indexes:* `email`
+
+| Field Name | Datatype | Constraints | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `_id` | ObjectId | PRIMARY KEY | Auto | Admin user ID |
+| `name` | String | NOT NULL | - | Administrator Name |
+| `email` | String | UNIQUE, NOT NULL | - | Login Email Address |
+| `password` | String | NOT NULL | - | Bcrypt hashed password |
+| `role` | String | ENUM | `'super_admin'`| super_admin / admin_officer / finance_officer |
+| `isTwoFactorEnabled` | Boolean | NOT NULL | `false` | 2FA verification enabled flag |
+| `twoFactorSecret` | String | NULLABLE | null | TOTP 2FA secret key |
+| `lastLoginAt` | Date | NULLABLE | null | Timestamp of last login |
+
+#### 9. Collection: `adminsessions`
+*Primary Key:* `_id` (ObjectId) | *Unique Indexes:* `sessionToken` | *TTL Index:* `expiresAt`
+
+| Field Name | Datatype | Constraints | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `_id` | ObjectId | PRIMARY KEY | Auto | Session record ID |
+| `userId` | ObjectId | REF: Admin | REQUIRED | Foreign key to Admin |
+| `sessionToken` | String | UNIQUE, NOT NULL | - | Active cryptographic session token |
+| `refreshTokenHash` | String | NOT NULL | - | Hashed refresh token |
+| `ipAddress` | String | NULLABLE | null | Client IP address |
+| `userAgent` | String | NULLABLE | null | Browser / Device User Agent |
+| `expiresAt` | Date | TTL INDEX | REQUIRED | Automatic session expiration date |
+| `isValid` | Boolean | NOT NULL | `true` | Session validity status flag |
 
 ---
 
-## 🎯 Verification & System Integrity Statement
+## 🎯 Verification & Architectural Integrity Statement
 
-This System Design & Architectural Specification document has been generated via deep static codebase analysis of the **e-Fine SL** repository. Every class, attribute, relationship, sequence flow, state machine, and data dictionary schema reflects the actual implementation in `backend_api/` and `mobile_app/`.
+This System Architecture & System Design Documentation has been authored and verified by static code analysis of the **e-Fine SL** enterprise codebase. All diagrams, entity schemas, data dictionary fields, state transitions, and sequence interactions strictly mirror the actual implementation in `backend_api/`, `mobile_app/`, and `admin-portal/`.
 
 <!-- GOAL_COMPLETE -->
