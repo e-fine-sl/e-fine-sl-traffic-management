@@ -1,4 +1,6 @@
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 const { APP, LICENSE_STATUS, EMAIL } = require('../config/constants');
 const sendEmail = require('../utils/sendEmail');
 
@@ -30,87 +32,98 @@ const formatDate = (date) => {
 };
 
 /**
- * Sends a license status change email to the driver.
+ * Helper to dispatch email via SendGrid with Nodemailer SMTP fallback.
+ */
+const dispatchEmail = async (to, subject, html, logContext = 'Email') => {
+  if (!to) {
+    console.warn(`[EmailService] ${logContext}: Missing recipient email`);
+    return false;
+  }
+
+  // 1. Try SendGrid HTTPS API first
+  if (process.env.SENDGRID_API_KEY) {
+    try {
+      await sendEmail({
+        email: to,
+        subject,
+        html,
+      });
+      console.log(`[EmailService] ${logContext} sent via SendGrid HTTPS to ${to}`);
+      return true;
+    } catch (sgError) {
+      console.warn(`[EmailService] SendGrid API failed for ${to}, trying Nodemailer fallback:`, sgError.message);
+    }
+  }
+
+  // 2. Fallback to Nodemailer SMTP
+  try {
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: `"e-Fine SL Traffic Authority" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    });
+    console.log(`[EmailService] ${logContext} sent via Nodemailer to ${to}`);
+    return true;
+  } catch (smtpError) {
+    console.error(`[EmailService] Failed to send email to ${to}:`, smtpError.message);
+    return false;
+  }
+};
+
+/**
+ * Sends a license status change email to the driver (ACTIVE / SUSPENDED).
  */
 const sendLicenseStatusEmail = async (driver, newStatus, reasonNote = null) => {
   const today = formatDate(new Date());
-  const isActive = newStatus === LICENSE_STATUS.ACTIVE;
+  const isActive = newStatus === LICENSE_STATUS.ACTIVE || newStatus === 'ACTIVE';
 
   const subject = isActive
-    ? EMAIL.SUBJECTS.LICENSE_ACTIVATED
-    : EMAIL.SUBJECTS.LICENSE_SUSPENDED;
+    ? `[e-Fine SL] Driving License Restored (ACTIVE) — License #${driver.licenseNumber}`
+    : `[e-Fine SL] Driving License Suspended — License #${driver.licenseNumber}`;
 
   const html = isActive
     ? buildActivationEmail(driver, today)
     : buildSuspensionEmail(driver, today, reasonNote);
 
-  if (process.env.SENDGRID_API_KEY) {
-    try {
-      await sendEmail({
-        email: driver.email,
-        subject,
-        html,
-      });
-      console.log(`[EmailService] License status email sent via SendGrid HTTPS to ${driver.email}`);
-      return;
-    } catch (sgError) {
-      console.warn('[EmailService] SendGrid API send failed, trying Nodemailer SMTP fallback:', sgError.message);
-    }
-  }
+  return dispatchEmail(driver.email, subject, html, 'License Status Email');
+};
 
-  try {
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from: `"e-Fine SL" <${process.env.EMAIL_USER}>`,
-      to: driver.email,
-      subject,
-      html,
-    });
-    console.log(`[EmailService] License status email sent via Nodemailer to ${driver.email}`);
-  } catch (smtpError) {
-    console.error(`[EmailService] Could not send email to ${driver.email}:`, smtpError.message);
-  }
+/**
+ * Sends an email notification when driver profile information is updated.
+ */
+const sendProfileUpdatedEmail = async (driver, updatedFields = []) => {
+  const today = formatDate(new Date());
+  const subject = `[e-Fine SL] Motorist Profile Details Updated — License #${driver.licenseNumber}`;
+  const html = buildProfileUpdatedEmail(driver, today, updatedFields);
+  return dispatchEmail(driver.email, subject, html, 'Profile Update Email');
+};
+
+/**
+ * Sends an email notification when driver demerit points are adjusted (manual or automatic).
+ */
+const sendDemeritAdjustmentEmail = async (driver, previousPoints, newPoints, reason = '', isAutomatic = false) => {
+  const today = formatDate(new Date());
+  const pointDifference = newPoints - (previousPoints ?? 24);
+  const diffStr = pointDifference > 0 ? `+${pointDifference}` : `${pointDifference}`;
+
+  const subject = isAutomatic
+    ? `[e-Fine SL] Monthly Good-Driver Point Recovery (${diffStr} Points) — License #${driver.licenseNumber}`
+    : `[e-Fine SL] Demerit Points Adjustment Notice (${diffStr} Points) — License #${driver.licenseNumber}`;
+
+  const html = buildDemeritAdjustmentEmail(driver, today, previousPoints, newPoints, pointDifference, reason, isAutomatic);
+  return dispatchEmail(driver.email, subject, html, 'Demerit Adjustment Email');
 };
 
 /**
  * Sends an official Traffic Fine Citation Notice email to the driver.
  */
 const sendFineIssuedEmail = async (driver, fine, offenseDetails = {}, demeritDeduction = 0, remainingPoints = 24) => {
-  if (!driver || !driver.email) {
-    console.warn('[EmailService] sendFineIssuedEmail called without valid driver email');
-    return;
-  }
-
   const fineIdShort = (fine._id ? fine._id.toString().slice(-8) : 'CITATION').toUpperCase();
   const subject = `[e-Fine SL] Traffic Fine Notice #${fineIdShort} — ${fine.offenseName || 'Violation'}`;
   const html = buildFineNoticeEmail(driver, fine, offenseDetails, demeritDeduction, remainingPoints);
-
-  if (process.env.SENDGRID_API_KEY) {
-    try {
-      await sendEmail({
-        email: driver.email,
-        subject,
-        html,
-      });
-      console.log(`[EmailService] Traffic Fine notice email sent via SendGrid to ${driver.email}`);
-      return;
-    } catch (sgError) {
-      console.warn('[EmailService] SendGrid fine email failed, falling back to Nodemailer:', sgError.message);
-    }
-  }
-
-  try {
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from: `"e-Fine SL Traffic Police" <${process.env.EMAIL_USER}>`,
-      to: driver.email,
-      subject,
-      html,
-    });
-    console.log(`[EmailService] Traffic Fine notice email sent via Nodemailer to ${driver.email}`);
-  } catch (smtpError) {
-    console.error(`[EmailService] Could not send fine notice email to ${driver.email}:`, smtpError.message);
-  }
+  return dispatchEmail(driver.email, subject, html, 'Fine Notice Email');
 };
 
 // ─── ACTIVATION EMAIL TEMPLATE ──────────────────────────────────────
@@ -119,35 +132,40 @@ function buildActivationEmail(driver, today) {
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:30px 0;">
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0;">
 <tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
   <tr>
-    <td style="background:#2563EB;padding:24px 30px;text-align:center;">
-      <h1 style="margin:0;color:#ffffff;font-size:22px;letter-spacing:0.5px;">${APP.NAME}</h1>
-      <p style="margin:4px 0 0;color:rgba(255,255,255,0.85);font-size:12px;">Sri Lanka Traffic Fine Management System</p>
+    <td style="background:#16a34a;padding:22px 28px;text-align:left;">
+      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:0.5px;">e-Fine SL</h1>
+      <p style="margin:3px 0 0;color:#dcfce7;font-size:11px;">Sri Lanka Traffic Police & Department of Motor Traffic</p>
     </td>
   </tr>
   <tr>
-    <td style="padding:24px 30px;">
-      <p style="margin:0 0 14px;color:#333;font-size:15px;">Dear <strong>${driver.name}</strong>,</p>
-      <p style="margin:0 0 16px;color:#555;font-size:13px;line-height:1.6;">
-        Your driving license (<strong style="font-family:monospace;">${driver.licenseNumber}</strong>) has been successfully
-        <strong style="color:#16A34A;">ACTIVATED</strong> by the traffic administration.
+    <td style="padding:24px 28px;">
+      <p style="margin:0 0 12px;color:#1e293b;font-size:14px;">Dear <strong>${driver.name}</strong>,</p>
+      <p style="margin:0 0 16px;color:#475569;font-size:13px;line-height:1.6;">
+        We are pleased to inform you that your driving license has been successfully
+        <strong style="color:#16a34a;">ACTIVATED & RESTORED</strong> by the Traffic Management Authority. You are authorized to operate your vehicle.
       </p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0FDF4;border-radius:8px;border-left:4px solid #16A34A;margin:0 0 16px;">
-        <tr><td style="padding:14px 18px;font-size:13px;color:#333;">
-          <p style="margin:0 0 4px;"><strong>Status:</strong> ACTIVE</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border-radius:8px;border-left:4px solid #16a34a;margin:0 0 16px;">
+        <tr><td style="padding:14px 18px;font-size:13px;color:#1e293b;">
+          <p style="margin:0 0 4px;"><strong>License Status:</strong> <span style="color:#16a34a;font-weight:bold;">ACTIVE</span></p>
           <p style="margin:0 0 4px;"><strong>Effective Date:</strong> ${today}</p>
-          <p style="margin:0;"><strong>License No:</strong> ${driver.licenseNumber}</p>
+          <p style="margin:0 0 4px;"><strong>License Number:</strong> <span style="font-family:monospace;font-weight:bold;">${driver.licenseNumber}</span></p>
+          <p style="margin:0;"><strong>Demerit Balance:</strong> ${driver.demeritPoints ?? 24} / 24 Points (EXCELLENT)</p>
         </td></tr>
       </table>
+      <p style="margin:0;color:#64748b;font-size:12px;line-height:1.5;">
+        Please continue to adhere to road traffic safety laws to maintain your good-driver rating.
+      </p>
     </td>
   </tr>
   <tr>
-    <td style="background:#1E293B;padding:16px 30px;text-align:center;">
-      <p style="margin:0;color:#94A3B8;font-size:11px;">e-Fine SL — Department of Motor Traffic, Sri Lanka</p>
+    <td style="background:#0f172a;padding:16px 28px;text-align:center;">
+      <p style="margin:0 0 4px;color:#94a3b8;font-size:11px;">e-Fine SL — Department of Motor Traffic, Sri Lanka</p>
+      <p style="margin:0;color:#64748b;font-size:10px;">This is an official administrative notice. Do not reply.</p>
     </td>
   </tr>
 </table>
@@ -163,39 +181,170 @@ function buildSuspensionEmail(driver, today, reasonNote) {
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:30px 0;">
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0;">
 <tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
   <tr>
-    <td style="background:#DC2626;padding:24px 30px;text-align:center;">
-      <h1 style="margin:0;color:#ffffff;font-size:22px;letter-spacing:0.5px;">${APP.NAME}</h1>
-      <p style="margin:4px 0 0;color:rgba(255,255,255,0.85);font-size:12px;">Sri Lanka Traffic Fine Management System</p>
+    <td style="background:#dc2626;padding:22px 28px;text-align:left;">
+      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:0.5px;">e-Fine SL</h1>
+      <p style="margin:3px 0 0;color:#fecaca;font-size:11px;">Sri Lanka Traffic Police & Department of Motor Traffic</p>
     </td>
   </tr>
   <tr>
-    <td style="padding:24px 30px;">
-      <p style="margin:0 0 14px;color:#333;font-size:15px;">Dear <strong>${driver.name}</strong>,</p>
-      <p style="margin:0 0 16px;color:#555;font-size:13px;line-height:1.6;">
-        We regret to inform you that your driving license has been
-        <strong style="color:#DC2626;">SUSPENDED</strong> due to traffic offenses or demerit point exhaustion.
+    <td style="padding:24px 28px;">
+      <p style="margin:0 0 12px;color:#1e293b;font-size:14px;">Dear <strong>${driver.name}</strong>,</p>
+      <p style="margin:0 0 16px;color:#475569;font-size:13px;line-height:1.6;">
+        This is an official notice that your driving license has been
+        <strong style="color:#dc2626;">SUSPENDED</strong> by the Traffic Management Authority.
       </p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#FEF2F2;border-radius:8px;border-left:4px solid #DC2626;margin:0 0 16px;">
-        <tr><td style="padding:14px 18px;font-size:13px;color:#333;">
-          <p style="margin:0 0 4px;"><strong>Status:</strong> SUSPENDED</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border-radius:8px;border-left:4px solid #dc2626;margin:0 0 16px;">
+        <tr><td style="padding:14px 18px;font-size:13px;color:#1e293b;">
+          <p style="margin:0 0 4px;"><strong>License Status:</strong> <span style="color:#dc2626;font-weight:bold;">SUSPENDED</span></p>
           <p style="margin:0 0 4px;"><strong>Effective Date:</strong> ${today}</p>
-          <p style="margin:0 0 4px;"><strong>License No:</strong> ${driver.licenseNumber}</p>
-          <p style="margin:0;color:#B91C1C;"><strong>Reason:</strong> ${reasonText}</p>
+          <p style="margin:0 0 4px;"><strong>License Number:</strong> <span style="font-family:monospace;font-weight:bold;">${driver.licenseNumber}</span></p>
+          <p style="margin:0;color:#b91c1c;"><strong>Reason / Grounds:</strong> ${reasonText}</p>
         </td></tr>
       </table>
-      <p style="margin:0;color:#DC2626;font-size:12px;line-height:1.5;">
-        Driving with a suspended license is a criminal offense under the Sri Lanka Motor Traffic Act.
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border-radius:8px;border-left:4px solid #f59e0b;margin:0 0 16px;">
+        <tr><td style="padding:12px 16px;font-size:12px;color:#92400e;line-height:1.5;">
+          <strong>Legal Warning:</strong> Operating any motor vehicle with a suspended driving license is a serious criminal offense under the Sri Lanka Motor Traffic Act and may lead to impoundment and prosecution.
+        </td></tr>
+      </table>
+      <p style="margin:0;color:#64748b;font-size:12px;line-height:1.5;">
+        You may appeal this suspension or check reinstatement eligibility through your regional traffic division.
       </p>
     </td>
   </tr>
   <tr>
-    <td style="background:#1E293B;padding:16px 30px;text-align:center;">
-      <p style="margin:0;color:#94A3B8;font-size:11px;">e-Fine SL — Department of Motor Traffic, Sri Lanka</p>
+    <td style="background:#0f172a;padding:16px 28px;text-align:center;">
+      <p style="margin:0 0 4px;color:#94a3b8;font-size:11px;">e-Fine SL — Department of Motor Traffic, Sri Lanka</p>
+      <p style="margin:0;color:#64748b;font-size:10px;">This is an official administrative notice. Do not reply.</p>
+    </td>
+  </tr>
+</table>
+</td></tr></table>
+</body>
+</html>`;
+}
+
+// ─── PROFILE UPDATED EMAIL TEMPLATE ─────────────────────────────────
+function buildProfileUpdatedEmail(driver, today, updatedFields = []) {
+  const fieldsList = updatedFields.length > 0
+    ? updatedFields.join(', ')
+    : 'Contact Phone, Address, Vehicle Number, or Profile Particulars';
+
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
+  <tr>
+    <td style="background:#2563eb;padding:22px 28px;text-align:left;">
+      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:0.5px;">e-Fine SL</h1>
+      <p style="margin:3px 0 0;color:#bfdbfe;font-size:11px;">Sri Lanka Traffic Police & Department of Motor Traffic</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:24px 28px;">
+      <p style="margin:0 0 12px;color:#1e293b;font-size:14px;">Dear <strong>${driver.name}</strong>,</p>
+      <p style="margin:0 0 16px;color:#475569;font-size:13px;line-height:1.6;">
+        Your driver registration account details on the national traffic management portal have been updated by the Traffic Management Authority.
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:0 0 16px;font-size:12px;">
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 14px;color:#64748b;width:35%;">License Number:</td>
+          <td style="padding:10px 14px;color:#0f172a;font-weight:bold;font-family:monospace;">${driver.licenseNumber}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 14px;color:#64748b;">Updated Fields:</td>
+          <td style="padding:10px 14px;color:#0f172a;">${fieldsList}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;color:#64748b;">Timestamp:</td>
+          <td style="padding:10px 14px;color:#0f172a;">${today}</td>
+        </tr>
+      </table>
+      <p style="margin:0;color:#64748b;font-size:12px;line-height:1.5;">
+        If you did not request or authorize this change, please contact the e-Fine SL administrator or your nearest police station immediately.
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#0f172a;padding:16px 28px;text-align:center;">
+      <p style="margin:0 0 4px;color:#94a3b8;font-size:11px;">e-Fine SL — Department of Motor Traffic, Sri Lanka</p>
+      <p style="margin:0;color:#64748b;font-size:10px;">This is an automated security notification. Do not reply.</p>
+    </td>
+  </tr>
+</table>
+</td></tr></table>
+</body>
+</html>`;
+}
+
+// ─── DEMERIT ADJUSTMENT EMAIL TEMPLATE ──────────────────────────────
+function buildDemeritAdjustmentEmail(driver, today, previousPoints, newPoints, diff, reason, isAutomatic) {
+  const diffDisplay = diff > 0 ? `+${diff} Points` : `${diff} Points`;
+  const diffColor = diff > 0 ? '#16a34a' : '#dc2626';
+
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
+  <tr>
+    <td style="background:#1e3a8a;padding:22px 28px;text-align:left;">
+      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:0.5px;">e-Fine SL</h1>
+      <p style="margin:3px 0 0;color:#93c5fd;font-size:11px;">National Demerit Points & Driver Safety System</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:24px 28px;">
+      <p style="margin:0 0 12px;color:#1e293b;font-size:14px;">Dear <strong>${driver.name}</strong>,</p>
+      <p style="margin:0 0 16px;color:#475569;font-size:13px;line-height:1.6;">
+        ${isAutomatic
+          ? 'Congratulations! You have been rewarded with good-driver conduct recovery points for maintaining a clean driving record.'
+          : 'Your driving license safety demerit points balance has been updated by the Traffic Management Authority.'}
+      </p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:0 0 16px;font-size:12px;">
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 14px;color:#64748b;width:38%;">License Number:</td>
+          <td style="padding:10px 14px;color:#0f172a;font-weight:bold;font-family:monospace;">${driver.licenseNumber}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 14px;color:#64748b;">Adjustment:</td>
+          <td style="padding:10px 14px;color:${diffColor};font-weight:bold;font-size:13px;">${diffDisplay}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 14px;color:#64748b;">New Demerit Balance:</td>
+          <td style="padding:10px 14px;color:#0f172a;font-weight:bold;font-size:14px;">${newPoints} / 24 Points</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 14px;color:#64748b;">Safety Tier:</td>
+          <td style="padding:10px 14px;color:#0f172a;font-weight:bold;">${driver.demeritLevel || 'EXCELLENT'}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;color:#64748b;">Reason / Reference:</td>
+          <td style="padding:10px 14px;color:#0f172a;">${reason || (isAutomatic ? 'Automated Good-Behavior Recovery Cycle' : 'Administrative Adjustment')}</td>
+        </tr>
+      </table>
+
+      <p style="margin:0;color:#64748b;font-size:12px;line-height:1.5;">
+        You can view your full demerit ledger and traffic history at any time on the e-Fine Driver Mobile App.
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#0f172a;padding:16px 28px;text-align:center;">
+      <p style="margin:0 0 4px;color:#94a3b8;font-size:11px;">e-Fine SL — Department of Motor Traffic, Sri Lanka</p>
+      <p style="margin:0;color:#64748b;font-size:10px;">This is an official administrative notice. Do not reply.</p>
     </td>
   </tr>
 </table>
@@ -318,5 +467,7 @@ function buildFineNoticeEmail(driver, fine, offenseDetails, demeritDeduction, re
 
 module.exports = {
   sendLicenseStatusEmail,
+  sendProfileUpdatedEmail,
+  sendDemeritAdjustmentEmail,
   sendFineIssuedEmail
 };

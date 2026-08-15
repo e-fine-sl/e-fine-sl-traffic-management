@@ -2,7 +2,11 @@ const Driver = require('../models/driverModel');
 const IssuedFine = require('../models/issuedFineModel');
 const bcrypt = require('bcryptjs');
 const { HTTP, LICENSE_STATUS, DEMERIT } = require('../config/constants');
-const { sendLicenseStatusEmail } = require('../services/emailService');
+const {
+    sendLicenseStatusEmail,
+    sendProfileUpdatedEmail,
+    sendDemeritAdjustmentEmail
+} = require('../services/emailService');
 const PdfReportService = require('../services/pdfReportService');
 
 // Helper to determine demerit level from points
@@ -378,6 +382,13 @@ const updateDriver = async (req, res) => {
             });
         }
 
+        const updatedFields = [];
+        if (name && name.trim() !== driver.name) updatedFields.push('Full Name');
+        if (phone && phone.trim() !== driver.phone) updatedFields.push('Phone Number');
+        if (email && email.toLowerCase().trim() !== driver.email) updatedFields.push('Email Address');
+        if (vehicleNumber !== undefined) updatedFields.push('Vehicle Plate Number');
+        if (addressLine1 !== undefined || city !== undefined) updatedFields.push('Residential Address');
+
         // If email is being changed, ensure uniqueness
         if (email && email.toLowerCase().trim() !== driver.email) {
             const emailInUse = await Driver.findOne({ email: email.toLowerCase().trim() });
@@ -395,9 +406,19 @@ const updateDriver = async (req, res) => {
         if (vehicleNumber !== undefined) driver.vehicleNumber = vehicleNumber ? vehicleNumber.toUpperCase().trim() : '';
         if (addressLine1 !== undefined) driver.addressLine1 = addressLine1 ? addressLine1.trim() : '';
         if (city !== undefined) driver.city = city ? city.trim() : '';
+        if (postalCode !== undefined) driver.postalCode = postalCode ? postalCode.trim() : '';
         await driver.save();
 
-        // Dispatch FCM push notification to driver's mobile phone
+        // 1. Dispatch Email Notice
+        if (driver.email) {
+            try {
+                await sendProfileUpdatedEmail(driver, updatedFields);
+            } catch (emailErr) {
+                console.error('[updateDriver] Email send error:', emailErr);
+            }
+        }
+
+        // 2. Dispatch FCM push notification to driver's mobile phone
         if (driver.fcmToken) {
             try {
                 const { sendToToken } = require('../services/fcmService');
@@ -606,6 +627,7 @@ const adjustDriverDemerit = async (req, res) => {
             });
         }
 
+        const previousPoints = driver.demeritPoints;
         const pointsNum = parseInt(newPoints, 10);
         driver.demeritPoints = pointsNum;
 
@@ -619,7 +641,22 @@ const adjustDriverDemerit = async (req, res) => {
 
         await driver.save();
 
-        // Dispatch FCM push notification to driver's phone
+        // 1. Dispatch Email Notice
+        if (driver.email) {
+            try {
+                await sendDemeritAdjustmentEmail(
+                    driver,
+                    previousPoints,
+                    pointsNum,
+                    reason || 'Administrative adjustment',
+                    false
+                );
+            } catch (emailErr) {
+                console.error('[adjustDriverDemerit] Email send error:', emailErr);
+            }
+        }
+
+        // 2. Dispatch FCM push notification to driver's phone
         if (driver.fcmToken) {
             try {
                 const { sendToToken } = require('../services/fcmService');
