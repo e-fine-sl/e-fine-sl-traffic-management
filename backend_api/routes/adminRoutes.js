@@ -13,11 +13,6 @@ const {
     adminLogout,
     adminRefreshToken,
     getDashboardStats,
-    getAllDrivers,
-    getDriverDetails,
-    suspendDriver,
-    activateDriver,
-    deleteDriver,
     getAllIssuedFines,
     deleteFine,
     updateOffense,
@@ -38,6 +33,19 @@ const {
     updateAdmin,
     deleteAdmin
 } = require('../controllers/adminController');
+const {
+    getAllDrivers,
+    getDriverMetrics,
+    getDriverById,
+    createDriver,
+    updateDriver,
+    suspendDriver,
+    activateDriver,
+    adjustDriverDemerit,
+    resetDriverCredentials,
+    exportDrivers,
+    deleteDriver
+} = require('../controllers/adminDriverController');
 const {
     getAllOfficers,
     getOfficerMetrics,
@@ -122,9 +130,18 @@ router.post('/seed-badges', async (req, res) => {
 // Dashboard
 router.get('/dashboard/stats', protectAdmin, getDashboardStats);
 
-// Drivers - View only
+// Driver License & Demerit Management Suite
+router.get('/drivers/metrics', protectAdmin, getDriverMetrics);
+router.get('/drivers/export', protectAdmin, exportDrivers);
+router.get('/drivers/:id', protectAdmin, getDriverById);
+router.post('/drivers', protectAdmin, requireRole('admin_officer', 'super_admin'), createDriver);
+router.put('/drivers/:id', protectAdmin, requireRole('admin_officer', 'super_admin'), updateDriver);
+router.put('/drivers/:id/suspend', protectAdmin, requireRole('admin_officer', 'super_admin'), suspendDriver);
+router.put('/drivers/:id/activate', protectAdmin, requireRole('admin_officer', 'super_admin'), activateDriver);
+router.post('/drivers/:id/adjust-demerit', protectAdmin, requireRole('super_admin'), adjustDriverDemerit);
+router.post('/drivers/:id/reset-credentials', protectAdmin, requireRole('super_admin'), resetDriverCredentials);
+router.delete('/drivers/:id', protectAdmin, requireRole('super_admin', 'admin_officer'), deleteDriver);
 router.get('/drivers', protectAdmin, getAllDrivers);
-router.get('/drivers/:id', protectAdmin, getDriverDetails);
 
 // Police Officer Workforce Management Suite
 router.get('/officers/metrics', protectAdmin, getOfficerMetrics);
@@ -161,11 +178,6 @@ router.post('/reports/officer-performance', protectAdmin, generateOfficerReport)
 // ==========================================
 // ADMIN OFFICER & SUPER ADMIN ONLY
 // ==========================================
-
-// Driver management
-router.put('/drivers/:id/suspend', protectAdmin, requireRole('admin_officer', 'super_admin'), suspendDriver);
-router.put('/drivers/:id/activate', protectAdmin, requireRole('admin_officer', 'super_admin'), activateDriver);
-router.delete('/drivers/:id', protectAdmin, requireRole('admin_officer', 'super_admin'), deleteDriver);
 
 // Offense management
 router.get('/fines/offenses', protectAdmin, getOffenses);
