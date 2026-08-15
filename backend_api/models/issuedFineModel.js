@@ -15,6 +15,7 @@ const issuedFineSchema = mongoose.Schema({
     status: { 
         type: String, 
         default: PAYMENT.STATUS.UNPAID,
+        set: v => (typeof v === 'string' ? v.toUpperCase() : v),
         enum: ['PAID', 'UNPAID', 'PENDING', 'REFUNDED', 'DISPUTED'],
         index: true
     }, // Payment status
