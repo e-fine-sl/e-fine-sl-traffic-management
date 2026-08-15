@@ -1,29 +1,37 @@
 const mongoose = require('mongoose');
 
 const systemConfigSchema = new mongoose.Schema({
-  // ── Accident / Officer Settings ──────────────────────────────────────────
+  // ── Alert & Emergency Notification Settings ────────────────────────────────
   accidentNotificationRadiusKm: {
     type: Number,
     required: true,
-    default: 10, // Default to 10km
-    min: 1,      // Minimum 1km radius
-    max: 100     // Maximum 100km radius to prevent excessive queries
+    default: 10,
+    min: 1,
+    max: 100
   },
   officerLogoutGracePeriodMinutes: {
     type: Number,
     required: true,
-    default: 20, // Default to 20 minutes
+    default: 20,
     min: 5,
     max: 120
   },
+  sosBroadcastRadiusKm: {
+    type: Number,
+    default: 15,
+    min: 1,
+    max: 100
+  },
+  emergencyEmailAlerts: {
+    type: Boolean,
+    default: true
+  },
+  emergencyPushAlerts: {
+    type: Boolean,
+    default: true
+  },
 
-  // ── Demerit System Values ─────────────────────────────────────────────────
-
-  /**
-   * The default starting demerit points assigned to every new driver
-   * and the ceiling that recovery cannot exceed.
-   * Changing this affects all new driver registrations and the rating % calculation.
-   */
+  // ── Demerit System Values ───────────────────────────────────────────────────
   defaultDemeritPoints: {
     type: Number,
     required: true,
@@ -31,11 +39,6 @@ const systemConfigSchema = new mongoose.Schema({
     min: 1,
     max: 100
   },
-
-  /**
-   * Number of demerit points added to active drivers on every recovery run.
-   * Maps to the former DEMERIT.MONTHLY_RECOVERY constant.
-   */
   monthlyRecoveryPoints: {
     type: Number,
     required: true,
@@ -43,13 +46,6 @@ const systemConfigSchema = new mongoose.Schema({
     min: 1,
     max: 10
   },
-
-  /**
-   * How often (in calendar months) the recovery runs.
-   * 1 = every month, 3 = every quarter, 12 = annually.
-   * The cron still fires monthly but skips execution if not enough time
-   * has elapsed since lastRecoveryRunAt.
-   */
   recoveryPeriodMonths: {
     type: Number,
     required: true,
@@ -57,10 +53,6 @@ const systemConfigSchema = new mongoose.Schema({
     min: 1,
     max: 12
   },
-
-  /**
-   * Number of days a driver must have no new offenses before being eligible for demerit point recovery.
-   */
   cleanRecordDays: {
     type: Number,
     required: true,
@@ -68,24 +60,50 @@ const systemConfigSchema = new mongoose.Schema({
     min: 0,
     max: 365
   },
-
-  /**
-   * Master switch for the monthly recovery job.
-   * When false the cron runs but performs no updates.
-   */
   recoveryEnabled: {
     type: Boolean,
     required: true,
     default: true
   },
-
-  /**
-   * Timestamp of the last successful recovery run.
-   * Used by the cron job to enforce recoveryPeriodMonths.
-   */
   lastRecoveryRunAt: {
     type: Date,
     default: null
+  },
+
+  // ── Payment & Fine Policy Settings ──────────────────────────────────────────
+  finePaymentGracePeriodDays: {
+    type: Number,
+    default: 14,
+    min: 1,
+    max: 90
+  },
+  minFineAmount: {
+    type: Number,
+    default: 500,
+    min: 100
+  },
+  maxFineAmount: {
+    type: Number,
+    default: 100000,
+    min: 1000
+  },
+
+  // ── Security & Access Policies ─────────────────────────────────────────────
+  adminSessionTimeoutMinutes: {
+    type: Number,
+    default: 60,
+    min: 15,
+    max: 480
+  },
+  maxLoginAttempts: {
+    type: Number,
+    default: 5,
+    min: 3,
+    max: 10
+  },
+  enforceAdmin2FA: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

@@ -81,6 +81,7 @@ const {
     getSystemConfig,
     updateSystemConfig,
     toggleRecovery,
+    triggerManualRecovery,
     resetDemeritConfig
 } = require('../controllers/systemConfigController');
 
@@ -231,6 +232,9 @@ router.put('/system-config', protectAdmin, requireRole('super_admin'), updateSys
 
 // Demerit Config — toggle recovery on/off (super_admin only)
 router.patch('/system-config/recovery-toggle', protectAdmin, requireRole('super_admin'), toggleRecovery);
+
+// Demerit Config — trigger manual recovery run (super_admin only)
+router.post('/system-config/trigger-recovery', protectAdmin, requireRole('super_admin'), triggerManualRecovery);
 
 // Demerit Config — reset to factory defaults (super_admin only)
 router.delete('/system-config/demerit', protectAdmin, requireRole('super_admin'), resetDemeritConfig);
