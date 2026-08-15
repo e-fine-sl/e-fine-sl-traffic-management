@@ -253,12 +253,50 @@ const triggerManualRecovery = async (req, res) => {
 
     let updatedCount = 0;
     for (const driver of eligibleDrivers) {
-      const newPoints = Math.min(ceiling, (driver.demeritPoints || 0) + recoveryPoints);
+      const previousPoints = driver.demeritPoints || 0;
+      const newPoints = Math.min(ceiling, previousPoints + recoveryPoints);
       driver.demeritPoints = newPoints;
       driver.demeritLevel = calculateLevel(newPoints);
       driver.ratingScore = calculateRating(newPoints);
       await driver.save();
       updatedCount++;
+
+      // 1. Dispatch Email Notice
+      if (driver.email) {
+        try {
+          const { sendDemeritAdjustmentEmail } = require('../services/emailService');
+          await sendDemeritAdjustmentEmail(
+            driver,
+            previousPoints,
+            newPoints,
+            'Good-Behavior Demerit Recovery Run',
+            true
+          );
+        } catch (emailErr) {
+          console.error(`[SystemConfig] Email error for driver ${driver.licenseNumber}:`, emailErr.message);
+        }
+      }
+
+      // 2. Dispatch FCM Push Notification
+      if (driver.fcmToken) {
+        try {
+          const { sendToToken } = require('../services/fcmService');
+          await sendToToken(driver.fcmToken, {
+            title: 'Good Driver Demerit Recovery',
+            body: `You have been rewarded with +${newPoints - previousPoints} demerit points. New balance: ${newPoints}/${ceiling} pts (${driver.demeritLevel}).`,
+            channelId: 'traffic_alerts',
+            data: {
+              type: 'DEMERIT_RECOVERY',
+              licenseNumber: driver.licenseNumber,
+              newPoints: String(newPoints),
+              previousPoints: String(previousPoints),
+              recoveryPoints: String(newPoints - previousPoints)
+            }
+          });
+        } catch (fcmErr) {
+          console.error(`[SystemConfig] FCM error for driver ${driver.licenseNumber}:`, fcmErr.message);
+        }
+      }
     }
 
     config.lastRecoveryRunAt = new Date();
