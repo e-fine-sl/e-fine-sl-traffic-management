@@ -331,6 +331,27 @@ const createFine = async (req, res) => {
             await driver.save();
         }
 
+        // Dispatch FCM Push notification to Driver's Mobile App
+        if (driver && driver.fcmToken) {
+            try {
+                const { sendToToken } = require('../services/fcmService');
+                await sendToToken(driver.fcmToken, {
+                    title: 'New Traffic Citation Issued',
+                    body: `Citation #${newFine._id.toString().slice(-8).toUpperCase()} for "${newFine.offenseName}" (LKR ${newFine.amount.toLocaleString()}) has been issued at ${newFine.place}.`,
+                    data: {
+                        type: 'NEW_FINE_ISSUED',
+                        fineId: newFine._id.toString(),
+                        licenseNumber: newFine.licenseNumber,
+                        amount: String(newFine.amount),
+                        offenseName: newFine.offenseName,
+                        place: newFine.place
+                    }
+                });
+            } catch (fcmError) {
+                console.error('[createFine] FCM notification error:', fcmError);
+            }
+        }
+
         res.status(HTTP.CREATED).json({
             success: true,
             message: `Traffic citation #${newFine._id.toString().slice(-8).toUpperCase()} issued successfully`,
@@ -395,6 +416,35 @@ const updateFineStatus = async (req, res) => {
                 driver.ratingScore = parseFloat(((restoredPoints / 24) * 5.0).toFixed(1));
                 await driver.save();
             }
+        }
+
+        // Dispatch push notification to driver if fcmToken present
+        try {
+            const driver = await Driver.findOne({ licenseNumber: fine.licenseNumber });
+            if (driver && driver.fcmToken) {
+                const { sendToToken } = require('../services/fcmService');
+                let notifTitle = 'Traffic Citation Status Updated';
+                let notifBody = `Your citation #${fine._id.toString().slice(-8).toUpperCase()} status is now ${newStatus}.`;
+                if (newStatus === 'REFUNDED') {
+                    notifTitle = 'Traffic Fine Dismissed / Refunded';
+                    notifBody = `Citation #${fine._id.toString().slice(-8).toUpperCase()} has been overturned/dismissed. ${restoreDemerit ? 'Demerit points restored.' : ''}`;
+                } else if (newStatus === 'DISPUTED') {
+                    notifTitle = 'Traffic Citation Dispute Under Review';
+                    notifBody = `Citation #${fine._id.toString().slice(-8).toUpperCase()} has been flagged under administrative review.`;
+                }
+
+                await sendToToken(driver.fcmToken, {
+                    title: notifTitle,
+                    body: notifBody,
+                    data: {
+                        type: 'FINE_STATUS_UPDATED',
+                        fineId: fine._id.toString(),
+                        status: newStatus
+                    }
+                });
+            }
+        } catch (fcmErr) {
+            console.error('[updateFineStatus] FCM error:', fcmErr);
         }
 
         res.status(HTTP.OK).json({
