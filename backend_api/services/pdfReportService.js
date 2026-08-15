@@ -202,14 +202,16 @@ class PdfReportService {
         const margin = doc.page.margins.left;
         const pageWidth = doc.page.width;
         const contentWidth = pageWidth - (margin * 2);
-        const footerY = doc.page.height - 35;
+        const footerY = doc.page.height - 30;
 
         for (let i = 0; i < pages.count; i++) {
             doc.switchToPage(i);
+            const origBottom = doc.page.margins.bottom;
+            doc.page.margins.bottom = 0; // Prevent PDFKit auto-page-break when writing near bottom boundary
 
             // Footer Top Divider Line
-            doc.moveTo(margin, footerY - 10)
-               .lineTo(pageWidth - margin, footerY - 10)
+            doc.moveTo(margin, footerY - 8)
+               .lineTo(pageWidth - margin, footerY - 8)
                .strokeColor(this.COLORS.BORDER_LIGHT)
                .lineWidth(0.75)
                .stroke();
@@ -222,7 +224,7 @@ class PdfReportService {
                    'CONFIDENTIAL — e-Fine SL Traffic Authority | Official Document',
                    margin,
                    footerY,
-                   { width: contentWidth / 2 }
+                   { width: contentWidth / 2, lineBreak: false }
                );
 
             // Page Numbering (Right)
@@ -233,8 +235,10 @@ class PdfReportService {
                    `Page ${i + 1} of ${pages.count}`,
                    margin + (contentWidth / 2),
                    footerY,
-                   { align: 'right', width: contentWidth / 2 }
+                   { align: 'right', width: contentWidth / 2, lineBreak: false }
                );
+
+            doc.page.margins.bottom = origBottom;
         }
     }
 
