@@ -395,9 +395,26 @@ const updateDriver = async (req, res) => {
         if (vehicleNumber !== undefined) driver.vehicleNumber = vehicleNumber ? vehicleNumber.toUpperCase().trim() : '';
         if (addressLine1 !== undefined) driver.addressLine1 = addressLine1 ? addressLine1.trim() : '';
         if (city !== undefined) driver.city = city ? city.trim() : '';
-        if (postalCode !== undefined) driver.postalCode = postalCode ? postalCode.trim() : '';
-
         await driver.save();
+
+        // Dispatch FCM push notification to driver's mobile phone
+        if (driver.fcmToken) {
+            try {
+                const { sendToToken } = require('../services/fcmService');
+                await sendToToken(driver.fcmToken, {
+                    title: 'Driver Profile Updated',
+                    body: `Your motorist registration particulars (Contact/Vehicle/Address) have been updated by the Traffic Management Authority.`,
+                    channelId: 'traffic_alerts',
+                    data: {
+                        type: 'PROFILE_UPDATED',
+                        licenseNumber: driver.licenseNumber,
+                        updatedAt: new Date().toISOString()
+                    }
+                });
+            } catch (fcmError) {
+                console.error('[updateDriver] Push notification error:', fcmError);
+            }
+        }
 
         res.status(HTTP.OK).json({
             success: true,
@@ -602,6 +619,26 @@ const adjustDriverDemerit = async (req, res) => {
 
         await driver.save();
 
+        // Dispatch FCM push notification to driver's phone
+        if (driver.fcmToken) {
+            try {
+                const { sendToToken } = require('../services/fcmService');
+                await sendToToken(driver.fcmToken, {
+                    title: 'Demerit Points Adjusted',
+                    body: `Your demerit points have been adjusted to ${pointsNum}/24 (${driver.demeritLevel}). Reason: ${reason || 'Administrative adjustment'}.`,
+                    channelId: 'traffic_alerts',
+                    data: {
+                        type: 'DEMERIT_ADJUSTED',
+                        licenseNumber: driver.licenseNumber,
+                        newPoints: String(pointsNum),
+                        reason: reason || ''
+                    }
+                });
+            } catch (fcmError) {
+                console.error('[adjustDriverDemerit] Push notification error:', fcmError);
+            }
+        }
+
         res.status(HTTP.OK).json({
             success: true,
             message: `Demerit points for ${driver.name} adjusted to ${pointsNum}/24 (${driver.demeritLevel}). Reason: ${reason || 'Administrative adjustment'}`,
@@ -651,6 +688,24 @@ const resetDriverCredentials = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         driver.password = await bcrypt.hash(newPassword, salt);
         await driver.save();
+
+        // Dispatch FCM push notification to driver's phone
+        if (driver.fcmToken) {
+            try {
+                const { sendToToken } = require('../services/fcmService');
+                await sendToToken(driver.fcmToken, {
+                    title: 'Security Notice: Password Reset',
+                    body: 'Your driver portal account password has been reset by the System Administrator. Please log in using your new credentials.',
+                    channelId: 'traffic_alerts',
+                    data: {
+                        type: 'PASSWORD_RESET',
+                        licenseNumber: driver.licenseNumber
+                    }
+                });
+            } catch (fcmError) {
+                console.error('[resetDriverCredentials] Push notification error:', fcmError);
+            }
+        }
 
         res.status(HTTP.OK).json({
             success: true,
@@ -809,6 +864,24 @@ const deleteDriver = async (req, res) => {
 
         // Check if historical fines exist for this driver
         const finesCount = await IssuedFine.countDocuments({ licenseNumber: driver.licenseNumber });
+
+        // Dispatch FCM Push notification before action
+        if (driver.fcmToken) {
+            try {
+                const { sendToToken } = require('../services/fcmService');
+                await sendToToken(driver.fcmToken, {
+                    title: 'Driver Account Record Notice',
+                    body: `Your motorist registry account has been ${finesCount > 0 ? 'archived and permanently suspended' : 'removed from the registry'} by the Traffic Management Authority.`,
+                    channelId: 'traffic_alerts',
+                    data: {
+                        type: 'ACCOUNT_STATUS_CHANGE',
+                        licenseNumber: driver.licenseNumber
+                    }
+                });
+            } catch (fcmError) {
+                console.error('[deleteDriver] Push notification error:', fcmError);
+            }
+        }
 
         if (finesCount > 0) {
             // Data integrity protection: Prohibit hard deletion, set to SUSPENDED
