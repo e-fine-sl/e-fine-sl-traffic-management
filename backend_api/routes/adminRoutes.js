@@ -26,7 +26,6 @@ const {
     deleteFine,
     updateOffense,
     deleteOffense,
-    getAllPayments,
     generateMonthlyReport,
     generatePaymentReport,
     generateDriverViolationReport,
@@ -43,6 +42,14 @@ const {
     updateAdmin,
     deleteAdmin
 } = require('../controllers/adminController');
+const {
+    getAllPayments,
+    getPaymentMetrics,
+    getPaymentById,
+    verifyPaymentGateway,
+    processPaymentRefund,
+    exportPayments
+} = require('../controllers/adminPaymentController');
 const {
     getSystemConfig,
     updateSystemConfig,
@@ -112,15 +119,6 @@ router.get('/drivers/:id', protectAdmin, getDriverDetails);
 
 // Officers - View only
 router.get('/officers', protectAdmin, getAllOfficers);
-
-const {
-    getAllPayments,
-    getPaymentMetrics,
-    getPaymentById,
-    verifyPaymentGateway,
-    processPaymentRefund,
-    exportPayments
-} = require('../controllers/adminPaymentController');
 
 // Fines - View only
 router.get('/fines', protectAdmin, getAllIssuedFines);
