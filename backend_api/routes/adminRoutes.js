@@ -59,6 +59,15 @@ const {
     deleteOfficer
 } = require('../controllers/adminOfficerController');
 const {
+    getAllFines,
+    getFineMetrics,
+    getFineById,
+    createFine,
+    updateFineStatus,
+    exportFines,
+    deleteFine: deleteFineController
+} = require('../controllers/adminFineController');
+const {
     getAllPayments,
     getPaymentMetrics,
     getPaymentById,
@@ -155,8 +164,14 @@ router.post('/officers/:id/reset-credentials', protectAdmin, requireRole('super_
 router.delete('/officers/:id', protectAdmin, requireRole('super_admin', 'admin_officer'), deleteOfficer);
 router.get('/officers', protectAdmin, getAllOfficers);
 
-// Fines - View only
-router.get('/fines', protectAdmin, getAllIssuedFines);
+// Fines & Citations Enforcement Suite
+router.get('/fines/metrics', protectAdmin, getFineMetrics);
+router.get('/fines/export', protectAdmin, exportFines);
+router.get('/fines/:id', protectAdmin, getFineById);
+router.post('/fines', protectAdmin, requireRole('admin_officer', 'super_admin'), createFine);
+router.patch('/fines/:id/status', protectAdmin, requireRole('admin_officer', 'super_admin'), updateFineStatus);
+router.delete('/fines/:id', protectAdmin, requireRole('super_admin'), deleteFineController);
+router.get('/fines', protectAdmin, getAllFines);
 
 // Payments & Financial Reconciliation - Enhanced Suite
 router.get('/payments/metrics', protectAdmin, getPaymentMetrics);
@@ -202,7 +217,6 @@ router.post('/register/complete', protectAdmin, requireRole('super_admin'), comp
 
 // Delete operations
 router.delete('/fines/offenses/:id', protectAdmin, requireRole('super_admin'), deleteOffense);
-router.delete('/fines/:id', protectAdmin, requireRole('super_admin'), deleteFine);
 
 // Station management
 router.post('/stations', protectAdmin, requireRole('super_admin'), createStation);
