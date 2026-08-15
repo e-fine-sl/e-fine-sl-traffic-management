@@ -401,6 +401,54 @@ const processPaymentRefund = async (req, res) => {
     }
 };
 
+// @desc    Manually Flag Fine / Payment as DISPUTED (Citizen Appeals, Chargeback, Camera Review)
+// @route   POST /api/admin/payments/dispute
+// @access  Private (Super Admin, Finance Officer, Admin Officer)
+const flagPaymentDispute = async (req, res) => {
+    try {
+        const { paymentId, reason, disputeCategory = 'OTHER', notes } = req.body;
+
+        if (!paymentId || !reason) {
+            return res.status(HTTP.BAD_REQUEST).json({ 
+                success: false, 
+                message: 'Payment ID and dispute reason are required' 
+            });
+        }
+
+        const fine = await IssuedFine.findById(paymentId);
+        if (!fine) {
+            return res.status(HTTP.NOT_FOUND).json({ 
+                success: false, 
+                message: 'Payment record not found' 
+            });
+        }
+
+        const adminIdentifier = req.user?.name || req.user?.email || 'Authorized Administrator';
+        const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Colombo' });
+
+        fine.status = 'DISPUTED';
+        fine.disputeReason = `[${disputeCategory}] ${reason}`;
+        
+        const noteEntry = `[${timestamp}] Flagged as DISPUTED by ${adminIdentifier}. Category: ${disputeCategory}. Reason: ${reason}${notes ? ` | Notes: ${notes}` : ''}`;
+        fine.paymentNotes = fine.paymentNotes ? `${fine.paymentNotes}\n${noteEntry}` : noteEntry;
+
+        await fine.save();
+
+        res.json({
+            success: true,
+            message: `Fine #${fine._id.toString().slice(-8).toUpperCase()} successfully flagged as DISPUTED.`,
+            data: fine
+        });
+    } catch (error) {
+        console.error('[flagPaymentDispute] Error:', error);
+        res.status(HTTP.SERVER_ERROR).json({ 
+            success: false, 
+            message: 'Failed to flag dispute', 
+            error: error.message 
+        });
+    }
+};
+
 // @desc    Export Payments Dataset to CSV or PDF format
 // @route   GET /api/admin/payments/export
 // @access  Private (Admin Roles)
@@ -567,5 +615,6 @@ module.exports = {
     getPaymentById,
     verifyPaymentGateway,
     processPaymentRefund,
+    flagPaymentDispute,
     exportPayments
 };
