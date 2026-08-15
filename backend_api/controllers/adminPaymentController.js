@@ -35,12 +35,13 @@ const getAllPayments = async (req, res) => {
         // Base query
         let query = {};
 
-        // Status Filter: default to PAID if status is not explicitly set to 'ALL' or specific status
+        // Status Filter:
         if (status && status !== 'ALL') {
-            query.status = status;
-        } else if (!status) {
-            // Default to paid/settled payments for payment reconciliation
-            query.status = { $in: [PAYMENT.STATUS.PAID, 'REFUNDED', 'DISPUTED'] };
+            if (status === 'UNPAID') {
+                query.status = { $in: ['UNPAID', 'PENDING'] };
+            } else {
+                query.status = status;
+            }
         }
 
         // Multi-Field Global Search
@@ -69,19 +70,27 @@ const getAllPayments = async (req, res) => {
             query.district = district;
         }
 
-        // Date Range Filter (Filter on paidAt date or date of issuance)
+        // Date Range Filter
         if (startDate || endDate) {
-            const dateField = query.status === PAYMENT.STATUS.PAID || !query.status ? 'paidAt' : 'date';
-            query[dateField] = {};
-            if (startDate) {
-                const start = new Date(startDate);
-                start.setHours(0, 0, 0, 0);
-                query[dateField].$gte = start;
-            }
-            if (endDate) {
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
-                query[dateField].$lte = end;
+            const start = startDate ? new Date(startDate) : null;
+            if (start) start.setHours(0, 0, 0, 0);
+
+            const end = endDate ? new Date(endDate) : null;
+            if (end) end.setHours(23, 59, 59, 999);
+
+            const dateCriteria = {};
+            if (start) dateCriteria.$gte = start;
+            if (end) dateCriteria.$lte = end;
+
+            if (status === 'PAID') {
+                query.paidAt = dateCriteria;
+            } else if (status === 'UNPAID') {
+                query.date = dateCriteria;
+            } else {
+                query.$or = [
+                    { paidAt: dateCriteria },
+                    { date: dateCriteria }
+                ];
             }
         }
 
@@ -92,9 +101,15 @@ const getAllPayments = async (req, res) => {
             if (maxAmount) query.amount.$lte = parseFloat(maxAmount);
         }
 
-        // Sorting
-        const sortOptions = {};
-        sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+        // Sorting: If sorting by paidAt and items might be unpaid, fall back to issuance date
+        let sortOptions = {};
+        if (sortBy === 'paidAt') {
+            sortOptions = sortOrder === 'asc' 
+                ? { paidAt: 1, date: 1, createdAt: 1 } 
+                : { paidAt: -1, date: -1, createdAt: -1 };
+        } else {
+            sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+        }
 
         // Execute query
         const [payments, total] = await Promise.all([
@@ -135,7 +150,7 @@ const getPaymentMetrics = async (req, res) => {
         monthStart.setHours(0, 0, 0, 0);
 
         // Aggregation Pipeline for Global & Timeframe Financials
-        const [metricsResult, totalFinesCount, paidFinesCount, provinceRevenueResult] = await Promise.all([
+        const [metricsResult, totalFinesCount, paidFinesCount, unpaidResult, provinceRevenueResult] = await Promise.all([
             IssuedFine.aggregate([
                 { $match: { status: PAYMENT.STATUS.PAID } },
                 {
@@ -170,6 +185,16 @@ const getPaymentMetrics = async (req, res) => {
             IssuedFine.countDocuments(),
             IssuedFine.countDocuments({ status: PAYMENT.STATUS.PAID }),
             IssuedFine.aggregate([
+                { $match: { status: { $in: ['UNPAID', 'PENDING'] } } },
+                {
+                    $group: {
+                        _id: null,
+                        unpaidRevenue: { $sum: '$amount' },
+                        unpaidCount: { $sum: 1 }
+                    }
+                }
+            ]),
+            IssuedFine.aggregate([
                 { $match: { status: PAYMENT.STATUS.PAID, province: { $exists: true, $ne: '' } } },
                 {
                     $group: {
@@ -192,6 +217,11 @@ const getPaymentMetrics = async (req, res) => {
             averagePayment: 0
         };
 
+        const unpaidMetrics = unpaidResult[0] || {
+            unpaidRevenue: 0,
+            unpaidCount: 0
+        };
+
         const collectionEfficiencyRate = totalFinesCount > 0 
             ? parseFloat(((paidFinesCount / totalFinesCount) * 100).toFixed(1))
             : 0;
@@ -200,6 +230,8 @@ const getPaymentMetrics = async (req, res) => {
             success: true,
             data: {
                 ...baseMetrics,
+                unpaidRevenue: unpaidMetrics.unpaidRevenue,
+                unpaidPaymentsCount: unpaidMetrics.unpaidCount,
                 collectionEfficiencyRate,
                 revenueByProvince: provinceRevenueResult.map(p => ({
                     province: p._id,
