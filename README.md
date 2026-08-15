@@ -1,7 +1,7 @@
 ![e-Fine SL Logo](mobile_app/assets/icons/app_icon/app_logo.png)
 
 # e-Fine SL Traffic Management & Automated Enforcement System
-### Senior Systems Architecture & Comprehensive System Design Documentation
+### Senior Systems Architecture & Comprehensive System Design Documentation (Thesis Grade)
 
 [![Status](https://img.shields.io/badge/System%20Design-Architecture%20Complete-success?style=for-the-badge&logo=architecture)](https://github.com/e-fine-sl)
 [![Backend](https://img.shields.io/badge/Node.js-18.x%20%7C%20Express-339933?style=for-the-badge&logo=nodedotjs)](https://nodejs.org)
@@ -14,21 +14,25 @@
 
 ## 📥 System Architecture & Design Diagrams Download Center
 
-All system design diagrams are rendered on a **solid, high-contrast pure white canvas (`#ffffff`)** with optimized user-visible dimensions. You can view or download each diagram individually in **High-Resolution PNG** or **Scalable Vector SVG** format:
+All 15 system design diagrams are rendered on a **solid, high-contrast pure white canvas (`#ffffff`)** with optimized user-visible dimensions. You can view or download each diagram individually in **High-Resolution PNG** or **Scalable Vector SVG** format:
 
 | # | Section | Diagram Title | Direct Image Preview | Individual Download Options |
 | :---: | :--- | :--- | :---: | :--- |
-| **01** | **4.1.2** | High-Level 3-Tier System Architecture | [🔍 View](docs/diagrams/01_high_level_system_architecture.png) | [📥 High-Res PNG](docs/diagrams/01_high_level_system_architecture.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/01_high_level_system_architecture.svg) |
-| **02** | **4.2.1** | System Use Case Diagram | [🔍 View](docs/diagrams/02_system_use_case_diagram.png) | [📥 High-Res PNG](docs/diagrams/02_system_use_case_diagram.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/02_system_use_case_diagram.svg) |
-| **03** | **4.2.2** | Unified System Class Diagram | [🔍 View](docs/diagrams/03_unified_system_class_diagram.png) | [📥 High-Res PNG](docs/diagrams/03_unified_system_class_diagram.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/03_unified_system_class_diagram.svg) |
-| **04** | **4.2.3.1**| Sequence: Driver KYC Liveness & OCR | [🔍 View](docs/diagrams/04_sequence_kyc_ocr_liveness.png) | [📥 High-Res PNG](docs/diagrams/04_sequence_kyc_ocr_liveness.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/04_sequence_kyc_ocr_liveness.svg) |
-| **05** | **4.2.3.2**| Sequence: Roadside Spot Fine & Demerits | [🔍 View](docs/diagrams/05_sequence_fine_issuance_demerits.png) | [📥 High-Res PNG](docs/diagrams/05_sequence_fine_issuance_demerits.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/05_sequence_fine_issuance_demerits.svg) |
-| **06** | **4.2.3.3**| Sequence: Fine Settlement via PayHere | [🔍 View](docs/diagrams/06_sequence_payhere_settlement.png) | [📥 High-Res PNG](docs/diagrams/06_sequence_payhere_settlement.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/06_sequence_payhere_settlement.svg) |
-| **07** | **4.2.3.4**| Sequence: Geospatial Emergency SOS (10km) | [🔍 View](docs/diagrams/07_sequence_emergency_sos_dispatch.png) | [📥 High-Res PNG](docs/diagrams/07_sequence_emergency_sos_dispatch.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/07_sequence_emergency_sos_dispatch.svg) |
-| **08** | **4.2.4.1**| Activity: KYC Liveness State Machine | [🔍 View](docs/diagrams/08_activity_kyc_verification_flow.png) | [📥 High-Res PNG](docs/diagrams/08_activity_kyc_verification_flow.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/08_activity_kyc_verification_flow.svg) |
-| **09** | **4.2.4.2**| Activity: Fine Issuance & Auto-Suspension | [🔍 View](docs/diagrams/09_activity_fine_issuance_suspension.png) | [📥 High-Res PNG](docs/diagrams/09_activity_fine_issuance_suspension.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/09_activity_fine_issuance_suspension.svg) |
-| **10** | **4.2.4.3**| Activity: Demerit Recovery Engine Cron | [🔍 View](docs/diagrams/10_activity_demerit_recovery_cron.png) | [📥 High-Res PNG](docs/diagrams/10_activity_demerit_recovery_cron.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/10_activity_demerit_recovery_cron.svg) |
-| **11** | **4.4.1** | Entity Relationship Diagram (ERD) | [🔍 View](docs/diagrams/11_entity_relationship_diagram_erd.png) | [📥 High-Res PNG](docs/diagrams/11_entity_relationship_diagram_erd.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/11_entity_relationship_diagram_erd.svg) |
+| **01** | **4.1.2** | High-Level 3-Tier Enterprise System Architecture | [🔍 View](docs/diagrams/01_high_level_system_architecture.png) | [📥 High-Res PNG](docs/diagrams/01_high_level_system_architecture.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/01_high_level_system_architecture.svg) |
+| **02** | **4.2.1** | System Use Case Diagram (4 Actors + Cron Engine) | [🔍 View](docs/diagrams/02_system_use_case_diagram.png) | [📥 High-Res PNG](docs/diagrams/02_system_use_case_diagram.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/02_system_use_case_diagram.svg) |
+| **03** | **4.2.2** | Unified System Class Diagram (Domain Model) | [🔍 View](docs/diagrams/03_unified_system_class_diagram.png) | [📥 High-Res PNG](docs/diagrams/03_unified_system_class_diagram.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/03_unified_system_class_diagram.svg) |
+| **04** | **4.2.3.1**| Sequence 1: Driver KYC Facial Liveness & License OCR | [🔍 View](docs/diagrams/04_sequence_kyc_ocr_liveness.png) | [📥 High-Res PNG](docs/diagrams/04_sequence_kyc_ocr_liveness.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/04_sequence_kyc_ocr_liveness.svg) |
+| **05** | **4.2.3.2**| Sequence 2: Roadside Spot Fine & Demerits | [🔍 View](docs/diagrams/05_sequence_fine_issuance_demerits.png) | [📥 High-Res PNG](docs/diagrams/05_sequence_fine_issuance_demerits.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/05_sequence_fine_issuance_demerits.svg) |
+| **06** | **4.2.3.3**| Sequence 3: Fine Settlement via PayHere PG Sandbox | [🔍 View](docs/diagrams/06_sequence_payhere_settlement.png) | [📥 High-Res PNG](docs/diagrams/06_sequence_payhere_settlement.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/06_sequence_payhere_settlement.svg) |
+| **07** | **4.2.3.4**| Sequence 4: Geospatial Emergency SOS (10km Spatial) | [🔍 View](docs/diagrams/07_sequence_emergency_sos_dispatch.png) | [📥 High-Res PNG](docs/diagrams/07_sequence_emergency_sos_dispatch.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/07_sequence_emergency_sos_dispatch.svg) |
+| **08** | **4.2.3.5**| Sequence 5: Admin Driver Dossier & License Suspension | [🔍 View](docs/diagrams/08_sequence_admin_driver_management_suspension.png) | [📥 High-Res PNG](docs/diagrams/08_sequence_admin_driver_management_suspension.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/08_sequence_admin_driver_management_suspension.svg) |
+| **09** | **4.2.3.6**| Sequence 6: Automated Monthly Demerit Recovery Cron | [🔍 View](docs/diagrams/09_sequence_monthly_demerit_recovery_cron.png) | [📥 High-Res PNG](docs/diagrams/09_sequence_monthly_demerit_recovery_cron.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/09_sequence_monthly_demerit_recovery_cron.svg) |
+| **10** | **4.2.4.1**| Activity 1: Driver Signup & KYC Liveness Verification | [🔍 View](docs/diagrams/10_activity_kyc_verification_flow.png) | [📥 High-Res PNG](docs/diagrams/10_activity_kyc_verification_flow.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/10_activity_kyc_verification_flow.svg) |
+| **11** | **4.2.4.2**| Activity 2: Traffic Fine Issuance & Auto-Suspension | [🔍 View](docs/diagrams/11_activity_fine_issuance_suspension.png) | [📥 High-Res PNG](docs/diagrams/11_activity_fine_issuance_suspension.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/11_activity_fine_issuance_suspension.svg) |
+| **12** | **4.2.4.3**| Activity 3: Online Payment & Webhook Reconciliation | [🔍 View](docs/diagrams/12_activity_payhere_settlement_reconciliation.png) | [📥 High-Res PNG](docs/diagrams/12_activity_payhere_settlement_reconciliation.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/12_activity_payhere_settlement_reconciliation.svg) |
+| **13** | **4.2.4.4**| Activity 4: Demerit Point Recovery Engine | [🔍 View](docs/diagrams/13_activity_demerit_recovery_cron.png) | [📥 High-Res PNG](docs/diagrams/13_activity_demerit_recovery_cron.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/13_activity_demerit_recovery_cron.svg) |
+| **14** | **4.2.4.5**| Activity 5: Geospatial Emergency SOS Dispatch | [🔍 View](docs/diagrams/14_activity_emergency_sos_dispatch.png) | [📥 High-Res PNG](docs/diagrams/14_activity_emergency_sos_dispatch.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/14_activity_emergency_sos_dispatch.svg) |
+| **15** | **4.4.1** | Entity Relationship Diagram (ERD) | [🔍 View](docs/diagrams/15_entity_relationship_diagram_erd.png) | [📥 High-Res PNG](docs/diagrams/15_entity_relationship_diagram_erd.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/15_entity_relationship_diagram_erd.svg) |
 
 ---
 
@@ -346,7 +350,6 @@ classDiagram
         +String name
         +String email
         +String phone
-        +String password
         +Number demeritPoints
         +Number ratingScore
         +String licenseStatus
@@ -356,9 +359,13 @@ classDiagram
         +Date lastOffenseDate
         +Date suspendedAt
         +String suspensionReason
-        +registerDriver()
-        +verifyKYC()
-        +updateProfile()
+        +register(driverDto)
+        +verifyKYCLiveness(selfie, license)
+        +updateProfile(profileDto)
+        +deductDemerits(points)
+        +restoreDemerits(points)
+        +suspendLicense(reason)
+        +activateLicense()
     }
 
     class Police {
@@ -371,25 +378,41 @@ classDiagram
         +String policeStation
         +String position
         +String role
-        +GeoJSON location
+        +GeoPoint location
         +String appState
         +Boolean isActive
         +String fcmToken
-        +updateLocation()
-        +setAppState()
+        +updateLocation(coords)
+        +setDutyAppState(state)
+        +issueSpotFine(fineDto)
     }
 
     class Admin {
         +ObjectId _id
         +String name
         +String email
-        +String password
         +String role
         +Boolean isTwoFactorEnabled
-        +String twoFactorSecret
         +Date lastLoginAt
-        +authenticate()
-        +verify2FA()
+        +authenticate(credentials)
+        +verify2FA(totpToken)
+        +manageDriverDossier(driverId, action)
+        +adjustDemerits(driverId, delta)
+        +updateSystemConfig(configDto)
+        +triggerManualRecovery()
+    }
+
+    class AdminSession {
+        +ObjectId _id
+        +ObjectId userId
+        +String sessionToken
+        +String refreshTokenHash
+        +String ipAddress
+        +Date expiresAt
+        +Boolean isValid
+        +createSession()
+        +invalidateSession()
+        +validateSession()
     }
 
     class IssuedFine {
@@ -408,9 +431,10 @@ classDiagram
         +Number demeritPoints
         +Date date
         +String paymentNotes
-        +createFine()
-        +updateStatus()
-        +markPaid()
+        +createFine(fineDto)
+        +markPaid(paymentId, channel)
+        +disputeFine(reason)
+        +refundFine()
     }
 
     class Offense {
@@ -421,26 +445,26 @@ classDiagram
         +String sectionOfAct
         +Number demeritValue
         +String category
-        +createOffense()
-        +updateOffense()
+        +createOffense(offenseDto)
+        +updateOffense(id, offenseDto)
     }
 
     class AccidentReport {
         +ObjectId _id
         +String driverLicense
         +String accidentType
-        +GeoJSON location
+        +String severity
+        +GeoPoint location
         +String placeDescription
         +String province
         +String district
         +String policeStation
         +String status
-        +String severity
-        +Array images
-        +Array statusHistory
-        +createReport()
-        +acknowledgeReport()
-        +resolveReport()
+        +List images
+        +List statusHistory
+        +createReport(reportDto)
+        +acknowledgeReport(officerId)
+        +resolveReport(notes)
     }
 
     class Station {
@@ -451,8 +475,9 @@ classDiagram
         +String province
         +String officialEmail
         +String phoneNumber
-        +GeoJSON location
-        +findNearestStation()
+        +GeoPoint location
+        +findNearestStation(coords)
+        +listActiveOfficers()
     }
 
     class SystemConfig {
@@ -468,20 +493,49 @@ classDiagram
         +Date lastRecoveryRunAt
         +Number finePaymentGraceDays
         +Boolean enableOnlinePayments
-        +Boolean allowDisputeSubmissions
         +Number sessionTimeoutMinutes
-        +Number maxFailedLoginAttempts
-        +updateConfig()
+        +updateConfig(configDto)
         +triggerManualRecovery()
+    }
+
+    class GeoPoint {
+        +String type
+        +List coordinates
+    }
+
+    class FCMService {
+        +sendToToken(fcmToken, payload)
+        +broadcastSOS(tokens, payload)
+        +sendTrafficAlert(token, details)
+    }
+
+    class EmailService {
+        +sendFineIssuedEmail(driver, fine, offense, points, remaining)
+        +sendLicenseStatusEmail(driver, status, reason)
+        +sendDemeritAdjustmentEmail(driver, delta, total, reason)
+        +sendProfileUpdatedEmail(driver, fields)
+    }
+
+    class DemeritRecoveryCronJob {
+        +executeMonthlyRecoveryJob()
+        +evaluateDriverEligibility(driver, rules)
     }
 
     Driver "1" -- "0..*" IssuedFine : incurs
     Police "1" -- "0..*" IssuedFine : issues
     Offense "1" -- "0..*" IssuedFine : categorizes
     Driver "1" -- "0..*" AccidentReport : reports
-    Station "1" -- "0..*" Police : stations
-    AccidentReport "0..*" -- "1" Station : notifies
-    Admin "1" -- "1" SystemConfig : configures
+    Station "1" -- "0..*" Police : assigns
+    Station "1" -- "0..*" AccidentReport : receives
+    Admin "1" -- "0..*" AdminSession : creates
+    Admin "1" -- "1" SystemConfig : manages
+    Police *-- "1" GeoPoint : contains
+    Station *-- "1" GeoPoint : contains
+    AccidentReport *-- "1" GeoPoint : contains
+    IssuedFine ..> FCMService : triggers
+    IssuedFine ..> EmailService : triggers
+    DemeritRecoveryCronJob ..> SystemConfig : reads rules
+    DemeritRecoveryCronJob ..> Driver : restores points
 ```
 
 </details>
@@ -670,6 +724,18 @@ sequenceDiagram
 
 #### Sequence 5: Administrative Driver Dossier Management & License Suspension
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/08_sequence_admin_driver_management_suspension.png" alt="Sequence 5: Administrative Driver Dossier & Suspension" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/08_sequence_admin_driver_management_suspension.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/08_sequence_admin_driver_management_suspension.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 sequenceDiagram
@@ -682,26 +748,45 @@ sequenceDiagram
     participant Email as SendGrid / Nodemailer Gateway
     actor Driver as Citizen Driver
 
-    Admin->>Portal: Search Driver & Click "Suspend License"
-    Admin->>Portal: Input Suspension Reason (e.g. "Dangerous Driving") & Confirm
-    Portal->>API: PUT /api/admin/drivers/:id/suspend { reason }
+    Admin->>Portal: Search Driver (License: B5395114) & Open Dossier
+    Portal->>API: GET /api/admin/drivers/:id
+    API->>DB: Query Driver Record & Citation History
+    DB-->>API: Driver Profile (demeritPoints: 22, status: ACTIVE)
+    API-->>Portal: Render Full Dossier & Demerit Scorecard
 
-    API->>DB: Find Driver & Set licenseStatus = 'SUSPENDED', suspendedAt = Now
-    DB-->>API: Driver Updated
+    Admin->>Portal: Click "Suspend License", Input Reason & Confirm
+    Portal->>API: PUT /api/admin/drivers/:id/suspend { reason: "Dangerous Driving Sec 140" }
+    
+    API->>DB: Update Driver (licenseStatus: 'SUSPENDED', suspendedAt: Now, suspensionReason)
+    DB-->>API: Driver Document Updated
 
     par Dual Notification Dispatch
         API->>FCM: sendToToken(driver.fcmToken, { title: 'DRIVING LICENSE SUSPENDED', reason })
-        FCM->>Driver: Immediate Push Notification on Mobile Phone
+        FCM->>Driver: High-Priority Alert Banner on Mobile Phone
     and
         API->>Email: sendLicenseStatusEmail(driver, 'SUSPENDED', reason)
-        Email->>Driver: Official Legal License Suspension Email Notice
+        Email->>Driver: Official Police Legal Suspension Notice HTML Email
     end
 
     API-->>Portal: 200 OK (Driver Suspended Successfully)
-    Portal-->>Admin: Display Toast & Refresh Driver Badge to SUSPENDED
+    Portal-->>Admin: Show Success Toast & Refresh Badge to SUSPENDED
 ```
 
+</details>
+
 #### Sequence 6: Automated Monthly Demerit Point Recovery Cron Job
+
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/09_sequence_monthly_demerit_recovery_cron.png" alt="Sequence 6: Automated Monthly Demerit Recovery Cron" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/09_sequence_monthly_demerit_recovery_cron.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/09_sequence_monthly_demerit_recovery_cron.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
@@ -718,7 +803,7 @@ sequenceDiagram
     Config-->>Cron: Active Rules Configuration
 
     Cron->>DB: Query Active Drivers with demerits < 24 & lastOffenseDate older than cleanDays
-    DB-->>Cron: List of Eligible Drivers
+    DB-->>Cron: List of Eligible Clean Drivers
 
     loop For Each Eligible Driver
         Cron->>DB: Update demeritPoints = min(24, current + 2), recalculate ratingScore
@@ -727,12 +812,14 @@ sequenceDiagram
             FCM->>Driver: Push Notification on Phone
         and
             Cron->>Email: sendDemeritAdjustmentEmail (Good Driver Conduct +2 pts)
-            Email->>Driver: Demerit Reinstatement Email Notice
+            Email->>Driver: Demerit Reinstatement Notice Email
         end
     end
 
     Cron->>Config: Update lastRecoveryRunAt = Now
 ```
+
+</details>
 
 ---
 
@@ -741,12 +828,12 @@ sequenceDiagram
 #### Activity 1: Driver Signup & KYC Liveness Verification State Machine
 
 <div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-  <img src="docs/diagrams/08_activity_kyc_verification_flow.png" alt="Activity 1: Driver KYC Verification Flow" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+  <img src="docs/diagrams/10_activity_kyc_verification_flow.png" alt="Activity 1: Driver KYC Verification Flow" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
 </div>
 
 <p align="center">
-  <a href="docs/diagrams/08_activity_kyc_verification_flow.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
-  <a href="docs/diagrams/08_activity_kyc_verification_flow.svg" download>📐 <b>Download Vector SVG</b></a>
+  <a href="docs/diagrams/10_activity_kyc_verification_flow.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/10_activity_kyc_verification_flow.svg" download>📐 <b>Download Vector SVG</b></a>
 </p>
 
 <details>
@@ -788,12 +875,12 @@ stateDiagram-v2
 #### Activity 2: Traffic Fine Issuance & Auto-Suspension Logic
 
 <div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-  <img src="docs/diagrams/09_activity_fine_issuance_suspension.png" alt="Activity 2: Traffic Fine Issuance & Auto-Suspension" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+  <img src="docs/diagrams/11_activity_fine_issuance_suspension.png" alt="Activity 2: Traffic Fine Issuance & Auto-Suspension" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
 </div>
 
 <p align="center">
-  <a href="docs/diagrams/09_activity_fine_issuance_suspension.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
-  <a href="docs/diagrams/09_activity_fine_issuance_suspension.svg" download>📐 <b>Download Vector SVG</b></a>
+  <a href="docs/diagrams/11_activity_fine_issuance_suspension.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/11_activity_fine_issuance_suspension.svg" download>📐 <b>Download Vector SVG</b></a>
 </p>
 
 <details>
@@ -830,6 +917,18 @@ stateDiagram-v2
 
 #### Activity 3: Online Payment Checkout & Webhook Reconciliation Flow
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/12_activity_payhere_settlement_reconciliation.png" alt="Activity 3: Online Payment Checkout & Reconciliation" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/12_activity_payhere_settlement_reconciliation.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/12_activity_payhere_settlement_reconciliation.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 stateDiagram-v2
@@ -856,15 +955,17 @@ stateDiagram-v2
     PaymentSuccessScreen --> [*]
 ```
 
+</details>
+
 #### Activity 4: Demerit Point Recovery Engine (Automated & On-Demand)
 
 <div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-  <img src="docs/diagrams/10_activity_demerit_recovery_cron.png" alt="Activity 4: Demerit Recovery Engine Cron" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+  <img src="docs/diagrams/13_activity_demerit_recovery_cron.png" alt="Activity 4: Demerit Recovery Engine Cron" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
 </div>
 
 <p align="center">
-  <a href="docs/diagrams/10_activity_demerit_recovery_cron.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
-  <a href="docs/diagrams/10_activity_demerit_recovery_cron.svg" download>📐 <b>Download Vector SVG</b></a>
+  <a href="docs/diagrams/13_activity_demerit_recovery_cron.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/13_activity_demerit_recovery_cron.svg" download>📐 <b>Download Vector SVG</b></a>
 </p>
 
 <details>
@@ -897,6 +998,18 @@ stateDiagram-v2
 
 #### Activity 5: Geospatial Emergency SOS Broadcast & Officer Siren Dispatch
 
+<div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+  <img src="docs/diagrams/14_activity_emergency_sos_dispatch.png" alt="Activity 5: Geospatial Emergency SOS Dispatch" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+</div>
+
+<p align="center">
+  <a href="docs/diagrams/14_activity_emergency_sos_dispatch.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/14_activity_emergency_sos_dispatch.svg" download>📐 <b>Download Vector SVG</b></a>
+</p>
+
+<details>
+<summary>🔍 Click to view Mermaid Source Code</summary>
+
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 stateDiagram-v2
@@ -916,6 +1029,8 @@ stateDiagram-v2
     BroadcastFCMPayload --> TriggerSirenOnDevice: Police Device Plays Audio Siren & Shows Route Map
     TriggerSirenOnDevice --> [*]
 ```
+
+</details>
 
 ---
 
@@ -1078,12 +1193,12 @@ The interface architecture of **e-Fine SL** adheres to 6 core human-centered eng
 ### 4.4.1 Entity Relationship Diagram (ERD)
 
 <div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-  <img src="docs/diagrams/11_entity_relationship_diagram_erd.png" alt="Entity Relationship Diagram (ERD)" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+  <img src="docs/diagrams/15_entity_relationship_diagram_erd.png" alt="Entity Relationship Diagram (ERD)" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
 </div>
 
 <p align="center">
-  <a href="docs/diagrams/11_entity_relationship_diagram_erd.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
-  <a href="docs/diagrams/11_entity_relationship_diagram_erd.svg" download>📐 <b>Download Vector SVG</b></a>
+  <a href="docs/diagrams/15_entity_relationship_diagram_erd.png" download>📥 <b>Download High-Res PNG</b></a> &nbsp;|&nbsp; 
+  <a href="docs/diagrams/15_entity_relationship_diagram_erd.svg" download>📐 <b>Download Vector SVG</b></a>
 </p>
 
 <details>
