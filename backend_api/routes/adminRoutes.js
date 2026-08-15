@@ -113,10 +113,24 @@ router.get('/drivers/:id', protectAdmin, getDriverDetails);
 // Officers - View only
 router.get('/officers', protectAdmin, getAllOfficers);
 
+const {
+    getAllPayments,
+    getPaymentMetrics,
+    getPaymentById,
+    verifyPaymentGateway,
+    processPaymentRefund,
+    exportPayments
+} = require('../controllers/adminPaymentController');
+
 // Fines - View only
 router.get('/fines', protectAdmin, getAllIssuedFines);
 
-// Payments - View only
+// Payments & Financial Reconciliation - Enhanced Suite
+router.get('/payments/metrics', protectAdmin, getPaymentMetrics);
+router.get('/payments/export', protectAdmin, exportPayments);
+router.get('/payments/:id', protectAdmin, getPaymentById);
+router.post('/payments/:id/verify-gateway', protectAdmin, requireRole('super_admin', 'finance_officer', 'admin_officer'), verifyPaymentGateway);
+router.post('/payments/refund', protectAdmin, requireRole('super_admin'), processPaymentRefund);
 router.get('/payments', protectAdmin, getAllPayments);
 
 // Reports - All admins can generate reports
