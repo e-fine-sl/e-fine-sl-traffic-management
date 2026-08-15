@@ -500,7 +500,7 @@ const exportPayments = async (req, res) => {
                 p.vehicleNumber || 'N/A',
                 p.offenseName ? (p.offenseName.length > 25 ? p.offenseName.substring(0, 23) + '...' : p.offenseName) : 'Offense',
                 `LKR ${(p.amount || 0).toLocaleString()}`,
-                p.status || 'UNPAID'
+                String(p.status || 'UNPAID').toUpperCase()
             ]);
 
             const tableData = {
