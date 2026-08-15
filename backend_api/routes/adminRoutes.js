@@ -48,6 +48,7 @@ const {
     getPaymentById,
     verifyPaymentGateway,
     processPaymentRefund,
+    flagPaymentDispute,
     exportPayments
 } = require('../controllers/adminPaymentController');
 const {
@@ -128,6 +129,7 @@ router.get('/payments/metrics', protectAdmin, getPaymentMetrics);
 router.get('/payments/export', protectAdmin, exportPayments);
 router.get('/payments/:id', protectAdmin, getPaymentById);
 router.post('/payments/:id/verify-gateway', protectAdmin, requireRole('super_admin', 'finance_officer', 'admin_officer'), verifyPaymentGateway);
+router.post('/payments/dispute', protectAdmin, requireRole('super_admin', 'finance_officer', 'admin_officer'), flagPaymentDispute);
 router.post('/payments/refund', protectAdmin, requireRole('super_admin'), processPaymentRefund);
 router.get('/payments', protectAdmin, getAllPayments);
 
