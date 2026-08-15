@@ -401,7 +401,7 @@ const processPaymentRefund = async (req, res) => {
     }
 };
 
-// @desc    Export Payments Dataset to CSV format
+// @desc    Export Payments Dataset to CSV or PDF format
 // @route   GET /api/admin/payments/export
 // @access  Private (Admin Roles)
 const exportPayments = async (req, res) => {
@@ -410,9 +410,11 @@ const exportPayments = async (req, res) => {
 
         let query = {};
         if (status && status !== 'ALL') {
-            query.status = status;
-        } else {
-            query.status = { $in: [PAYMENT.STATUS.PAID, 'REFUNDED', 'DISPUTED'] };
+            if (status === 'UNPAID') {
+                query.status = { $in: ['UNPAID', 'PENDING'] };
+            } else {
+                query.status = status;
+            }
         }
 
         if (search && search.trim() !== '') {
@@ -421,30 +423,106 @@ const exportPayments = async (req, res) => {
                 { licenseNumber: searchRegex },
                 { vehicleNumber: searchRegex },
                 { paymentId: searchRegex },
-                { offenseName: searchRegex }
+                { offenseName: searchRegex },
+                { policeOfficerId: searchRegex }
             ];
         }
 
         if (startDate || endDate) {
-            query.paidAt = {};
-            if (startDate) query.paidAt.$gte = new Date(startDate);
-            if (endDate) {
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
-                query.paidAt.$lte = end;
+            const start = startDate ? new Date(startDate) : null;
+            if (start) start.setHours(0, 0, 0, 0);
+
+            const end = endDate ? new Date(endDate) : null;
+            if (end) end.setHours(23, 59, 59, 999);
+
+            const dateCriteria = {};
+            if (start) dateCriteria.$gte = start;
+            if (end) dateCriteria.$lte = end;
+
+            if (status === 'PAID') {
+                query.paidAt = dateCriteria;
+            } else if (status === 'UNPAID') {
+                query.date = dateCriteria;
+            } else {
+                query.$or = [
+                    { paidAt: dateCriteria },
+                    { date: dateCriteria }
+                ];
             }
         }
 
         const payments = await IssuedFine.find(query)
-            .sort({ paidAt: -1 })
+            .sort({ paidAt: -1, date: -1 })
             .limit(5000)
             .lean();
+
+        // 1. PDF Statement Export
+        if (format === 'pdf') {
+            const PdfReportService = require('../services/pdfReportService');
+            const fileName = `e-Fine-Settlement-Ledger-${new Date().toISOString().slice(0, 10)}.pdf`;
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+            const doc = PdfReportService.createDocument();
+            doc.pipe(res);
+
+            const totalTransactions = payments.length;
+            const totalRevenue = payments
+                .filter(p => String(p.status).toUpperCase() === 'PAID')
+                .reduce((sum, p) => sum + (p.amount || 0), 0);
+            const totalOutstanding = payments
+                .filter(p => String(p.status).toUpperCase() === 'UNPAID' || String(p.status).toUpperCase() === 'PENDING')
+                .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+            const statusText = status && status !== 'ALL' ? `Status: ${status}` : 'All Statuses';
+            const dateText = (startDate || endDate) ? `${startDate || 'Start'} to ${endDate || 'Present'}` : 'All Recorded Dates';
+
+            PdfReportService.buildHeader(doc, {
+                title: 'Treasury Settlement Ledger',
+                category: 'FINANCIAL SETTLEMENT STATEMENT',
+                adminInfo: req.admin,
+                reportId: `LEDGER-${Date.now().toString().slice(-6)}`,
+                dateRange: `${statusText} | Period: ${dateText}`
+            });
+
+            PdfReportService.buildKPICards(doc, [
+                { label: 'Total Records', value: totalTransactions.toString(), subtext: 'Filtered Entries', color: '#2563EB' },
+                { label: 'Settled Revenue', value: `LKR ${totalRevenue.toLocaleString()}`, subtext: 'Realized Collections', color: '#10B981' },
+                { label: 'Outstanding Amount', value: `LKR ${totalOutstanding.toLocaleString()}`, subtext: 'Unpaid / Pending Fines', color: '#EF4444' }
+            ]);
+
+            PdfReportService.buildSectionHeader(doc, 'Settlement & Transaction Log');
+
+            const tableRows = payments.slice(0, 500).map(p => [
+                p.paymentId || (p.gatewayPaymentId ? p.gatewayPaymentId.slice(-10) : p._id.toString().slice(-8).toUpperCase()),
+                p.paidAt ? new Date(p.paidAt).toLocaleDateString() : (p.date ? new Date(p.date).toLocaleDateString() : 'N/A'),
+                p.licenseNumber || 'N/A',
+                p.vehicleNumber || 'N/A',
+                p.offenseName ? (p.offenseName.length > 25 ? p.offenseName.substring(0, 23) + '...' : p.offenseName) : 'Offense',
+                `LKR ${(p.amount || 0).toLocaleString()}`,
+                p.status || 'UNPAID'
+            ]);
+
+            const tableData = {
+                headers: ["Ref / ID", "Date", "License No", "Vehicle No", "Offense Description", "Amount", "Status"],
+                rows: tableRows.length > 0 ? tableRows : [["-", "-", "-", "-", "No records found matching filter", "-", "-"]]
+            };
+
+            await doc.table(tableData, {
+                prepareHeader: () => doc.font("Helvetica-Bold").fontSize(8),
+                prepareRow: () => doc.font("Helvetica").fontSize(7.5)
+            });
+
+            PdfReportService.buildFooter(doc);
+            doc.end();
+            return;
+        }
 
         if (format === 'json') {
             return res.json({ success: true, count: payments.length, data: payments });
         }
 
-        // Generate CSV output
+        // 2. CSV Output
         const headers = [
             'Payment ID',
             'Payment Date',
@@ -473,8 +551,9 @@ const exportPayments = async (req, res) => {
 
         const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
 
+        const fileName = `e-Fine-Settlement-Ledger-${new Date().toISOString().slice(0, 10)}.csv`;
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="eFine_Payments_Export_${Date.now()}.csv"`);
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
         return res.status(HTTP.OK).send(csvContent);
     } catch (error) {
         console.error('[exportPayments] Error:', error);
