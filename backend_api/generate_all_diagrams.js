@@ -635,15 +635,20 @@ const diagrams = [
   },
   {
     id: '15_entity_relationship_diagram_erd',
-    title: 'Entity Relationship Diagram (ERD) with Constraints & Cardinalities',
+    title: 'Comprehensive Entity Relationship Diagram (ERD) with Constraints & Cardinalities',
     code: `erDiagram
     DRIVERS ||--o{ ISSUED_FINES : "incurs"
+    OFFENSES ||--o{ ISSUED_FINES : "classifies"
     POLICE ||--o{ ISSUED_FINES : "issues"
-    OFFENSES ||--o{ ISSUED_FINES : "categorizes"
-    DRIVERS ||--o{ ACCIDENT_REPORTS : "submits"
-    STATIONS ||--o{ POLICE : "employs"
+    ISSUED_FINES ||--o| PAYMENT_TRANSACTIONS : "settled_via"
+    DRIVERS ||--o{ ACCIDENT_REPORTS : "files"
     STATIONS ||--o{ ACCIDENT_REPORTS : "receives"
-    ADMINS ||--o{ ADMIN_SESSIONS : "initiates"
+    STATIONS ||--o{ POLICE : "assigns"
+    POLICE ||--o{ OFFICER_SESSIONS : "logs"
+    POLICE ||--o| PRE_APPROVED_OFFICERS : "validated_against"
+    STATIONS ||--o{ VERIFICATIONS : "issues"
+    ADMINS ||--o{ ADMIN_SESSIONS : "creates"
+    ADMINS ||--|| SYSTEM_CONFIGS : "maintains"
 
     DRIVERS {
         ObjectId _id PK
@@ -658,6 +663,16 @@ const diagrams = [
         string licenseStatus
         string demeritLevel
         boolean kycVerified
+        boolean isVerified
+        boolean emailIsVerified
+        string vehicleNumber
+        string addressLine1
+        string addressLine2
+        string city
+        string postalCode
+        string licenseExpiryDate
+        string licenseIssueDate
+        string dateOfBirth
         string fcmToken
         date lastOffenseDate
         date suspendedAt
@@ -670,6 +685,8 @@ const diagrams = [
         string name
         string email UK
         string nic UK
+        string phone
+        string password
         string policeStation FK
         string position
         string role
@@ -677,6 +694,10 @@ const diagrams = [
         string appState
         boolean isActive
         string fcmToken
+        date lastActiveTime
+        date lastLoginTime
+        GeoJSON lastLoginLocation
+        date lastLogoutTime
     }
 
     ISSUED_FINES {
@@ -687,13 +708,19 @@ const diagrams = [
         string offenseName
         number amount
         string place
-        string policeStation
+        string province
+        string district
+        string policeStation FK
         string policeOfficerId FK
         string status
         string paymentId
+        string paymentMethod
+        number gatewayFee
+        number netAmount
         date paidAt
         number demeritPoints
         date date
+        string disputeReason
         string paymentNotes
     }
 
@@ -707,17 +734,40 @@ const diagrams = [
         string category
     }
 
+    PAYMENT_TRANSACTIONS {
+        ObjectId _id PK
+        string orderId FK
+        string gatewayPaymentId UK
+        string merchantId
+        number amount
+        string currency
+        string statusCode
+        string statusMessage
+        string paymentMethod
+        string cardHolderName
+        string cardNoMasked
+        string md5sig
+        date processedAt
+        boolean isVerified
+    }
+
     ACCIDENT_REPORTS {
         ObjectId _id PK
         string driverLicense FK
+        string driverName
+        string driverPhone
         string accidentType
+        string description
         GeoJSON location
-        string placeDescription
         string province
         string district
-        string policeStation
+        string policeDivision
+        string locationAddress
+        number officersNotified
+        string stationNotified FK
         string status
-        string severity
+        string acknowledgedBy
+        string resolvedBy
         date reportedAt
     }
 
@@ -730,6 +780,59 @@ const diagrams = [
         string officialEmail
         string phoneNumber
         GeoJSON location
+    }
+
+    OFFICER_SESSIONS {
+        ObjectId _id PK
+        string badgeNumber FK
+        string officerName
+        string policeStation
+        date loginTime
+        GeoJSON loginLocation
+        date logoutTime
+        GeoJSON logoutLocation
+        number sessionDurationMinutes
+    }
+
+    PRE_APPROVED_OFFICERS {
+        ObjectId _id PK
+        string badgeNumber UK
+        boolean isRegistered
+        date registeredAt
+        string notes
+    }
+
+    VERIFICATIONS {
+        ObjectId _id PK
+        string badgeNumber FK
+        string stationCode FK
+        string otp
+        date expiresAt
+        date createdAt
+    }
+
+    ADMINS {
+        ObjectId _id PK
+        string name
+        string email UK
+        string password
+        string role
+        boolean isTwoFactorEnabled
+        string twoFactorSecret
+        date lastLoginAt
+        number failedLoginAttempts
+        boolean accountLocked
+    }
+
+    ADMIN_SESSIONS {
+        ObjectId _id PK
+        ObjectId userId FK
+        string sessionToken UK
+        string refreshTokenHash
+        string ipAddress
+        string userAgent
+        date expiresAt
+        boolean isValid
     }
 
     SYSTEM_CONFIGS {
@@ -745,28 +848,12 @@ const diagrams = [
         date lastRecoveryRunAt
         number finePaymentGraceDays
         boolean enableOnlinePayments
+        boolean allowDisputeSubmissions
         number sessionTimeoutMinutes
-    }
-
-    ADMINS {
-        ObjectId _id PK
-        string name
-        string email UK
-        string password
-        string role
-        boolean isTwoFactorEnabled
-        date lastLoginAt
-    }
-
-    ADMIN_SESSIONS {
-        ObjectId _id PK
-        string userId FK
-        string sessionToken UK
-        string refreshTokenHash
-        date expiresAt
-        boolean isValid
-    }
-`
+        number maxFailedLoginAttempts
+        number jwtExpiryMinutes
+        boolean require2FAForAdmins
+    }`
   }
 ];
 

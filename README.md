@@ -32,7 +32,7 @@ All 15 system design diagrams are rendered on a **solid, high-contrast pure whit
 | **12** | **4.2.4.3**| Activity 3: Online Payment & Webhook Reconciliation | [🔍 View](docs/diagrams/12_activity_payhere_settlement_reconciliation.png) | [📥 High-Res PNG](docs/diagrams/12_activity_payhere_settlement_reconciliation.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/12_activity_payhere_settlement_reconciliation.svg) |
 | **13** | **4.2.4.4**| Activity 4: Demerit Point Recovery Engine | [🔍 View](docs/diagrams/13_activity_demerit_recovery_cron.png) | [📥 High-Res PNG](docs/diagrams/13_activity_demerit_recovery_cron.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/13_activity_demerit_recovery_cron.svg) |
 | **14** | **4.2.4.5**| Activity 5: Geospatial Emergency SOS Dispatch | [🔍 View](docs/diagrams/14_activity_emergency_sos_dispatch.png) | [📥 High-Res PNG](docs/diagrams/14_activity_emergency_sos_dispatch.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/14_activity_emergency_sos_dispatch.svg) |
-| **15** | **4.4.1** | Entity Relationship Diagram (ERD) | [🔍 View](docs/diagrams/15_entity_relationship_diagram_erd.png) | [📥 High-Res PNG](docs/diagrams/15_entity_relationship_diagram_erd.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/15_entity_relationship_diagram_erd.svg) |
+| **15** | **4.4.1** | Comprehensive Entity Relationship Diagram (ERD) | [🔍 View](docs/diagrams/15_entity_relationship_diagram_erd.png) | [📥 High-Res PNG](docs/diagrams/15_entity_relationship_diagram_erd.png) &nbsp;•&nbsp; [📐 Vector SVG](docs/diagrams/15_entity_relationship_diagram_erd.svg) |
 
 ---
 
@@ -67,7 +67,7 @@ All 15 system design diagrams are rendered on a **solid, high-contrast pure whit
     - [Screen 4: Admin Portal Driver Dossier & License Suspension Modal](#screen-4-admin-portal-driver-dossier--license-suspension-modal)
     - [Screen 5: Admin Portal System Configuration & Diagnostics Center](#screen-5-admin-portal-system-configuration--diagnostics-center)
 - [4.4 Database Design](#44-database-design)
-  - [4.4.1 Entity Relationship Diagram (ERD)](#441-entity-relationship-diagram-erd)
+  - [4.4.1 Comprehensive Entity Relationship Diagram (ERD)](#441-comprehensive-entity-relationship-diagram-erd)
   - [4.4.2 Comprehensive Normalization Analysis (1NF to BCNF & MongoDB Pragmatic Denormalization)](#442-comprehensive-normalization-analysis-1nf-to-bcnf--mongodb-pragmatic-denormalization)
   - [4.4.3 Complete Relational Schema & Data Dictionary](#443-complete-relational-schema--data-dictionary)
 
@@ -1190,10 +1190,12 @@ The interface architecture of **e-Fine SL** adheres to 6 core human-centered eng
 
 ## 4.4 Database Design
 
-### 4.4.1 Entity Relationship Diagram (ERD)
+### 4.4.1 Comprehensive Entity Relationship Diagram (ERD)
+
+The complete Entity Relationship Diagram (ERD) captures all **13 live MongoDB collections and subdocuments** encompassing the entire e-Fine SL domain: driver accounts & KYC verification, traffic police officers & spatial tracking, issued fines & offenses, PayHere payment audit logs, accident incident reports, police stations, duty session tracking, pre-approved officer verification, OTP verification tokens, administrator accounts, security sessions, and dynamic system configurations.
 
 <div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-  <img src="docs/diagrams/15_entity_relationship_diagram_erd.png" alt="Entity Relationship Diagram (ERD)" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
+  <img src="docs/diagrams/15_entity_relationship_diagram_erd.png" alt="Comprehensive Entity Relationship Diagram (ERD)" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
 </div>
 
 <p align="center">
@@ -1208,12 +1210,17 @@ The interface architecture of **e-Fine SL** adheres to 6 core human-centered eng
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#2563eb', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#ffffff', 'background': '#ffffff' }}}%%
 erDiagram
     DRIVERS ||--o{ ISSUED_FINES : "incurs"
+    OFFENSES ||--o{ ISSUED_FINES : "classifies"
     POLICE ||--o{ ISSUED_FINES : "issues"
-    OFFENSES ||--o{ ISSUED_FINES : "categorizes"
-    DRIVERS ||--o{ ACCIDENT_REPORTS : "submits"
-    STATIONS ||--o{ POLICE : "employs"
+    ISSUED_FINES ||--o| PAYMENT_TRANSACTIONS : "settled_via"
+    DRIVERS ||--o{ ACCIDENT_REPORTS : "files"
     STATIONS ||--o{ ACCIDENT_REPORTS : "receives"
-    ADMINS ||--o{ ADMIN_SESSIONS : "initiates"
+    STATIONS ||--o{ POLICE : "assigns"
+    POLICE ||--o{ OFFICER_SESSIONS : "logs"
+    POLICE ||--o| PRE_APPROVED_OFFICERS : "validated_against"
+    STATIONS ||--o{ VERIFICATIONS : "issues"
+    ADMINS ||--o{ ADMIN_SESSIONS : "creates"
+    ADMINS ||--|| SYSTEM_CONFIGS : "maintains"
 
     DRIVERS {
         ObjectId _id PK
@@ -1228,6 +1235,16 @@ erDiagram
         string licenseStatus
         string demeritLevel
         boolean kycVerified
+        boolean isVerified
+        boolean emailIsVerified
+        string vehicleNumber
+        string addressLine1
+        string addressLine2
+        string city
+        string postalCode
+        string licenseExpiryDate
+        string licenseIssueDate
+        string dateOfBirth
         string fcmToken
         date lastOffenseDate
         date suspendedAt
@@ -1240,6 +1257,8 @@ erDiagram
         string name
         string email UK
         string nic UK
+        string phone
+        string password
         string policeStation FK
         string position
         string role
@@ -1247,6 +1266,10 @@ erDiagram
         string appState
         boolean isActive
         string fcmToken
+        date lastActiveTime
+        date lastLoginTime
+        GeoJSON lastLoginLocation
+        date lastLogoutTime
     }
 
     ISSUED_FINES {
@@ -1257,13 +1280,19 @@ erDiagram
         string offenseName
         number amount
         string place
-        string policeStation
+        string province
+        string district
+        string policeStation FK
         string policeOfficerId FK
         string status
         string paymentId
+        string paymentMethod
+        number gatewayFee
+        number netAmount
         date paidAt
         number demeritPoints
         date date
+        string disputeReason
         string paymentNotes
     }
 
@@ -1277,17 +1306,40 @@ erDiagram
         string category
     }
 
+    PAYMENT_TRANSACTIONS {
+        ObjectId _id PK
+        string orderId FK
+        string gatewayPaymentId UK
+        string merchantId
+        number amount
+        string currency
+        string statusCode
+        string statusMessage
+        string paymentMethod
+        string cardHolderName
+        string cardNoMasked
+        string md5sig
+        date processedAt
+        boolean isVerified
+    }
+
     ACCIDENT_REPORTS {
         ObjectId _id PK
         string driverLicense FK
+        string driverName
+        string driverPhone
         string accidentType
+        string description
         GeoJSON location
-        string placeDescription
         string province
         string district
-        string policeStation
+        string policeDivision
+        string locationAddress
+        number officersNotified
+        string stationNotified FK
         string status
-        string severity
+        string acknowledgedBy
+        string resolvedBy
         date reportedAt
     }
 
@@ -1300,6 +1352,59 @@ erDiagram
         string officialEmail
         string phoneNumber
         GeoJSON location
+    }
+
+    OFFICER_SESSIONS {
+        ObjectId _id PK
+        string badgeNumber FK
+        string officerName
+        string policeStation
+        date loginTime
+        GeoJSON loginLocation
+        date logoutTime
+        GeoJSON logoutLocation
+        number sessionDurationMinutes
+    }
+
+    PRE_APPROVED_OFFICERS {
+        ObjectId _id PK
+        string badgeNumber UK
+        boolean isRegistered
+        date registeredAt
+        string notes
+    }
+
+    VERIFICATIONS {
+        ObjectId _id PK
+        string badgeNumber FK
+        string stationCode FK
+        string otp
+        date expiresAt
+        date createdAt
+    }
+
+    ADMINS {
+        ObjectId _id PK
+        string name
+        string email UK
+        string password
+        string role
+        boolean isTwoFactorEnabled
+        string twoFactorSecret
+        date lastLoginAt
+        number failedLoginAttempts
+        boolean accountLocked
+    }
+
+    ADMIN_SESSIONS {
+        ObjectId _id PK
+        ObjectId userId FK
+        string sessionToken UK
+        string refreshTokenHash
+        string ipAddress
+        string userAgent
+        date expiresAt
+        boolean isValid
     }
 
     SYSTEM_CONFIGS {
@@ -1315,26 +1420,11 @@ erDiagram
         date lastRecoveryRunAt
         number finePaymentGraceDays
         boolean enableOnlinePayments
+        boolean allowDisputeSubmissions
         number sessionTimeoutMinutes
-    }
-
-    ADMINS {
-        ObjectId _id PK
-        string name
-        string email UK
-        string password
-        string role
-        boolean isTwoFactorEnabled
-        date lastLoginAt
-    }
-
-    ADMIN_SESSIONS {
-        ObjectId _id PK
-        string userId FK
-        string sessionToken UK
-        string refreshTokenHash
-        date expiresAt
-        boolean isValid
+        number maxFailedLoginAttempts
+        number jwtExpiryMinutes
+        boolean require2FAForAdmins
     }
 ```
 
@@ -1345,15 +1435,15 @@ erDiagram
 ### 4.4.2 Comprehensive Normalization Analysis (1NF to BCNF & MongoDB Pragmatic Denormalization)
 
 #### 1. Unnormalized Form (UNF)
-In a raw non-relational spreadsheet format, fine data, driver details, offense categories, and officer stations are merged in a single flat structure containing repeating groups (multi-valued offense names, vehicle classes array, nested station locations).
+In a raw non-relational spreadsheet format, fine data, driver details, offense categories, officer shifts, payment receipts, and station jurisdictions are merged in a single flat structure containing repeating groups (multi-valued offense names, vehicle classes array, nested station locations).
 
 #### 2. First Normal Form (1NF)
 - **Requirement:** Elimination of repeating groups; all attributes must contain atomic values.
-- **Transformation:** Extracted multi-offense spot fines into discrete `IssuedFine` records referencing atomic `offenseId` entries. Standardized driver metadata into discrete atomic fields (`licenseNumber`, `nic`, `email`, `phone`).
+- **Transformation:** Extracted multi-offense spot fines into discrete `IssuedFine` records referencing atomic `offenseId` entries. Standardized driver metadata into discrete atomic fields (`licenseNumber`, `nic`, `email`, `phone`). Separated payment gateway transactions into `PaymentTransaction` records.
 
 #### 3. Second Normal Form (2NF)
 - **Requirement:** Meets 1NF; all non-key attributes must be fully functionally dependent on the primary key (no partial functional dependencies).
-- **Transformation:** Separated `Offense` attributes (`amount`, `sectionOfAct`, `demeritValue`) from `IssuedFine`. `IssuedFine` references `offenseId` as foreign key, ensuring statutory fine metadata depends strictly on `offenseId`.
+- **Transformation:** Separated statutory `Offense` attributes (`amount`, `sectionOfAct`, `demeritValue`) from `IssuedFine`. `IssuedFine` references `offenseId` as foreign key, ensuring statutory fine metadata depends strictly on `offenseId`. Separated officer duty sessions into `OfficerSession`.
 
 #### 4. Third Normal Form (3NF)
 - **Requirement:** Meets 2NF; no transitive dependencies exist (non-key attributes depend *only* on candidate keys).
@@ -1361,7 +1451,7 @@ In a raw non-relational spreadsheet format, fine data, driver details, offense c
 
 #### 5. Boyce-Codd Normal Form (BCNF)
 - **Requirement:** Every determinant is a candidate key.
-- **Transformation:** Enforced unique candidate key index constraints (`unique: true`) on `badgeNumber`, `licenseNumber`, `nic`, `email`, and `stationCode`.
+- **Transformation:** Enforced unique candidate key index constraints (`unique: true`) on `badgeNumber`, `licenseNumber`, `nic`, `email`, `stationCode`, and `gatewayPaymentId`.
 
 #### 6. Strategic Pragmatic Denormalization in MongoDB
 While relational principles dictate strict 3NF/BCNF, high-throughput NoSQL MongoDB applications benefit from strategic denormalization:
@@ -1390,7 +1480,18 @@ While relational principles dictate strict 3NF/BCNF, high-throughput NoSQL Mongo
 | `licenseStatus` | String | ENUM | `'ACTIVE'` | `'ACTIVE'` or `'SUSPENDED'` |
 | `demeritLevel` | String | ENUM | `'EXCELLENT'`| EXCELLENT/GOOD/FAIR/WARNING/DANGER/SUSPENDED |
 | `kycVerified` | Boolean | NOT NULL | `false` | Liveness KYC verification flag |
+| `isVerified` | Boolean | NOT NULL | `false` | Overall account verified flag |
+| `emailIsVerified`| Boolean | NOT NULL | `false` | Email OTP verification status |
+| `profileImage` | String | NULLABLE | null | Base64 profile photo |
+| `licenseFrontImage`| String | NULLABLE | null | Base64 license front |
+| `licenseBackImage` | String | NULLABLE | null | Base64 license back |
 | `vehicleNumber` | String | NULLABLE | null | Registered vehicle plate |
+| `addressLine1` | String | NULLABLE | null | Residential street address |
+| `city` | String | NULLABLE | null | City / Town |
+| `postalCode` | String | NULLABLE | null | Postal Code |
+| `licenseExpiryDate`| String | NULLABLE | null | Driving license expiry date |
+| `licenseIssueDate` | String | NULLABLE | null | Driving license issue date (4a) |
+| `dateOfBirth` | String | NULLABLE | null | Driver Date of Birth (3) |
 | `fcmToken` | String | NULLABLE | null | Firebase FCM Device Token |
 | `lastOffenseDate`| Date | NULLABLE | null | Timestamp of most recent violation |
 | `suspendedAt` | Date | NULLABLE | null | License suspension timestamp |
@@ -1413,6 +1514,10 @@ While relational principles dictate strict 3NF/BCNF, high-throughput NoSQL Mongo
 | `appState` | String | ENUM | `'LOGGED_OUT'`| FOREGROUND / BACKGROUND / LOGGED_OUT |
 | `isActive` | Boolean | NOT NULL | `true` | Duty active flag |
 | `fcmToken` | String | NULLABLE | null | Firebase FCM Device Token |
+| `lastActiveTime` | Date | NULLABLE | null | Timestamp of last heartbeat |
+| `lastLoginTime` | Date | NULLABLE | null | Timestamp of most recent login |
+| `lastLoginLocation`| GeoJSON Point | 2DSPHERE INDEX | `[0.0, 0.0]` | Login GPS location |
+| `lastLogoutTime` | Date | NULLABLE | null | Timestamp of duty logout |
 
 #### 3. Collection: `issuedfines`
 *Primary Key:* `_id` (ObjectId) | *Indexes:* `licenseNumber`, `policeOfficerId`, `status`, `date`
@@ -1426,13 +1531,19 @@ While relational principles dictate strict 3NF/BCNF, high-throughput NoSQL Mongo
 | `offenseName` | String | NOT NULL | - | Denormalized offense title |
 | `amount` | Number | MIN: 0 | REQUIRED | Statutory fine penalty (LKR) |
 | `place` | String | NOT NULL | - | Violation location description |
+| `province` | String | NULLABLE | null | Administrative Province |
+| `district` | String | NULLABLE | null | Administrative District |
 | `policeStation` | String | NOT NULL | - | Issuing Police Station Command |
 | `policeOfficerId`| String | NOT NULL | - | Issuing Officer Badge Number |
-| `status` | String | ENUM | `'UNPAID'` | `'UNPAID'`, `'PAID'`, `'DISPUTED'`, `'REFUNDED'` |
+| `status` | String | ENUM | `'UNPAID'` | `'UNPAID'`, `'PAID'`, `'PENDING'`, `'REFUNDED'`, `'DISPUTED'` |
 | `paymentId` | String | NULLABLE | null | PayHere transaction gateway ID |
+| `paymentMethod` | String | NOT NULL | `'PAYHERE_GATEWAY'` | Payment method / channel |
+| `gatewayFee` | Number | DEFAULT: 0 | `0` | Gateway convenience fee |
+| `netAmount` | Number | NULLABLE | null | Net settled amount |
 | `paidAt` | Date | NULLABLE | null | Fine payment timestamp |
 | `demeritPoints` | Number | NOT NULL | `0` | Demerit points deducted for citation |
 | `date` | Date | TIMESTAMP | `Now` | Date citation was issued |
+| `disputeReason` | String | NULLABLE | null | Ground for citation dispute |
 | `paymentNotes` | String | NULLABLE | null | Administrative notes |
 
 #### 4. Collection: `offenses`
@@ -1448,25 +1559,52 @@ While relational principles dictate strict 3NF/BCNF, high-throughput NoSQL Mongo
 | `demeritValue` | Number | MIN: 1, MAX: 4 | `1` | Penalty points deducted (P1-P4) |
 | `category` | String | ENUM | `'GENERAL'` | SPEEDING/DOCUMENTATION/RECKLESS/HELMET |
 
-#### 5. Collection: `accidentreports`
+#### 5. Collection: `paymenttransactions`
+*Primary Key:* `_id` (ObjectId) | *Unique Indexes:* `gatewayPaymentId` | *Indexes:* `orderId`
+
+| Field Name | Datatype | Constraints | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `_id` | ObjectId | PRIMARY KEY | Auto | Transaction ID |
+| `orderId` | String | REF: IssuedFine | REQUIRED | Fine Citation reference ID |
+| `gatewayPaymentId`| String | UNIQUE, NOT NULL | - | PayHere payment_id |
+| `merchantId` | String | NOT NULL | - | PayHere merchant identifier |
+| `amount` | Number | NOT NULL | - | Transaction value in LKR |
+| `currency` | String | NOT NULL | `'LKR'` | Currency code |
+| `statusCode` | String | NOT NULL | - | PayHere status (2 = SUCCESS) |
+| `statusMessage` | String | NULLABLE | null | Gateway status message |
+| `paymentMethod` | String | NULLABLE | null | VISA / MasterCard / eZcash |
+| `cardHolderName`| String | NULLABLE | null | Name on payment card |
+| `cardNoMasked` | String | NULLABLE | null | Masked card number (e.g. ************1234) |
+| `md5sig` | String | NOT NULL | - | Verified MD5 signature hash |
+| `processedAt` | Date | TIMESTAMP | `Now` | Transaction timestamp |
+| `isVerified` | Boolean | NOT NULL | `true` | MD5 cryptographic authenticity flag |
+
+#### 6. Collection: `accidentreports`
 *Primary Key:* `_id` (ObjectId) | *Spatial Index:* `location` (2dsphere) | *Compound Indexes:* `(province, status)`, `(district, status)`
 
 | Field Name | Datatype | Constraints | Default | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | `_id` | ObjectId | PRIMARY KEY | Auto | Accident report ID |
 | `driverLicense` | String | NOT NULL | - | Reporting driver license |
+| `driverName` | String | NOT NULL | - | Driver full name |
+| `driverPhone` | String | NULLABLE | null | Contact phone |
 | `accidentType` | String | ENUM | REQUIRED | Collision / Pedestrian / Hit & Run / Hazard |
+| `description` | String | MAX: 200 | `''` | Brief incident description |
 | `location` | GeoJSON Point | 2DSPHERE INDEX | REQUIRED | Accident scene GPS `[lng, lat]` |
-| `placeDescription`| String | NOT NULL | - | Road / Landmark description |
-| `province` | String | NOT NULL | - | Administrative Province |
-| `district` | String | NOT NULL | - | Administrative District |
-| `policeStation` | String | NOT NULL | - | Jurisdictional Police Station |
+| `province` | String | NOT NULL | `'Unknown'` | Administrative Province |
+| `district` | String | NOT NULL | `'Unknown'` | Administrative District |
+| `policeDivision` | String | NOT NULL | `'Unknown'` | Police Division |
+| `locationAddress`| String | NULLABLE | `''` | Street / Landmark address |
+| `officersNotified`| Number | DEFAULT: 0 | `0` | Count of officers alerted |
+| `stationNotified`| String | NULLABLE | `''` | Nearest police station name |
 | `status` | String | ENUM | `'OPEN'` | OPEN / ACKNOWLEDGED / RESOLVED |
-| `severity` | String | ENUM | `'MODERATE'`| MINOR / MODERATE / CRITICAL |
-| `images` | Array[String] | Base64/URLs | `[]` | Accident scene photographs |
+| `acknowledgedBy` | String | NULLABLE | null | Officer badge acknowledging |
+| `resolvedBy` | String | NULLABLE | null | Officer badge resolving |
+| `images` | Array[String] | Base64/URLs | `[]` | Incident photographs |
 | `statusHistory` | Array[Schema] | Sub-document | `[]` | Audit trail of status transitions |
+| `reportedAt` | Date | TIMESTAMP | `Now` | Incident reporting timestamp |
 
-#### 6. Collection: `stations`
+#### 7. Collection: `stations`
 *Primary Key:* `_id` (ObjectId) | *Unique Indexes:* `stationCode` | *Spatial Index:* `location` (2dsphere)
 
 | Field Name | Datatype | Constraints | Default | Description |
@@ -1480,7 +1618,75 @@ While relational principles dictate strict 3NF/BCNF, high-throughput NoSQL Mongo
 | `phoneNumber` | String | NOT NULL | - | Station contact phone |
 | `location` | GeoJSON Point | 2DSPHERE INDEX | null | Station GPS coordinates |
 
-#### 7. Collection: `systemconfigs`
+#### 8. Collection: `officersessions`
+*Primary Key:* `_id` (ObjectId) | *Spatial Index:* `loginLocation` (2dsphere) | *Indexes:* `badgeNumber`, `loginTime`
+
+| Field Name | Datatype | Constraints | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `_id` | ObjectId | PRIMARY KEY | Auto | Session log ID |
+| `badgeNumber` | String | NOT NULL | - | Officer Badge Number |
+| `officerName` | String | NOT NULL | - | Officer Full Name |
+| `policeStation` | String | NULLABLE | null | Station assigned |
+| `loginTime` | Date | NOT NULL | - | Duty login timestamp |
+| `loginLocation` | GeoJSON Point | 2DSPHERE INDEX | - | Login GPS coordinates |
+| `logoutTime` | Date | NULLABLE | null | Duty logout timestamp |
+| `logoutLocation`| GeoJSON Point | NULLABLE | null | Logout GPS coordinates |
+| `sessionDurationMinutes`| Number | NULLABLE | null | Active shift duration in minutes |
+
+#### 9. Collection: `preapprovedofficers`
+*Primary Key:* `_id` (ObjectId) | *Unique Indexes:* `badgeNumber`
+
+| Field Name | Datatype | Constraints | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `_id` | ObjectId | PRIMARY KEY | Auto | Record ID |
+| `badgeNumber` | String | UNIQUE, NOT NULL | - | Whitelisted Officer Badge Number |
+| `isRegistered` | Boolean | NOT NULL | `false` | Onboarding completed flag |
+| `registeredAt` | Date | NULLABLE | null | Registration timestamp |
+| `notes` | String | DEFAULT: '' | `''` | Departmental notes |
+
+#### 10. Collection: `verifications`
+*Primary Key:* `_id` (ObjectId) | *TTL Index:* `createdAt`
+
+| Field Name | Datatype | Constraints | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `_id` | ObjectId | PRIMARY KEY | Auto | Verification token ID |
+| `badgeNumber` | String | NOT NULL | - | Target officer badge number |
+| `stationCode` | String | NOT NULL | - | Police station code issuing OTP |
+| `otp` | String | NOT NULL | - | 6-digit secret OTP |
+| `expiresAt` | Date | NULLABLE | null | Explicit expiry timestamp |
+| `createdAt` | Date | TTL (10 mins) | `Now` | Auto-purged after expiry |
+
+#### 11. Collection: `admins`
+*Primary Key:* `_id` (ObjectId) | *Unique Indexes:* `email`
+
+| Field Name | Datatype | Constraints | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `_id` | ObjectId | PRIMARY KEY | Auto | Admin user ID |
+| `name` | String | NOT NULL | - | Administrator Name |
+| `email` | String | UNIQUE, NOT NULL | - | Login Email Address |
+| `password` | String | NOT NULL | - | Bcrypt hashed password |
+| `role` | String | ENUM | `'super_admin'`| super_admin / admin_officer / finance_officer |
+| `isTwoFactorEnabled` | Boolean | NOT NULL | `false` | 2FA verification enabled flag |
+| `twoFactorSecret` | String | NULLABLE | null | TOTP 2FA secret key |
+| `lastLoginAt` | Date | NULLABLE | null | Timestamp of last login |
+| `failedLoginAttempts`| Number | DEFAULT: 0 | `0` | Failed attempts tracker |
+| `accountLocked` | Boolean | NOT NULL | `false` | Account lock status |
+
+#### 12. Collection: `adminsessions`
+*Primary Key:* `_id` (ObjectId) | *Unique Indexes:* `sessionToken` | *TTL Index:* `expiresAt`
+
+| Field Name | Datatype | Constraints | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `_id` | ObjectId | PRIMARY KEY | Auto | Session record ID |
+| `userId` | ObjectId | REF: Admin | REQUIRED | Foreign key to Admin |
+| `sessionToken` | String | UNIQUE, NOT NULL | - | Active cryptographic session token |
+| `refreshTokenHash` | String | NOT NULL | - | Hashed refresh token |
+| `ipAddress` | String | NULLABLE | null | Client IP address |
+| `userAgent` | String | NULLABLE | null | Browser / Device User Agent |
+| `expiresAt` | Date | TTL INDEX | REQUIRED | Automatic session expiration date |
+| `isValid` | Boolean | NOT NULL | `true` | Session validity status flag |
+
+#### 13. Collection: `systemconfigs`
 *Primary Key:* `_id` (ObjectId) | *Singleton Configuration Record*
 
 | Field Name | Datatype | Constraints | Default | Description |
@@ -1496,35 +1702,11 @@ While relational principles dictate strict 3NF/BCNF, high-throughput NoSQL Mongo
 | `lastRecoveryRunAt` | Date | NULLABLE | null | Timestamp of last recovery run |
 | `finePaymentGraceDays` | Number | MIN: 1, MAX: 90 | `14` | Statutory payment window |
 | `enableOnlinePayments` | Boolean | NOT NULL | `true` | PayHere gateway master switch |
+| `allowDisputeSubmissions` | Boolean | NOT NULL | `true` | Citizen fine dispute flag |
 | `sessionTimeoutMinutes` | Number | MIN: 5, MAX: 480 | `60` | Admin portal session timeout |
-
-#### 8. Collection: `admins`
-*Primary Key:* `_id` (ObjectId) | *Unique Indexes:* `email`
-
-| Field Name | Datatype | Constraints | Default | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `_id` | ObjectId | PRIMARY KEY | Auto | Admin user ID |
-| `name` | String | NOT NULL | - | Administrator Name |
-| `email` | String | UNIQUE, NOT NULL | - | Login Email Address |
-| `password` | String | NOT NULL | - | Bcrypt hashed password |
-| `role` | String | ENUM | `'super_admin'`| super_admin / admin_officer / finance_officer |
-| `isTwoFactorEnabled` | Boolean | NOT NULL | `false` | 2FA verification enabled flag |
-| `twoFactorSecret` | String | NULLABLE | null | TOTP 2FA secret key |
-| `lastLoginAt` | Date | NULLABLE | null | Timestamp of last login |
-
-#### 9. Collection: `adminsessions`
-*Primary Key:* `_id` (ObjectId) | *Unique Indexes:* `sessionToken` | *TTL Index:* `expiresAt`
-
-| Field Name | Datatype | Constraints | Default | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `_id` | ObjectId | PRIMARY KEY | Auto | Session record ID |
-| `userId` | ObjectId | REF: Admin | REQUIRED | Foreign key to Admin |
-| `sessionToken` | String | UNIQUE, NOT NULL | - | Active cryptographic session token |
-| `refreshTokenHash` | String | NOT NULL | - | Hashed refresh token |
-| `ipAddress` | String | NULLABLE | null | Client IP address |
-| `userAgent` | String | NULLABLE | null | Browser / Device User Agent |
-| `expiresAt` | Date | TTL INDEX | REQUIRED | Automatic session expiration date |
-| `isValid` | Boolean | NOT NULL | `true` | Session validity status flag |
+| `maxFailedLoginAttempts` | Number | DEFAULT: 5 | `5` | Maximum failed attempts before lock |
+| `jwtExpiryMinutes` | Number | DEFAULT: 1440 | `1440` | JWT expiration in minutes |
+| `require2FAForAdmins` | Boolean | NOT NULL | `false` | 2FA enforcement policy |
 
 ---
 
