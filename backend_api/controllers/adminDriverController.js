@@ -19,6 +19,52 @@ function calculateDemeritLevel(points) {
     return 'SUSPENDED';
 }
 
+/**
+ * Helper to intelligently split and normalize addresses into addressLine1, addressLine2, and city
+ */
+function parseAddress(rawAddress, manualLine1, manualLine2, manualCity) {
+    let line1 = manualLine1 ? manualLine1.trim() : '';
+    let line2 = manualLine2 ? manualLine2.trim() : '';
+    let city = manualCity ? manualCity.trim() : '';
+
+    if (line1 && line2) {
+        return { addressLine1: line1, addressLine2: line2, city: city || undefined };
+    }
+
+    const combined = line1 || (rawAddress || '').trim();
+    if (!combined) {
+        return { addressLine1: undefined, addressLine2: undefined, city: city || undefined };
+    }
+
+    const segments = combined.split(',').map(s => s.trim()).filter(Boolean);
+
+    if (segments.length === 1) {
+        return {
+            addressLine1: segments[0],
+            addressLine2: line2 || undefined,
+            city: city || undefined
+        };
+    } else if (segments.length === 2) {
+        return {
+            addressLine1: segments[0],
+            addressLine2: line2 || segments[1],
+            city: city || undefined
+        };
+    } else if (segments.length === 3) {
+        return {
+            addressLine1: segments[0],
+            addressLine2: line2 || segments[1],
+            city: city || segments[2]
+        };
+    } else {
+        return {
+            addressLine1: segments.slice(0, 2).join(', '),
+            addressLine2: line2 || segments[2],
+            city: city || segments[segments.length - 1]
+        };
+    }
+}
+
 // @desc    Get all drivers with multi-dimensional filtering, search, sorting & pagination
 // @route   GET /api/admin/drivers
 // @access  Private (Admin)
@@ -449,7 +495,15 @@ const createDriver = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // 7. Create Driver Record with DMT verified data
+        // 7. Parse and cleanly separate addressLine1, addressLine2, and city
+        const parsedAddr = parseAddress(
+            dmtData?.address,
+            addressLine1,
+            addressLine2,
+            city
+        );
+
+        // 8. Create Driver Record with DMT verified data and separate address lines
         const newDriver = await Driver.create({
             name: name.trim(),
             nic: normalizedNic,
@@ -458,9 +512,9 @@ const createDriver = async (req, res) => {
             phone: normalizedPhone,
             password: hashedPassword,
             vehicleNumber: vehicleNumber ? vehicleNumber.toUpperCase().trim() : undefined,
-            city: city ? city.trim() : undefined,
-            addressLine1: addressLine1 ? addressLine1.trim() : (dmtData?.address || undefined),
-            addressLine2: addressLine2 ? addressLine2.trim() : undefined,
+            city: (city && city.trim()) || parsedAddr.city || undefined,
+            addressLine1: parsedAddr.addressLine1 || undefined,
+            addressLine2: parsedAddr.addressLine2 || undefined,
             postalCode: postalCode ? postalCode.trim() : undefined,
             licenseExpiryDate: licenseExpiryDate || dmtData?.licenseExpiryDate || undefined,
             licenseIssueDate: licenseIssueDate || dmtData?.licenseIssueDate || undefined,
@@ -486,7 +540,10 @@ const createDriver = async (req, res) => {
                 email: newDriver.email,
                 licenseStatus: newDriver.licenseStatus,
                 demeritPoints: newDriver.demeritPoints,
-                vehicleClasses: newDriver.vehicleClasses
+                vehicleClasses: newDriver.vehicleClasses,
+                addressLine1: newDriver.addressLine1,
+                addressLine2: newDriver.addressLine2,
+                city: newDriver.city
             }
         });
 
@@ -505,7 +562,7 @@ const createDriver = async (req, res) => {
 // @access  Private (Admin Officer, Super Admin)
 const updateDriver = async (req, res) => {
     try {
-        const { name, phone, email, vehicleNumber, addressLine1, city, postalCode } = req.body;
+        const { name, phone, email, vehicleNumber, addressLine1, addressLine2, city, postalCode } = req.body;
 
         const driver = await Driver.findById(req.params.id);
 
@@ -521,7 +578,7 @@ const updateDriver = async (req, res) => {
         if (phone && phone.trim() !== driver.phone) updatedFields.push('Phone Number');
         if (email && email.toLowerCase().trim() !== driver.email) updatedFields.push('Email Address');
         if (vehicleNumber !== undefined) updatedFields.push('Vehicle Plate Number');
-        if (addressLine1 !== undefined || city !== undefined) updatedFields.push('Residential Address');
+        if (addressLine1 !== undefined || addressLine2 !== undefined || city !== undefined) updatedFields.push('Residential Address');
 
         // If email is being changed, ensure uniqueness
         if (email && email.toLowerCase().trim() !== driver.email) {
@@ -539,6 +596,7 @@ const updateDriver = async (req, res) => {
         if (phone) driver.phone = phone.trim();
         if (vehicleNumber !== undefined) driver.vehicleNumber = vehicleNumber ? vehicleNumber.toUpperCase().trim() : '';
         if (addressLine1 !== undefined) driver.addressLine1 = addressLine1 ? addressLine1.trim() : '';
+        if (addressLine2 !== undefined) driver.addressLine2 = addressLine2 ? addressLine2.trim() : '';
         if (city !== undefined) driver.city = city ? city.trim() : '';
         if (postalCode !== undefined) driver.postalCode = postalCode ? postalCode.trim() : '';
         await driver.save();
