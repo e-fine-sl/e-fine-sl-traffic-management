@@ -1192,7 +1192,7 @@ The interface architecture of **e-Fine SL** adheres to 6 core human-centered eng
 
 ### 4.4.1 Comprehensive Entity Relationship Diagram (ERD)
 
-The complete Entity Relationship Diagram (ERD) captures all **13 live MongoDB collections and subdocuments** encompassing the entire e-Fine SL domain: driver accounts & KYC verification, traffic police officers & spatial tracking, issued fines & offenses, PayHere payment audit logs, accident incident reports, police stations, duty session tracking, pre-approved officer verification, OTP verification tokens, administrator accounts, security sessions, and dynamic system configurations.
+The complete Entity Relationship Diagram (ERD) captures the physical architecture of the production database **`efine_sl_db`** on MongoDB Atlas `Cluster0`, encompassing the entire e-Fine SL domain across its active collections: driver accounts & DMT legal verification, traffic police officers & spatial tracking, issued fines & offenses, PayHere payment audit logs, accident incident reports, police stations, duty session tracking, pre-approved officer verification, OTP verification tokens, administrator accounts, security sessions, and dynamic system configurations (strictly isolated from the external `dmt_db` registry).
 
 <div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
   <img src="docs/diagrams/15_entity_relationship_diagram_erd.png" alt="Comprehensive Entity Relationship Diagram (ERD)" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
@@ -1486,12 +1486,14 @@ While relational principles dictate strict 3NF/BCNF, high-throughput NoSQL Mongo
 | `licenseFrontImage`| String | NULLABLE | null | Base64 license front |
 | `licenseBackImage` | String | NULLABLE | null | Base64 license back |
 | `vehicleNumber` | String | NULLABLE | null | Registered vehicle plate |
-| `addressLine1` | String | NULLABLE | null | Residential street address |
-| `city` | String | NULLABLE | null | City / Town |
+| `addressLine1` | String | NULLABLE | null | Street / House Number / Premises |
+| `addressLine2` | String | NULLABLE | null | Locality / Suburb / Village / Area |
+| `city` | String | NULLABLE | null | City / District |
 | `postalCode` | String | NULLABLE | null | Postal Code |
 | `licenseExpiryDate`| String | NULLABLE | null | Driving license expiry date |
 | `licenseIssueDate` | String | NULLABLE | null | Driving license issue date (4a) |
 | `dateOfBirth` | String | NULLABLE | null | Driver Date of Birth (3) |
+| `vehicleClasses` | Array[Object] | NULLABLE | `[]` | DMT authorized vehicle classes: `[{ category, issueDate, expiryDate }]` |
 | `fcmToken` | String | NULLABLE | null | Firebase FCM Device Token |
 | `lastOffenseDate`| Date | NULLABLE | null | Timestamp of most recent violation |
 | `suspendedAt` | Date | NULLABLE | null | License suspension timestamp |
