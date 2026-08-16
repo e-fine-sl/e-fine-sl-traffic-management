@@ -1,22 +1,18 @@
 // config/db.js
-
-//assign mongoose to a variable
 const mongoose = require('mongoose');
 
-//function of connect to the database
+// Connect to the official e-Fine SL traffic management database
 const connectDB = async () => {
   try {
+    const conn = await mongoose.connect(process.env.MONGO_URI, {
+      dbName: process.env.MONGO_DB_NAME || 'efine_sl_db'
+    });
 
-    //connect MONGO URI in env
-    const conn = await mongoose.connect(process.env.MONGO_URI);
-
-    //If success then show in terminal
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    console.log(`[MongoDB] Connected: ${conn.connection.host}`);
+    console.log(`[MongoDB] Active Database: ${conn.connection.name}`);
 
   } catch (error) {
-
-    //when cannot connect to the database then show the error ans stop the server
-    console.error(`Error: ${error.message}`);
+    console.error(`[MongoDB] Connection Error: ${error.message}`);
     process.exit(1);
   }
 };
