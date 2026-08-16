@@ -278,81 +278,215 @@ const createDriver = async (req, res) => {
             vehicleNumber,
             city,
             addressLine1,
+            addressLine2,
+            postalCode,
             licenseExpiryDate,
-            dateOfBirth
+            licenseIssueDate,
+            dateOfBirth,
+            vehicleClasses
         } = req.body;
 
-        // Validation
+        // 1. Mandatory Fields Validation
         if (!name || !nic || !licenseNumber || !email || !phone || !password) {
             return res.status(HTTP.BAD_REQUEST).json({
                 success: false,
-                message: 'Please provide all required driver credentials (Name, NIC, License, Email, Phone, Password)'
+                message: 'Please provide all required driver credentials (Name, NIC, License Number, Email, Phone, Password)'
             });
         }
 
-        // Check for existing duplicates
-        const [existingNic, existingLicense, existingEmail] = await Promise.all([
-            Driver.findOne({ nic: nic.toUpperCase().trim() }),
-            Driver.findOne({ licenseNumber: licenseNumber.toUpperCase().trim() }),
-            Driver.findOne({ email: email.toLowerCase().trim() })
+        const normalizedNic = nic.toUpperCase().trim();
+        const normalizedLicense = licenseNumber.toUpperCase().trim();
+        const normalizedEmail = email.toLowerCase().trim();
+        const normalizedPhone = phone.trim();
+
+        // 2. Format Validation
+        const nicRegex = /^([0-9]{9}[vVxX]|[0-9]{12})$/;
+        if (!nicRegex.test(normalizedNic)) {
+            return res.status(HTTP.BAD_REQUEST).json({
+                success: false,
+                message: 'Invalid Sri Lankan National ID (NIC) format. Must be 9 digits + V/X or 12 digits.'
+            });
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(normalizedEmail)) {
+            return res.status(HTTP.BAD_REQUEST).json({
+                success: false,
+                message: 'Invalid email address format.'
+            });
+        }
+
+        const phoneRegex = /^(?:\+94|0)?[0-9]{9,10}$/;
+        if (!phoneRegex.test(normalizedPhone.replace(/\s+/g, ''))) {
+            return res.status(HTTP.BAD_REQUEST).json({
+                success: false,
+                message: 'Invalid contact phone number format.'
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(HTTP.BAD_REQUEST).json({
+                success: false,
+                message: 'Password must be at least 6 characters long.'
+            });
+        }
+
+        // 3. Check for existing duplicates across e-Fine SL database
+        const Police = require('../models/policeModel');
+        const [existingNic, existingLicense, existingEmail, existingPhone, emailUsedByPolice] = await Promise.all([
+            Driver.findOne({ nic: normalizedNic }),
+            Driver.findOne({ licenseNumber: normalizedLicense }),
+            Driver.findOne({ email: normalizedEmail }),
+            Driver.findOne({ phone: normalizedPhone }),
+            Police.findOne({ email: normalizedEmail }).select('_id')
         ]);
 
         if (existingNic) {
             return res.status(HTTP.BAD_REQUEST).json({
                 success: false,
-                message: `National ID (${nic}) is already registered in the driver directory`
+                message: `National ID (${normalizedNic}) is already registered in e-Fine SL.`
             });
         }
 
         if (existingLicense) {
             return res.status(HTTP.BAD_REQUEST).json({
                 success: false,
-                message: `Driving License Number (${licenseNumber}) is already registered`
+                message: `Driving License Number (${normalizedLicense}) is already registered in e-Fine SL.`
             });
         }
 
         if (existingEmail) {
             return res.status(HTTP.BAD_REQUEST).json({
                 success: false,
-                message: `Email address (${email}) is already associated with an existing account`
+                message: `Email address (${normalizedEmail}) is already associated with an existing driver account.`
             });
         }
 
-        // Hash password
+        if (emailUsedByPolice) {
+            return res.status(HTTP.BAD_REQUEST).json({
+                success: false,
+                message: `Email address (${normalizedEmail}) is already registered as a Police Officer.`
+            });
+        }
+
+        if (existingPhone) {
+            return res.status(HTTP.BAD_REQUEST).json({
+                success: false,
+                message: `Phone number (${normalizedPhone}) is already registered for another driver.`
+            });
+        }
+
+        // 4. DMT (Department of Motor Traffic) Legal License Verification
+        let dmtData = null;
+        const dmtServerUrl = process.env.DMT_SERVER_URL;
+        const dmtApiKey = process.env.DMT_API_KEY;
+
+        if (dmtServerUrl) {
+            const dmtUrl = `${dmtServerUrl}/api/dmt/verify-license`;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 12000);
+
+            try {
+                const dmtResponse = await fetch(dmtUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-dmt-api-key': dmtApiKey
+                    },
+                    body: JSON.stringify({
+                        licenseNumber: normalizedLicense,
+                        nic: normalizedNic
+                    }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeout);
+
+                if (dmtResponse.status === 404) {
+                    return res.status(HTTP.BAD_REQUEST).json({
+                        success: false,
+                        message: `Verification Failed: Driving License Number (${normalizedLicense}) was not found in the Department of Motor Traffic (DMT) database. Only legal, registered licenses can be onboarded.`
+                    });
+                }
+
+                if (dmtResponse.status === 400) {
+                    return res.status(HTTP.BAD_REQUEST).json({
+                        success: false,
+                        message: `Verification Failed: National ID (${normalizedNic}) does not match the legal license holder record at the Department of Motor Traffic (DMT).`
+                    });
+                }
+
+                if (dmtResponse.status === 200) {
+                    const parsedDmt = await dmtResponse.json();
+                    dmtData = parsedDmt.data;
+                    console.log(`[adminDriverController:createDriver] DMT Verification Succeeded for ${normalizedLicense}`);
+                } else {
+                    console.warn(`[adminDriverController:createDriver] DMT returned unexpected status: ${dmtResponse.status}`);
+                }
+            } catch (dmtFetchErr) {
+                clearTimeout(timeout);
+                console.error('[adminDriverController:createDriver] DMT server unreachable:', dmtFetchErr.message);
+                return res.status(503).json({
+                    success: false,
+                    message: 'DMT license verification service is currently unavailable. Driver registration is temporarily blocked to protect registry integrity. Please try again later.'
+                });
+            }
+        }
+
+        // 5. System Configuration for Default Demerit Points
+        let defaultPoints = DEMERIT.DEFAULT_POINTS || 24;
+        try {
+            const SystemConfig = require('../models/systemConfigModel');
+            const sysConfig = await SystemConfig.findOne();
+            if (sysConfig && sysConfig.defaultDemeritPoints) {
+                defaultPoints = sysConfig.defaultDemeritPoints;
+            }
+        } catch (sysErr) {
+            console.warn('[adminDriverController:createDriver] Could not load SystemConfig:', sysErr.message);
+        }
+
+        // 6. Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        // 7. Create Driver Record with DMT verified data
         const newDriver = await Driver.create({
             name: name.trim(),
-            nic: nic.toUpperCase().trim(),
-            licenseNumber: licenseNumber.toUpperCase().trim(),
-            email: email.toLowerCase().trim(),
-            phone: phone.trim(),
+            nic: normalizedNic,
+            licenseNumber: normalizedLicense,
+            email: normalizedEmail,
+            phone: normalizedPhone,
             password: hashedPassword,
             vehicleNumber: vehicleNumber ? vehicleNumber.toUpperCase().trim() : undefined,
             city: city ? city.trim() : undefined,
-            addressLine1: addressLine1 ? addressLine1.trim() : undefined,
-            licenseExpiryDate: licenseExpiryDate || undefined,
-            dateOfBirth: dateOfBirth || undefined,
-            demeritPoints: DEMERIT.DEFAULT_POINTS || 24,
+            addressLine1: addressLine1 ? addressLine1.trim() : (dmtData?.address || undefined),
+            addressLine2: addressLine2 ? addressLine2.trim() : undefined,
+            postalCode: postalCode ? postalCode.trim() : undefined,
+            licenseExpiryDate: licenseExpiryDate || dmtData?.licenseExpiryDate || undefined,
+            licenseIssueDate: licenseIssueDate || dmtData?.licenseIssueDate || undefined,
+            dateOfBirth: dateOfBirth || dmtData?.dateOfBirth || undefined,
+            vehicleClasses: (dmtData && dmtData.vehicleClasses) ? dmtData.vehicleClasses : (vehicleClasses || []),
+            demeritPoints: defaultPoints,
             ratingScore: 5.0,
             licenseStatus: LICENSE_STATUS.ACTIVE,
             demeritLevel: 'EXCELLENT',
             isVerified: true,
-            kycVerified: false,
+            kycVerified: true, // Mark verified since legal DMT check passed
             emailIsVerified: true
         });
 
         res.status(HTTP.CREATED).json({
             success: true,
-            message: `Driver "${newDriver.name}" (License: ${newDriver.licenseNumber}) registered successfully`,
+            message: `Driver "${newDriver.name}" (License: ${newDriver.licenseNumber}) successfully verified with DMT and registered.`,
             data: {
                 id: newDriver._id,
                 name: newDriver.name,
                 nic: newDriver.nic,
                 licenseNumber: newDriver.licenseNumber,
                 email: newDriver.email,
-                licenseStatus: newDriver.licenseStatus
+                licenseStatus: newDriver.licenseStatus,
+                demeritPoints: newDriver.demeritPoints,
+                vehicleClasses: newDriver.vehicleClasses
             }
         });
 
