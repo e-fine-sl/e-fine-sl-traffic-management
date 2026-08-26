@@ -683,7 +683,7 @@ sequenceDiagram
 
 </details>
 
-#### Sequence 4: Geospatial Emergency SOS Alert Broadcast (10km Spatial Query)
+#### Sequence 4: Geospatial Emergency SOS Alert Broadcast (5km Spatial Query)
 
 <div align="center" style="background:#ffffff; padding:24px; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
   <img src="docs/diagrams/07_sequence_emergency_sos_dispatch.png" alt="Sequence 4: Geospatial Emergency SOS Broadcast" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#ffffff;" />
@@ -712,8 +712,8 @@ sequenceDiagram
     App->>API: POST /api/sos/trigger (Latitude, Longitude, Driver Info)
     
     API->>DB: Query Police Collection with $near Spatial Operator
-    Note over API,DB: $near: [lng, lat], $maxDistance: 10,000m, appState: FOREGROUND/BACKGROUND
-    DB-->>API: Return Array of Active Officer FCM Tokens within 10km
+    Note over API,DB: $near: [lng, lat], $maxDistance: 5,000m, appState: FOREGROUND/BACKGROUND
+    DB-->>API: Return Array of Active Officer FCM Tokens within 5km
 
     API->>FCM: Broadcast High-Priority SOS Payload (channelId: 'sos_alerts', siren sound)
     FCM->>Officers: Trigger Emergency Audio Siren & Map Coordinate Overlay

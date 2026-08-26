@@ -432,8 +432,8 @@ const diagrams = [
     App->>API: POST /api/sos/trigger (Latitude, Longitude, Driver Info)
     
     API->>DB: Query Police Collection with $near Spatial Operator
-    Note over API,DB: $near: [lng, lat], $maxDistance: 10,000m, appState: FOREGROUND/BACKGROUND
-    DB-->>API: Return Array of Active Officer FCM Tokens within 10km
+    Note over API,DB: $near: [lng, lat], $maxDistance: 5,000m, appState: FOREGROUND/BACKGROUND
+    DB-->>API: Return Array of Active Officer FCM Tokens within 5km
 
     API->>FCM: Broadcast High-Priority SOS Payload (channelId: 'sos_alerts', siren sound)
     FCM->>Officers: Trigger Emergency Audio Siren & Map Coordinate Overlay
@@ -624,7 +624,7 @@ const diagrams = [
     PostSOSToBackend --> QueryNearbyOfficers: Execute MongoDB 2dsphere $near Spatial Query
     
     state QueryNearbyOfficers {
-        [*] --> FilterRadius: $maxDistance: 10,000m (10km)
+        [*] --> FilterRadius: $maxDistance: 5,000m (5km)
         FilterRadius --> FilterState: appState IN ('FOREGROUND', 'BACKGROUND')
     }
 

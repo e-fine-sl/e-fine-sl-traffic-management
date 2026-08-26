@@ -8,7 +8,7 @@ const OfficerSession = require('../models/officerSessionModel');
 const { sendToMultiple } = require('../services/fcmService');
 
 // Constants
-const SOS_RADIUS_METERS = 10000; // Search radius: 10 kilometers (10,000m)
+const SOS_RADIUS_METERS = 5000; // Search radius: 5 kilometers
 
 /**
  * @route   POST /api/sos
@@ -66,7 +66,7 @@ const triggerSOS = async (req, res) => {
             type: 'Point',
             coordinates: [longitude, latitude], // Query center
           },
-          $maxDistance: SOS_RADIUS_METERS, // Limit to 10km (10,000m)
+          $maxDistance: SOS_RADIUS_METERS, // Limit to 5km
         },
       },
       isActive: true, // Only fetch officers who are currently online
