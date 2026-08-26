@@ -8,7 +8,7 @@ const sendEmail          = require('../utils/sendEmail');
 const { resolveLocation } = require('../utils/sriLankaGeoHelper');
 const { buildNearbyStationAlertHtml } = require('../utils/nearbyStationAlertEmail');
 
-const ACCIDENT_RADIUS_METERS = 5000; // 5 km (for officers)
+const ACCIDENT_RADIUS_METERS = 10000; // 10 km (for officers)
 // STATION_RADIUS_METERS is now fetched dynamically from SystemConfig
 
 const buildEmailHtml = ({
