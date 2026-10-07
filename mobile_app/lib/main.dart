@@ -22,8 +22,8 @@ void main() async {
   if (initialMessage != null) {
     final type = initialMessage.data['type'] ?? '';
     if (type == 'SOS_ALERT') {
-      final lat = initialMessage.data['senderLat']?.toString() ?? '0';
-      final lng = initialMessage.data['senderLng']?.toString() ?? '0';
+      final lat = initialMessage.data['lat']?.toString() ?? '0';
+      final lng = initialMessage.data['lng']?.toString() ?? '0';
       // Add a slight delay if necessary to ensure app is ready before launching external URL
       Future.delayed(const Duration(milliseconds: 500), () {
         SosService.openGoogleMapsForSOS(lat, lng);
