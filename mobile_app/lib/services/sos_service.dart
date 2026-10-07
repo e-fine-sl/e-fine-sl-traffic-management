@@ -38,8 +38,8 @@ class SosService {
       return;
     }
 
-    // Official Universal Google Maps Search URL
-    final String googleMapsUrl = 'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
+    // Official Universal Google Maps Directions URL
+    final String googleMapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=$latitude,$longitude';
     final Uri mapUri = Uri.parse(googleMapsUrl);
 
     try {
@@ -433,8 +433,8 @@ class SosService {
       }
 
       if (type == 'SOS_ALERT') {
-        final lat = message.data['senderLat']?.toString() ?? '0';
-        final lng = message.data['senderLng']?.toString() ?? '0';
+        final lat = message.data['lat']?.toString() ?? '0';
+        final lng = message.data['lng']?.toString() ?? '0';
         SosService.openGoogleMapsForSOS(lat, lng);
       }
     });
