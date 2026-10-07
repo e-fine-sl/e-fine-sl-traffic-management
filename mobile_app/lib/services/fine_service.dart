@@ -69,6 +69,34 @@ class FineService {
   }
 
   // ----------------------------------------------------------------
+  // 2b. Driver Record (Officer view: profile, demerit score, fine history)
+  // ----------------------------------------------------------------
+  Future<Map<String, dynamic>> getDriverRecord(String licenseNumber) async {
+    String? token = await _authService.getToken();
+    if (token == null) {
+      throw Exception("Token missing. Please Logout & Login.");
+    }
+
+    final uri = Uri.parse('$baseUrl/fines/driver-record').replace(queryParameters: {
+      'licenseNumber': licenseNumber.trim(),
+    });
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(jsonDecode(response.body));
+    }
+    final msg = jsonDecode(response.body)['message'] ?? response.statusCode;
+    throw Exception("Server Error: $msg");
+  }
+
+  // ----------------------------------------------------------------
   // 3. Get History (Correct endpoint)
   // ----------------------------------------------------------------
   Future<List<Map<String, dynamic>>> getOfficerFineHistory() async {

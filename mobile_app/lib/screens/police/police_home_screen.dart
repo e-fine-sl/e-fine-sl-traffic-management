@@ -18,6 +18,7 @@ import 'package:mobile_app/screens/police/new_fine.dart';
 import 'package:mobile_app/screens/police/fine_history_screen.dart';
 import 'package:mobile_app/screens/police/profile_screen.dart';
 import 'package:mobile_app/screens/police/qr_scanner_screen.dart';
+import 'package:mobile_app/screens/police/driver_record_screen.dart';
 import 'package:mobile_app/screens/police/police_settings_screen.dart';
 import 'package:mobile_app/screens/auth/login_screen.dart';
 
@@ -239,7 +240,12 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
       try {
         Map<String, dynamic> data = jsonDecode(result);
         if (data['type'] == 'driver_identity') {
-          _showDriverDetailsDialog(data);
+          // Show identity + demerit score + fine history before issuing a fine
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => DriverRecordScreen(scannedData: data)),
+          );
+          if (mounted) _initScreen();
         } else {
           _showErrorDialog(PoliceLocaleService.instance.translate('police.home_invalid_qr'));
         }
@@ -250,120 +256,6 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
   }
 
   // --- UI Dialogs ---
-  void _showDriverDetailsDialog(Map<String, dynamic> data) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.verified_user, color: AppColors.successGreen),
-            const SizedBox(width: 10),
-            Text(PoliceLocaleService.instance.translate('police.home_driver_details_title')),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Card(
-                elevation: 0,
-                color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(15.0),
-                  child: Column(
-                    children: [
-                      _detailRow(Icons.person, "Name", data['name'] ?? 'N/A'),
-                      const Divider(),
-                      _detailRow(Icons.badge, "NIC", data['nic'] ?? 'N/A'),
-                      const Divider(),
-                      _detailRow(Icons.card_membership, "License", data['license'] ?? 'N/A'),
-                      const Divider(),
-                      _detailRow(Icons.directions_car, "Vehicle", data['vehicleNumber'] ?? 'N/A'),
-                      const Divider(),
-                      _detailRow(Icons.phone, "Contact", data['phone'] ?? data['contactNumber'] ?? 'N/A'),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 15),
-              Text(
-                PoliceLocaleService.instance.translate('police.home_verify_hint'),
-                style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 13),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => NewFineScreen(
-                          scannedLicenseNumber: data['license'],
-                          scannedVehicleNumber: data['vehicleNumber'],
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.edit_note, color: Colors.white),
-                  label: Text(
-                    PoliceLocaleService.instance.translate('police.home_issue_fine'),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.errorRed,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(
-                    PoliceLocaleService.instance.translate('police.home_close'),
-                    style: TextStyle(color: Theme.of(context).disabledColor),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _detailRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: AppColors.primaryBlue),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 11)),
-                Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Theme.of(context).colorScheme.onSurface)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
