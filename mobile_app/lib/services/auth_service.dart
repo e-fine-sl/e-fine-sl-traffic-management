@@ -161,9 +161,9 @@ class AuthService {
     // Step 2: Encrypt password (never sent in plain text)
     final encryptedPassword = _encryptPassword(password, publicKey);
 
-    // Step 3: Send login request to auth-service
+    // Step 3: Send login request to main backend (supports RSA-encrypted password)
     final response = await http.post(
-      Uri.parse('$_authUrl/auth/login'),
+      Uri.parse('$_mainUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'email':             email,
@@ -238,7 +238,7 @@ class AuthService {
     debugPrint('[AuthService] loginWithEncryptedPassword() — biometric re-login for: $email');
 
     final response = await http.post(
-      Uri.parse('$_authUrl/auth/login'),
+      Uri.parse('$_mainUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'email':             email,
@@ -342,7 +342,7 @@ class AuthService {
     if (sessionToken != null) {
       try {
         await http.post(
-          Uri.parse('$_authUrl/auth/logout'),
+          Uri.parse('$_mainUrl/auth/logout'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'sessionToken': sessionToken}),
         );
@@ -385,7 +385,7 @@ class AuthService {
     if (_cachedPublicKey != null) return _cachedPublicKey!;
 
     final response = await http.get(
-      Uri.parse('$_authUrl/auth/public-key'),
+      Uri.parse('$_mainUrl/auth/public-key'),
       headers: {'Content-Type': 'application/json'},
     );
 

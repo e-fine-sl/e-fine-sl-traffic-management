@@ -1,4 +1,4 @@
-﻿// utils/cryptoService.js (Main Backend)
+// utils/cryptoService.js (Main Backend)
 // RSA decryption for register and password-reset flows.
 // Flutter encrypts passwords with RSA public key BEFORE sending.
 // This utility decrypts them using the private key stored in .env.
@@ -25,4 +25,20 @@ const decryptPassword = (encryptedBase64) => {
   return privateKey.decrypt(encryptedBytes, 'RSA-OAEP');
 };
 
-module.exports = { decryptPassword };
+/**
+ * Returns the RSA public key in PEM format, derived from the private key in .env.
+ * Flutter fetches this to encrypt passwords before sending.
+ * @returns {string} public key PEM
+ */
+const getPublicKeyPem = () => {
+  const privateKeyPem = process.env.RSA_PRIVATE_KEY;
+  if (!privateKeyPem) {
+    throw new Error('RSA_PRIVATE_KEY not configured in environment');
+  }
+  const formattedKey = privateKeyPem.replace(/\\n/g, '\n');
+  const privateKey   = forge.pki.privateKeyFromPem(formattedKey);
+  const publicKey    = forge.pki.rsa.setPublicKey(privateKey.n, privateKey.e);
+  return forge.pki.publicKeyToPem(publicKey);
+};
+
+module.exports = { decryptPassword, getPublicKeyPem };
