@@ -9,6 +9,7 @@ const {
     getDriverPendingFines,
     payFine,
     getDriverPaidHistory,
+    getDriverRecord,
     getDashboardStats
 } = require('../controllers/fineController');
 
@@ -30,6 +31,9 @@ router.get('/history', getFineHistory);
 router.get('/pending', getDriverPendingFines);
 
 router.get('/driver-history', getDriverPaidHistory);
+
+// Officer view: driver profile + demerit score + full fine history
+router.get('/driver-record', getDriverRecord);
 
 router.post('/:id/pay', payFine);
 
