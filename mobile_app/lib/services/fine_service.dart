@@ -317,4 +317,54 @@ class FineService {
       throw Exception('Error fetching driver status: $e');
     }
   }
+
+  // Fetch driver status by specific license number (used by Police Officers)
+  Future<Map<String, dynamic>?> getDriverStatusByLicense(String licenseNumber) async {
+    try {
+      String? token = await _authService.getToken();
+      if (token == null || licenseNumber.isEmpty) return null;
+
+      final uri = Uri.parse('$baseUrl/drivers/$licenseNumber/status');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching driver status by license: $e');
+      return null;
+    }
+  }
+
+  // Fetch downloadable e-Fine SL Digital Fine Receipt PDF bytes
+  Future<Uint8List?> getFinePdfBytes(String fineId) async {
+    try {
+      String? token = await _authService.getToken();
+      if (token == null) return null;
+
+      final uri = Uri.parse('$baseUrl/fines/$fineId/pdf');
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching fine PDF bytes: $e');
+      return null;
+    }
+  }
 }

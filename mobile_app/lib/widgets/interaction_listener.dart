@@ -47,6 +47,10 @@ class _InteractionListenerState extends State<InteractionListener> with WidgetsB
       // User returned to the app - check if they timed out while in background
       debugPrint('[InteractionListener] App resumed. Checking background timeout...');
       _checkTimeout();
+      _authService.updatePresence('FOREGROUND');
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden || state == AppLifecycleState.inactive) {
+      debugPrint('[InteractionListener] App moved to background ($state).');
+      _authService.updatePresence('BACKGROUND');
     }
   }
 

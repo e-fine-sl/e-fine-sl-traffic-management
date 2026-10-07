@@ -7,6 +7,7 @@ import 'package:mobile_app/screens/driver/profile_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_app/providers/theme_provider.dart';
+import 'package:mobile_app/services/secure_storage_service.dart';
 import '../config/app_constants.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -118,7 +119,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildListTile(
             icon: Icons.language, 
             title: "Language", 
-            subtitle: context.locale.languageCode == 'en' ? "English" : "Sinhala (සිංහල)",
+            subtitle: context.locale.languageCode == 'en' 
+                ? "English" 
+                : context.locale.languageCode == 'si' 
+                    ? "Sinhala (සිංහල)" 
+                    : "Tamil (தமிழ்)",
             onTap: _showLanguageDialog
           ),
 
@@ -263,7 +268,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(context: context, barrierDismissible: false, builder: (c) => const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen)));
     
     try {
+      // 1. Check secure storage cache first
+      final cachedProfile = await SecureStorageService().getCachedProfile();
+      
+      if (cachedProfile != null) {
+        if (!mounted) return;
+        Navigator.pop(context); 
+        Navigator.push(context, MaterialPageRoute(builder: (c) => ProfileScreen(userData: cachedProfile)));
+        return;
+      }
+
+      // 2. Fallback to API if not cached
       final data = await _authService.getUserProfile();
+      
+      // Cache it for next time
+      await SecureStorageService().cacheProfile(data);
+      
       if (!mounted) return;
       Navigator.pop(context); 
       Navigator.push(context, MaterialPageRoute(builder: (c) => ProfileScreen(userData: data)));
@@ -287,7 +307,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             child: const Padding(
               padding: EdgeInsets.all(8.0),
-              child: Text("English 🇺🇸"),
+              child: Text("English"),
             ),
           ),
           SimpleDialogOption(
@@ -297,7 +317,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             child: const Padding(
               padding: EdgeInsets.all(8.0),
-              child: Text("Sinhala (සිංහල) 🇱🇰"),
+              child: Text("Sinhala (සිංහල)"),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () {
+              context.setLocale(const Locale('ta'));
+              Navigator.pop(context);
+            },
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text("Tamil (தமிழ்)"),
             ),
           ),
         ],

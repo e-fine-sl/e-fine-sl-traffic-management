@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:mobile_app/config/app_constants.dart';
 import '../../services/accident_service.dart';
-import '../../config/app_constants.dart';
+import '../../widgets/driver/accident_type_card.dart';
+import '../../widgets/driver/photo_attachment_zone.dart';
+import '../../widgets/driver/info_banner.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -28,34 +31,36 @@ class _ReportScreenState extends State<ReportScreen> {
   final ImagePicker _picker = ImagePicker();
   final List<File> _selectedImages = [];
 
-  final List<Map<String, String>> _accidentTypes = [
-    { 
-      'emoji': '🚗', 
-      'label': 'Vehicle Collision', 
-      'desc': 'Crash between cars, bikes, or trucks' 
+  // ── Accident type definitions using Material Icons ──
+  final List<Map<String, dynamic>> _accidentTypes = [
+    {
+      'icon': Icons.directions_car_rounded,
+      'label': 'Vehicle Collision',
+      'desc': 'Two or more vehicles crashed — cars, bikes, tuktuk, or trucks',
     },
-    { 
-      'emoji': '🚶', 
-      'label': 'Pedestrian Accident', 
-      'desc': 'Accident involving a person walking' 
+    {
+      'icon': Icons.directions_walk_rounded,
+      'label': 'Pedestrian Accident',
+      'desc': 'A person walking or crossing the road was hit by a vehicle',
     },
-    { 
-      'emoji': '🏃', 
-      'label': 'Hit & Run', 
-      'desc': 'Vehicle hit someone and drove away' 
+    {
+      'icon': Icons.directions_run_rounded,
+      'label': 'Hit & Run',
+      'desc': 'A vehicle caused damage or injury and left the scene',
     },
-    { 
-      'emoji': '⚠️', 
-      'label': 'Road Hazard', 
-      'desc': 'Blocked road, fallen tree, or potholes' 
+    {
+      'icon': Icons.report_problem_rounded,
+      'label': 'Road Hazard',
+      'desc': 'Fallen tree, damaged road, flood, or any road blockage',
     },
-    { 
-      'emoji': '📋', 
-      'label': 'Other', 
-      'desc': 'Any other emergency not listed' 
+    {
+      'icon': Icons.description_rounded,
+      'label': 'Other',
+      'desc': 'Any other road emergency not listed above',
     },
   ];
 
+  // ── Localization helpers (unchanged logic) ──
   String _getLocalizedTypeLabel(String label) {
     switch (label) {
       case 'Vehicle Collision': return 'report_screen.type_vehicle_collision'.tr();
@@ -118,19 +123,43 @@ class _ReportScreenState extends State<ReportScreen> {
 
     final bool? confirmed = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext ctx) {
         return AlertDialog(
-          title: Text('report_screen.confirm_title'.tr()),
-          content: Text('report_screen.confirm_content'.tr()),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Color(0xFFC62828), size: 24),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'report_screen.confirm_title'.tr(),
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'report_screen.confirm_content'.tr(),
+            style: const TextStyle(fontSize: 14, height: 1.5, color: Color(0xFF475569)),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text('report_screen.cancel'.tr()),
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(
+                'report_screen.cancel'.tr(),
+                style: const TextStyle(color: Color(0xFF64748B)),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.errorRed),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text('report_screen.send_alert'.tr(), style: const TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFC62828),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text('report_screen.send_alert'.tr()),
             ),
           ],
         );
@@ -189,327 +218,324 @@ class _ReportScreenState extends State<ReportScreen> {
     }
   }
 
+  // ═══════════════════════════════════════════════════════
+  // SUCCESS VIEW
+  // ═══════════════════════════════════════════════════════
   Widget _buildSuccessView() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.check_circle, size: 96, color: Colors.green),
-          const SizedBox(height: 24),
-          Text(
-            'report_screen.success_title'.tr(),
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'report_screen.success_officers'.tr(args: [_officersNotified.toString()]),
-            style: const TextStyle(color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'report_screen.success_email'.tr(),
-            style: const TextStyle(color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          if (_resolvedProvince.isNotEmpty) ...[
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Success icon with soft green background
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5E9),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                size: 48,
+                color: Color(0xFF2E7D32),
+              ),
+            ),
+            const SizedBox(height: 24),
             Text(
-              'report_screen.province_district'.tr(args: [_resolvedProvince, _resolvedDistrict]),
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+              'report_screen.success_title'.tr(),
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'report_screen.success_officers'.tr(args: [_officersNotified.toString()]),
+              style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 6),
             Text(
-              'report_screen.police_division'.tr(args: [_resolvedDivision]),
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+              'report_screen.success_email'.tr(),
+              style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
               textAlign: TextAlign.center,
+            ),
+            if (_resolvedProvince.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  children: [
+                    _detailRow(Icons.location_on_outlined, 'Province', '$_resolvedProvince, $_resolvedDistrict'),
+                    const SizedBox(height: 8),
+                    _detailRow(Icons.local_police_outlined, 'Division', _resolvedDivision),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(  
+                  backgroundColor: AppColors.primaryGreen,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'report_screen.done'.tr(),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ),
             ),
           ],
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryBlue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: Text('report_screen.done'.tr(), style: const TextStyle(color: Colors.white)),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildReportForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Row(
       children: [
-        // SECTION 1 — Header Banner
-        Container(
-          margin: const EdgeInsets.only(bottom: 24),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Colors.red, Colors.orange],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.local_police, size: 48, color: Colors.white),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('report_screen.banner_title'.tr(), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text('report_screen.banner_subtitle'.tr(), style: const TextStyle(color: Colors.white, fontSize: 13)),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        Icon(icon, size: 18, color: Colors.grey.shade500),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
         ),
-
-        // SECTION 2 — Accident Type Selector
-        Text('report_screen.select_type_label'.tr(), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _accidentTypes.map((option) {
-            final isSelected = _selectedAccidentType == option['label'];
-            return InkWell(
-              onTap: () {
-                setState(() {
-                  _selectedAccidentType = isSelected ? null : option['label'];
-                });
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.red.shade50 : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected ? Colors.red.shade300 : Colors.grey.shade200,
-                    width: isSelected ? 2 : 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Text(option['emoji']!, style: const TextStyle(fontSize: 24)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _getLocalizedTypeLabel(option['label']!),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isSelected ? Colors.red.shade800 : Colors.black87,
-                            ),
-                          ),
-                          Text(
-                            _getLocalizedTypeDesc(option['label']!),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isSelected ? Colors.red.shade600 : Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (isSelected)
-                      Icon(Icons.check_circle, color: Colors.red.shade600, size: 20),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 24),
-
-        // SECTION 3 — Description TextFormField
-        TextFormField(
-          controller: _descriptionController,
-          maxLines: 3,
-          maxLength: 200,
-          decoration: InputDecoration(
-            labelText: 'report_screen.details_label'.tr(),
-            hintText: 'report_screen.details_hint'.tr(),
-            helperText: 'report_screen.details_helper'.tr(),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        // SECTION 3.5 — Image Picker
-        Text('report_screen.photos_label'.tr(), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
-        const SizedBox(height: 12),
-        if (_selectedImages.isNotEmpty)
-          Container(
-            height: 100,
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _selectedImages.length,
-              itemBuilder: (context, index) {
-                return Stack(
-                  children: [
-                    Container(
-                      width: 100,
-                      height: 100,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        image: DecorationImage(
-                          image: FileImage(_selectedImages[index]),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 0,
-                      right: 8,
-                      child: GestureDetector(
-                        onTap: () => _removeImage(index),
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.close, size: 16, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: _pickImage,
-            icon: const Icon(Icons.add_a_photo),
-            label: Text(_selectedImages.isEmpty ? 'report_screen.add_photos'.tr() : 'report_screen.add_more_photos'.tr()),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        // SECTION 4 — Location Info Card
-        Container(
-          padding: const EdgeInsets.all(12),
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            color: Colors.blue.shade50,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.location_on, color: Colors.blue),
-              const SizedBox(width: 8),
-              Expanded(child: Text('report_screen.gps_notice'.tr(), style: const TextStyle(color: Colors.blue, fontSize: 13))),
-            ],
-          ),
-        ),
-
-        // SECTION 5 — Warning Note
-        Container(
-          padding: const EdgeInsets.all(12),
-          margin: const EdgeInsets.only(bottom: 24),
-          decoration: BoxDecoration(
-            color: Colors.amber.shade50,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.amber),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.warning_amber, color: Colors.amber),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'report_screen.warning_notice'.tr(),
-                  style: const TextStyle(color: Colors.orange, fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // SECTION 6 — Error message
-        if (_errorMessage != null)
-          Container(
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
-          ),
-
-        // SECTION 7 — Submit Button
-        SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.errorRed,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: _isLoading ? null : _submitReport,
-            child: _isLoading
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
-                      const SizedBox(width: 12),
-                      Text('report_screen.sending_alert'.tr(), style: const TextStyle(color: Colors.white, fontSize: 16)),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.send, color: Colors.white),
-                      const SizedBox(width: 8),
-                      Text('report_screen.send_accident_alert'.tr(), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
           ),
         ),
       ],
     );
   }
 
+  // ═══════════════════════════════════════════════════════
+  // REPORT FORM
+  // ═══════════════════════════════════════════════════════
+  Widget _buildReportForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Section Header ──
+        Text(
+          'report_screen.banner_title'.tr(),
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E293B),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'report_screen.banner_subtitle'.tr(),
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey.shade500,
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // ── Accident Type Selection ──
+        Text(
+          'report_screen.select_type_label'.tr(),
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            color: Color(0xFF475569),
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        ..._accidentTypes.map((option) {
+          final bool isSelected = _selectedAccidentType == option['label'];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: AccidentTypeCard(
+              icon: option['icon'] as IconData,
+              label: _getLocalizedTypeLabel(option['label'] as String),
+              description: _getLocalizedTypeDesc(option['label'] as String),
+              isSelected: isSelected,
+              onTap: () {
+                setState(() {
+                  _selectedAccidentType = isSelected ? null : option['label'] as String;
+                });
+              },
+            ),
+          );
+        }),
+        const SizedBox(height: 24),
+
+        // ── Description Field ──
+        Text(
+          'report_screen.details_label'.tr(),
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            color: Color(0xFF475569),
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _descriptionController,
+          maxLines: 3,
+          maxLength: 200,
+          style: const TextStyle(fontSize: 14),
+          decoration: InputDecoration(
+            hintText: 'report_screen.details_hint'.tr(),
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            helperText: 'report_screen.details_helper'.tr(),
+            helperStyle: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            contentPadding: const EdgeInsets.all(14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFC62828), width: 1.5),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // ── Photo Attachment ──
+        Text(
+          'report_screen.photos_label'.tr(),
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            color: Color(0xFF475569),
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        PhotoAttachmentZone(
+          images: _selectedImages,
+          maxImages: 3,
+          onAddPhoto: _pickImage,
+          onRemovePhoto: _removeImage,
+        ),
+        const SizedBox(height: 24),
+
+        // ── Info Banners ──
+        InfoBanner(
+          icon: Icons.my_location_rounded,
+          text: 'report_screen.gps_notice'.tr(),
+          variant: InfoBannerVariant.info,
+        ),
+        const SizedBox(height: 10),
+        InfoBanner(
+          icon: Icons.info_outline_rounded,
+          text: 'report_screen.warning_notice'.tr(),
+          variant: InfoBannerVariant.warning,
+        ),
+        const SizedBox(height: 20),
+
+        // ── Error Message ──
+        if (_errorMessage != null) ...[
+          InfoBanner(
+            icon: Icons.error_outline_rounded,
+            text: _errorMessage!,
+            variant: InfoBannerVariant.error,
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // ── Submit Button ──
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC62828),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            onPressed: _isLoading ? null : _submitReport,
+            child: _isLoading
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'report_screen.sending_alert'.tr(),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.emergency_share_rounded, size: 20),
+                      const SizedBox(width: 10),
+                      Text(
+                        'report_screen.send_accident_alert'.tr(),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // SCAFFOLD
+  // ═══════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('report_screen.appbar_title'.tr(), style: const TextStyle(color: Colors.white)),
-        backgroundColor: AppColors.errorRed,
+        title: Text(
+          'report_screen.appbar_title'.tr(),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: const Color(0xFFC62828),
         iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(20.0),
             child: _isSuccess ? _buildSuccessView() : _buildReportForm(),
           ),
         ),

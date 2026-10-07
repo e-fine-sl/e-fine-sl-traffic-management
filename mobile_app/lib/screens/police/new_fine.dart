@@ -68,10 +68,26 @@ class _NewFineScreenState extends State<NewFineScreen> {
         "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
   }
 
+  bool _isLicenseSuspended = false;
+
   Future<void> _loadInitialData() async {
     await _loadOfficerDetails();
     await _getCurrentLocation();
     await _fetchOffenses();
+    if (_licenseController.text.isNotEmpty) {
+      await _checkDriverLicenseStatus(_licenseController.text);
+    }
+  }
+
+  Future<void> _checkDriverLicenseStatus(String licenseNum) async {
+    try {
+      final status = await FineService().getDriverStatusByLicense(licenseNum);
+      if (mounted && status != null) {
+        setState(() {
+          _isLicenseSuspended = status['licenseStatus'] == 'SUSPENDED' || (status['demeritPoints'] != null && status['demeritPoints'] <= 0);
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _fetchOffenses() async {
@@ -104,22 +120,46 @@ class _NewFineScreenState extends State<NewFineScreen> {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
+        if (permission == LocationPermission.denied) {
+          _locationController.text = "Permission Denied";
+          return;
+        }
       }
-      Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
-      List<Placemark> placemarks =
-          await placemarkFromCoordinates(position.latitude, position.longitude);
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        String address = "${place.street}, ${place.locality}";
-        if (address.startsWith(", ")) address = address.substring(2);
-        setState(() => _locationController.text = address);
-      } else {
+      if (permission == LocationPermission.deniedForever) {
+        _locationController.text = "Permission Permanently Denied";
+        return;
+      }
+      setState(() => _locationController.text = "Fetching location...");
+      
+      Position? lastKnown = await Geolocator.getLastKnownPosition();
+      Position position = lastKnown ?? await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 10));
+          
+      try {
+        List<Placemark> placemarks =
+            await placemarkFromCoordinates(position.latitude, position.longitude);
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks[0];
+          String address = "${place.street}, ${place.locality}";
+          if (address.startsWith(", ")) address = address.substring(2);
+          
+          if (address.trim().isEmpty || address == ", ") {
+            setState(() => _locationController.text = "${position.latitude}, ${position.longitude}");
+          } else {
+            setState(() => _locationController.text = address);
+          }
+        } else {
+          setState(() => _locationController.text =
+              "${position.latitude}, ${position.longitude}");
+        }
+      } catch (geocodingError) {
+        debugPrint("Geocoding failed, falling back to coords: $geocodingError");
         setState(() => _locationController.text =
             "${position.latitude}, ${position.longitude}");
       }
     } catch (e) {
+      debugPrint("Get Location Error: $e");
       setState(() => _locationController.text = "Error getting location");
     } finally {
       setState(() => _isGettingLocation = false);
@@ -265,6 +305,31 @@ class _NewFineScreenState extends State<NewFineScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (_isLicenseSuspended) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade800,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 28),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          PoliceLocaleService.instance.translate('police.new_fine_suspended_warning'),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, height: 1.3),
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 15),
+              ],
               Text(
                 PoliceLocaleService.instance.translate('police.new_fine_details_section'),
                 style:
@@ -426,7 +491,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
-                  onPressed: _isSubmitting ? null : _submitFine,
+                  onPressed: (_isSubmitting || _isGettingLocation) ? null : _submitFine,
                   icon: const Icon(Icons.send),
                   label: _isSubmitting
                       ? const CircularProgressIndicator(color: Colors.white)

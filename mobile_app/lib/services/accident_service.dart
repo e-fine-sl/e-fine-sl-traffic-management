@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:http/http.dart' as http_pkg;
+import 'package:http_parser/http_parser.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'api_logger.dart' as http;
@@ -44,7 +45,20 @@ class AccidentService {
       );
       return position;
     } catch (e) {
-      throw 'Failed to get GPS location: $e';
+      debugPrint('$_tag High-accuracy request failed or timed out: $e');
+      debugPrint('$_tag STEP 4: Falling back to last known position...');
+      
+      try {
+        final lastPosition = await Geolocator.getLastKnownPosition();
+        if (lastPosition != null) {
+          debugPrint('$_tag Successfully retrieved last known position.');
+          return lastPosition;
+        }
+      } catch (fallbackErr) {
+        debugPrint('$_tag Fallback also failed: $fallbackErr');
+      }
+
+      throw 'Could not determine your location. Please move outside for a better GPS signal and try again.';
     }
   }
 
@@ -86,11 +100,15 @@ class AccidentService {
         for (var image in images) {
           final stream = http_pkg.ByteStream(image.openRead());
           final length = await image.length();
+          final ext = p.extension(image.path).replaceAll('.', '').toLowerCase();
+          final String mimeType = ext == 'png' ? 'png' : (ext == 'webp' ? 'webp' : 'jpeg');
+
           final multipartFile = http_pkg.MultipartFile(
             'images',
             stream,
             length,
             filename: p.basename(image.path),
+            contentType: MediaType('image', mimeType),
           );
           request.files.add(multipartFile);
         }

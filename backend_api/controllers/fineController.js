@@ -106,7 +106,8 @@ const getFineHistory = async (req, res) => {
 // @route   GET /api/fines/pending
 const getDriverPendingFines = async (req, res) => {
   try {
-    const { licenseNumber } = req.query;
+    // IDOR Prevention: If the user is a driver, force the query to their own license number.
+    const licenseNumber = req.user.role === 'Driver' ? req.user.licenseNumber : req.query.licenseNumber;
 
     if (!licenseNumber) {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'License number is required' });
@@ -140,6 +141,11 @@ const payFine = async (req, res) => {
       return res.status(HTTP.NOT_FOUND).json({ message: 'Fine not found' });
     }
 
+    // IDOR Prevention: Only the driver who received the fine can mark it as paid.
+    if (req.user.role === 'Driver' && fine.licenseNumber.toUpperCase() !== req.user.licenseNumber.toUpperCase()) {
+      return res.status(HTTP.FORBIDDEN).json({ message: 'Not authorized to pay this fine' });
+    }
+
     if (fine.status === PAYMENT.STATUS.PAID) {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'Fine is already paid' });
     }
@@ -160,7 +166,8 @@ const payFine = async (req, res) => {
 // @route   GET /api/fines/driver-history
 const getDriverPaidHistory = async (req, res) => {
   try {
-    const { licenseNumber } = req.query;
+    // IDOR Prevention: If the user is a driver, force the query to their own license number.
+    const licenseNumber = req.user.role === 'Driver' ? req.user.licenseNumber : req.query.licenseNumber;
 
     if (!licenseNumber) {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'License number is required' });
@@ -305,6 +312,60 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
+// @desc    Generate and stream downloadable e-Fine SL Digital Fine Receipt (PDF)
+// @route   GET /api/fines/:id/pdf
+const generateFinePdf = async (req, res) => {
+  try {
+    const QRCode = require('qrcode');
+    const Driver = require('../models/driverModel');
+    const PdfReportService = require('../services/pdfReportService');
+
+    const { id } = req.params;
+    const fine = await IssuedFine.findById(id);
+
+    if (!fine) {
+      return res.status(HTTP.NOT_FOUND).json({ message: 'Fine record not found' });
+    }
+
+    const driver = await Driver.findOne({
+      licenseNumber: { $regex: new RegExp(`^${fine.licenseNumber}$`, 'i') }
+    });
+
+    // Generate Verification QR Code Buffer
+    const qrData = JSON.stringify({
+      receiptRef: `SL-FINE-${fine._id.toString().slice(-8).toUpperCase()}`,
+      fineId: fine._id,
+      licenseNumber: fine.licenseNumber,
+      amount: fine.amount,
+      status: fine.status,
+      verifyUrl: `https://efine.gov.lk/verify/${fine._id}`
+    });
+
+    const qrBuffer = await QRCode.toBuffer(qrData, {
+      width: 250,
+      margin: 1,
+      color: { dark: '#0F172A', light: '#FFFFFF' }
+    });
+
+    // Set Response Headers for Direct PDF Download
+    const fileName = `e-Fine-Receipt-${fine._id.toString().slice(-8).toUpperCase()}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    const doc = PdfReportService.createDocument();
+    doc.pipe(res);
+
+    PdfReportService.buildReceipt(doc, { fine, driver, qrBuffer });
+    doc.end();
+
+  } catch (error) {
+    console.error('[generateFinePdf] Error:', error);
+    if (!res.headersSent) {
+      res.status(HTTP.SERVER_ERROR).json({ message: 'Failed to generate fine receipt PDF', error: error.message });
+    }
+  }
+};
+
 module.exports = {
   getOffenses,
   addOffense,
@@ -314,5 +375,6 @@ module.exports = {
   payFine,
   getDriverPaidHistory,
   getDriverRecord,
-  getDashboardStats
+  getDashboardStats,
+  generateFinePdf
 };

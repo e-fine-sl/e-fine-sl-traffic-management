@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>e-Fine SL — Figma Wireframe Design Workbench & Interactive Prototype</title>
+  <style>
+    :root {
+      --figma-bg: #1E1E1E;
+      --figma-sidebar: #2C2C2C;
+      --figma-panel: #383838;
+      --figma-accent: #0D99FF;
+      --figma-border: #444444;
+      --text-main: #FFFFFF;
+      --text-muted: #B3B3B3;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: var(--figma-bg); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Top Toolbar */
+    header { height: 48px; background: var(--figma-sidebar); border-bottom: 1px solid var(--figma-border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 10; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px; }
+    .brand-badge { background: var(--figma-accent); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+    .toolbar-actions { display: flex; align-items: center; gap: 12px; }
+    .btn { background: var(--figma-panel); color: #fff; border: 1px solid var(--figma-border); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; transition: 0.15s ease; }
+    .btn:hover { background: #4B4B4B; border-color: #666; }
+    .btn-primary { background: var(--figma-accent); border-color: var(--figma-accent); }
+    .btn-primary:hover { background: #007BE5; }
+
+    /* Main Container */
+    .workbench { flex: 1; display: flex; overflow: hidden; }
+
+    /* Sidebar */
+    aside { width: 280px; background: var(--figma-sidebar); border-right: 1px solid var(--figma-border); display: flex; flex-direction: column; overflow-y: auto; }
+    .sidebar-section { padding: 16px 12px 8px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .nav-item { padding: 10px 16px; font-size: 13px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-radius: 6px; margin: 2px 8px; transition: 0.1s; }
+    .nav-item:hover { background: rgba(255, 255, 255, 0.05); color: #fff; }
+    .nav-item.active { background: rgba(13, 153, 255, 0.15); color: var(--figma-accent); font-weight: 600; }
+    .nav-item .tag { font-size: 10px; background: #383838; padding: 2px 6px; border-radius: 4px; color: #AAA; }
+
+    /* Canvas Area */
+    main { flex: 1; position: relative; background-color: #121212; background-image: radial-gradient(#262626 1px, transparent 1px); background-size: 24px 24px; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 40px; }
+    
+    /* Device Frame Container */
+    .artboard-container { background: #000; border-radius: 44px; padding: 12px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 12px #262626; position: relative; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .artboard-container.desktop { border-radius: 12px; padding: 0; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
+    
+    iframe { border: none; border-radius: 36px; display: block; background: #0F172A; }
+    .artboard-container.desktop iframe { border-radius: 12px; }
+
+    /* Floating Canvas Controls */
+    .canvas-controls { position: absolute; bottom: 24px; right: 24px; background: var(--figma-sidebar); border: 1px solid var(--figma-border); border-radius: 8px; padding: 4px; display: flex; gap: 4px; z-index: 5; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand">
+      <span>❖ Figma Wireframe Design Suite</span>
+      <span class="brand-badge">e-Fine SL v1.2</span>
+    </div>
+    <div class="toolbar-actions">
+      <span id="activeScreenTitle" style="font-size: 13px; font-weight: 600; color: #BBB;">02_driver_home_dashboard</span>
+      <a id="downloadSvgBtn" href="svg/02_driver_home_dashboard.svg" download class="btn">
+        📐 Download Vector SVG (Figma Ready)
+      </a>
+      <a id="downloadPngBtn" href="docs/diagrams/02_system_use_case_diagram.png" download class="btn btn-primary">
+        📥 Download High-Res PNG
+      </a>
+    </div>
+  </header>
+
+  <!-- Workbench Body -->
+  <div class="workbench">
+    
+    <!-- Left Navigation Explorer -->
+    <aside>
+      <div class="sidebar-section">📱 Citizen Driver Module</div>
+      <div class="nav-item" onclick="loadScreen('01_driver_signup_kyc_liveness', 'KYC Liveness & OCR', '390', '844', false)">
+        <span>01. KYC & Liveness Check</span>
+        <span class="tag">Mobile</span>
+      </div>
+      <div class="nav-item active" onclick="loadScreen('02_driver_home_dashboard', 'Driver Home Dashboard', '390', '844', false)">
+        <span>02. Driver Dashboard</span>
+        <span class="tag">Mobile</span>
+      </div>
+      <div class="nav-item" onclick="loadScreen('03_driver_pay_fine_payhere', 'Fine Payment & PayHere PG', '390', '844', false)">
+        <span>03. Pay Fine & PayHere</span>
+        <span class="tag">Mobile</span>
+      </div>
+
+      <div class="sidebar-section">👮 Traffic Police Module</div>
+      <div class="nav-item" onclick="loadScreen('05_police_duty_dashboard', 'Police Duty Dashboard', '390', '844', false)">
+        <span>05. Officer Duty Portal</span>
+        <span class="tag">Mobile</span>
+      </div>
+      <div class="nav-item" onclick="loadScreen('06_police_fine_issuance', 'Spot Fine Issuance Form', '390', '844', false)">
+        <span>06. Spot Fine Issuance</span>
+        <span class="tag">Mobile</span>
+      </div>
+
+      <div class="sidebar-section">⚙️ System Admin Portal</div>
+      <div class="nav-item" onclick="loadScreen('08_admin_management_dashboard', 'Super Admin System Portal', '1200', '750', true)">
+        <span>08. Admin Analytics Portal</span>
+        <span class="tag">Desktop</span>
+      </div>
+
+      <div class="sidebar-section" style="margin-top: auto;">💡 Figma Import Guide</div>
+      <div style="padding: 12px; font-size: 11px; color: #888; line-height: 1.5;">
+        To edit in Figma: Download the <b>Vector SVG</b> file above, open Figma, and drag & drop the SVG onto your Figma canvas!
+      </div>
+    </aside>
+
+    <!-- Interactive Canvas Viewport -->
+    <main>
+      <div id="artboardFrame" class="artboard-container">
+        <iframe id="screenIframe" src="svg/02_driver_home_dashboard.svg" width="390" height="844"></iframe>
+      </div>
+    </main>
+
+  </div>
+
+  <script>
+    function loadScreen(file, title, width, height, isDesktop) {
+      const iframe = document.getElementById('screenIframe');
+      const frame = document.getElementById('artboardFrame');
+      const titleEl = document.getElementById('activeScreenTitle');
+      const svgBtn = document.getElementById('downloadSvgBtn');
+
+      titleEl.innerText = title;
+      iframe.src = 'svg/' + file + '.svg';
+      iframe.width = width;
+      iframe.height = height;
+      svgBtn.href = 'svg/' + file + '.svg';
+
+      if (isDesktop) {
+        frame.classList.add('desktop');
+      } else {
+        frame.classList.remove('desktop');
+      }
+
+      // Highlight active nav item
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+    }
+  </script>
+</body>
+</html>

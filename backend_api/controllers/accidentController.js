@@ -121,8 +121,11 @@ const reportAccident = async (req, res) => {
     }
 
     // STEP 1 — Validate input
-    const { licenseNumber, lat, lng, accidentType, description } = req.body;
+    const { lat, lng, accidentType, description } = req.body;
     
+    // IDOR Prevention: Enforce the authenticated driver's license number
+    const licenseNumber = req.user.role === 'Driver' ? req.user.licenseNumber : req.body.licenseNumber;
+
     if (!licenseNumber || !lat || !lng || !accidentType) {
       console.error(`${tag}  STEP 1 FAILED: Missing required fields`);
       return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -147,6 +150,7 @@ const reportAccident = async (req, res) => {
 
     // STEP 2 — Find Driver
     console.log(`\n${tag} STEP 2: Looking up driver...`);
+    // Optimisation: We already have req.user, so if it's a driver, we can use that instead of hitting the DB again, but for safety:
     const driver = await Driver.findOne({ licenseNumber });
     if (!driver) {
       console.error(`${tag}  STEP 2 FAILED: Driver not found`);
@@ -159,64 +163,82 @@ const reportAccident = async (req, res) => {
     const geoData = resolveLocation(latitude, longitude);
     console.log(`${tag}  STEP 3 OK: ${geoData.province} / ${geoData.district} / ${geoData.policeDivision}`);
 
-    // STEP 4 — Find nearby police officers (5 km radius)
-    console.log(`\n${tag} STEP 4: Finding nearby police officers (including grace window)...`);
-    
-    const GRACE_WINDOW_MINUTES = 20;
-    const graceWindowCutoff = new Date(Date.now() - GRACE_WINDOW_MINUTES * 60 * 1000);
+    // Fetch dynamic configuration
+    let stationRadiusKm = 10; // Default to 10km
+    let graceWindowMinutes = 20; // Default to 20 mins
+    try {
+      const config = await SystemConfig.findOne();
+      if (config) {
+        if (config.accidentNotificationRadiusKm) stationRadiusKm = config.accidentNotificationRadiusKm;
+        if (config.officerLogoutGracePeriodMinutes) graceWindowMinutes = config.officerLogoutGracePeriodMinutes;
+      }
+    } catch (err) {
+      console.warn(`${tag} WARNING: Failed to fetch SystemConfig, using defaults`);
+    }
+    const stationRadiusMeters = stationRadiusKm * 1000;
 
-    // Query 1: Active officers within 5 km
-    const activeOfficers = await Police.find({
+    console.log(`\n${tag} STEP 4: Finding nearby police officers (including ${graceWindowMinutes}-min grace window)...`);
+    const graceWindowCutoff = new Date(Date.now() - graceWindowMinutes * 60 * 1000);
+
+    // Query 1: By current location
+    const locationOfficers = await Police.find({
       location: {
         $near: {
           $geometry: { type: 'Point', coordinates: [longitude, latitude] },
           $maxDistance: ACCIDENT_RADIUS_METERS
         }
-      },
-      isActive: true
-    }).select('name badgeNumber fcmToken');
+      }
+    }).select('name badgeNumber isActive appState lastActiveTime lastLogoutTime fcmToken policeStation');
     
-    // Query 2: Recently logged-out officers (within 20-min grace window)
-    // whose LAST LOGIN LOCATION was within 5 km
-    const graceOfficers = await Police.find({
+    // Query 2: By last login location (mostly for logged out officers)
+    const loginLocationOfficers = await Police.find({
       lastLoginLocation: {
         $near: {
           $geometry: { type: 'Point', coordinates: [longitude, latitude] },
           $maxDistance: ACCIDENT_RADIUS_METERS
         }
-      },
-      isActive: false,
-      lastLogoutTime: { $gte: graceWindowCutoff }
-    }).select('name badgeNumber fcmToken');
+      }
+    }).select('name badgeNumber isActive appState lastActiveTime lastLogoutTime fcmToken policeStation');
 
     // Merge and deduplicate by badgeNumber
     const seenBadges = new Set();
     const nearbyOfficers = [];
     
-    for (const o of [...activeOfficers, ...graceOfficers]) {
+    let activeCount = 0;
+    let graceCount = 0;
+    
+    for (const o of [...locationOfficers, ...loginLocationOfficers]) {
       if (!seenBadges.has(o.badgeNumber)) {
         seenBadges.add(o.badgeNumber);
-        nearbyOfficers.push(o);
+        
+        if (o.appState === 'LOGGED_OUT' || o.isActive === false) {
+           if (!o.lastLogoutTime || o.lastLogoutTime.getTime() < graceWindowCutoff.getTime()) {
+               continue; 
+           }
+           graceCount++;
+           nearbyOfficers.push(o);
+        } else if (o.appState === 'FOREGROUND') {
+           if (o.lastActiveTime && o.lastActiveTime.getTime() >= graceWindowCutoff.getTime()) {
+               activeCount++;
+           } else {
+               graceCount++; 
+           }
+           nearbyOfficers.push(o);
+        } else if (o.appState === 'BACKGROUND') {
+           graceCount++;
+           nearbyOfficers.push(o);
+        } else {
+           activeCount++;
+           nearbyOfficers.push(o);
+        }
       }
     }
 
     const validTokens = nearbyOfficers.map(o => o.fcmToken).filter(t => t && t.length > 10);
     console.log(`${tag}  STEP 4 OK:`);
-    console.log(`${tag}    Active officers: ${activeOfficers.length}`);
-    console.log(`${tag}    Grace window officers: ${graceOfficers.length}`);
+    console.log(`${tag}    Active officers: ${activeCount}`);
+    console.log(`${tag}    Grace window / Background officers: ${graceCount}`);
     console.log(`${tag}    Total unique: ${nearbyOfficers.length}, valid tokens: ${validTokens.length}`);
-
-    // Fetch dynamic radius configuration
-    let stationRadiusKm = 10; // Default to 10km
-    try {
-      const config = await SystemConfig.findOne();
-      if (config && config.accidentNotificationRadiusKm) {
-        stationRadiusKm = config.accidentNotificationRadiusKm;
-      }
-    } catch (err) {
-      console.warn(`${tag} WARNING: Failed to fetch SystemConfig, using default radius 10km`);
-    }
-    const stationRadiusMeters = stationRadiusKm * 1000;
 
     // STEP 5 — Find NEARBY police stations
     console.log(`\n${tag} STEP 5: Finding nearby police stations (${stationRadiusKm} km radius)...`);
@@ -612,11 +634,177 @@ const getAccidentStats = async (req, res) => {
   }
 };
 
+const getNearbyOfficersForReport = async (req, res) => {
+  try {
+    const report = await AccidentReport.findById(req.params.id);
+    if (!report) return res.status(404).json({ success: false, message: 'Report not found' });
+
+    const [longitude, latitude] = report.location.coordinates;
+    
+    let graceWindowMinutes = 20;
+    try {
+      const config = await SystemConfig.findOne();
+      if (config && config.officerLogoutGracePeriodMinutes) {
+        graceWindowMinutes = config.officerLogoutGracePeriodMinutes;
+      }
+    } catch (err) {
+      console.warn('[AccidentCtrl] WARNING: Failed to fetch SystemConfig, using default grace period');
+    }
+
+    const graceWindowCutoff = new Date(Date.now() - graceWindowMinutes * 60 * 1000);
+
+    // Query 1: By current location
+    const locationOfficers = await Police.find({
+      location: {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [longitude, latitude] },
+          $maxDistance: ACCIDENT_RADIUS_METERS
+        }
+      }
+    }).select('name badgeNumber isActive appState lastActiveTime lastLogoutTime fcmToken policeStation');
+
+    // Query 2: By last login location (mostly for logged out officers)
+    const loginLocationOfficers = await Police.find({
+      lastLoginLocation: {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [longitude, latitude] },
+          $maxDistance: ACCIDENT_RADIUS_METERS
+        }
+      }
+    }).select('name badgeNumber isActive appState lastActiveTime lastLogoutTime fcmToken policeStation');
+
+    // Merge, deduplicate, and determine precise status
+    const seenBadges = new Set();
+    const nearbyOfficers = [];
+
+    for (const o of [...locationOfficers, ...loginLocationOfficers]) {
+      if (!seenBadges.has(o.badgeNumber)) {
+        seenBadges.add(o.badgeNumber);
+        
+        let derivedStatus = 'LOGGED_OUT_GRACE';
+        
+        if (o.appState === 'LOGGED_OUT' || o.isActive === false) {
+           // Logged out explicitly - only include if within grace window
+           if (!o.lastLogoutTime || o.lastLogoutTime.getTime() < graceWindowCutoff.getTime()) {
+               continue; // Ignore, outside grace window
+           }
+           derivedStatus = 'LOGGED_OUT_GRACE';
+        } else if (o.appState === 'FOREGROUND') {
+           // Foreground, but verify heartbeat isn't stale (e.g. force killed app)
+           if (o.lastActiveTime && o.lastActiveTime.getTime() >= graceWindowCutoff.getTime()) {
+               derivedStatus = 'ACTIVE';
+           } else {
+               derivedStatus = 'BACKGROUND'; // Stale heartbeat -> Background
+           }
+        } else if (o.appState === 'BACKGROUND') {
+           derivedStatus = 'BACKGROUND';
+        } else {
+           // Legacy user without appState but isActive = true
+           derivedStatus = 'ACTIVE';
+        }
+
+        nearbyOfficers.push({
+          name: o.name,
+          badgeNumber: o.badgeNumber,
+          status: derivedStatus,
+          isActive: o.isActive, // Keep for backward compatibility
+          lastLogoutTime: o.lastLogoutTime,
+          policeStation: o.policeStation,
+          hasValidToken: !!(o.fcmToken && o.fcmToken.length > 10)
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: nearbyOfficers,
+      count: nearbyOfficers.length
+    });
+  } catch (err) {
+    console.error('[AccidentCtrl] Error fetching nearby officers:', err);
+    return res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+};
+
+const manualNotifyOfficers = async (req, res) => {
+  try {
+    const { adminName, badgeNumbers } = req.body;
+    
+    if (!badgeNumbers || !Array.isArray(badgeNumbers) || badgeNumbers.length === 0) {
+      return res.status(400).json({ success: false, message: 'No badge numbers provided' });
+    }
+
+    const report = await AccidentReport.findById(req.params.id);
+    if (!report) return res.status(404).json({ success: false, message: 'Report not found' });
+
+    // Find the officers and collect their FCM tokens
+    const officers = await Police.find({
+      badgeNumber: { $in: badgeNumbers }
+    }).select('fcmToken');
+
+    const validTokens = officers.map(o => o.fcmToken).filter(t => t && t.length > 10);
+
+    if (validTokens.length === 0) {
+      return res.status(400).json({ success: false, message: 'None of the selected officers have a valid notification token' });
+    }
+
+    const [longitude, latitude] = report.location.coordinates;
+    const cleanDescription = report.description ? report.description.trim().substring(0, 200) : '';
+
+    const fcmPayload = {
+      title: `🚨 Accident Alert — ${report.accidentType}`,
+      body: `Driver ${report.driverName} has reported an accident near you. Tap to view location.`,
+      data: {
+        type: 'ACCIDENT_ALERT',
+        licenseNumber: report.driverLicense,
+        driverName: report.driverName,
+        driverPhone: report.driverPhone || '',
+        accidentType: report.accidentType,
+        description: cleanDescription,
+        lat: String(latitude),
+        lng: String(longitude),
+        mapsLink: `https://maps.google.com/?q=${latitude},${longitude}`,
+        province: report.province,
+        district: report.district,
+        policeDivision: report.policeDivision,
+        reportedAt: new Date(report.reportedAt).toISOString()
+      }
+    };
+
+    const fcmResult = await sendToMultiple(validTokens, fcmPayload);
+    const sentCount = fcmResult.sent || 0;
+
+    if (sentCount > 0) {
+      report.officersNotified += sentCount;
+      report.statusHistory.push({
+        status: report.status,
+        changedBy: adminName || 'System Admin',
+        note: `Manual push notification sent to ${sentCount} officer(s)`,
+        changedAt: new Date()
+      });
+      await report.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      notifiedCount: sentCount,
+      failedCount: fcmResult.failed || 0,
+      message: `Notifications sent to ${sentCount} officer(s).`
+    });
+
+  } catch (err) {
+    console.error('[AccidentCtrl] Error sending manual notifications:', err);
+    return res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
   reportAccident,
   getAccidentReports,
   getAccidentReportById,
   updateAccidentStatus,
   notifyPoliceDivision,
-  getAccidentStats
+  getAccidentStats,
+  getNearbyOfficersForReport,
+  manualNotifyOfficers
 };

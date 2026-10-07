@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../config/app_constants.dart';
+import '../../widgets/otp_input_field.dart';
 import 'license_recovery_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -99,6 +100,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Theme(
       data: Theme.of(context).copyWith(
         primaryColor: AppColors.primaryGreen,
@@ -145,17 +148,80 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   
               // STEP 2: OTP Input
               if (_currentStep == 1) ...[
-                const Text("Enter the 6-digit code sent to your email", textAlign: TextAlign.center),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: _otpController,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 24, letterSpacing: 5),
-                  decoration: const InputDecoration(labelText: "OTP Code", border: OutlineInputBorder()),
+                // ── Envelope + Key Icon ───────────────────────────
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryGreen.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.mark_email_read_rounded,
+                        size: 44,
+                        color: AppColors.primaryGreen,
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 4,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreenDark,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF1E1E1E)
+                                : Colors.white,
+                            width: 2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.vpn_key_rounded,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 20),
+                Text(
+                  'Verify Your Email Address',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  "We've sent a 6-digit verification code to\n${_emailController.text}.\nPlease enter it below.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white60 : AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                OtpInputField(
+                  length: 6,
+                  accentColor: AppColors.primaryGreen,
+                  filledBackground: AppColors.pastelGreen,
+                  onCompleted: (otp) {
+                    _otpController.text = otp;
+                    _verifyOTP();
+                  },
+                  onChanged: (otp) {
+                    _otpController.text = otp;
+                  },
+                ),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity, height: 50,
                   child: ElevatedButton(
@@ -163,12 +229,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryGreen,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                      elevation: 3,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 2,
                     ),
                     child: _isLoading 
-                      ? const CircularProgressIndicator(color: Colors.white) 
-                      : const Text("Verify OTP", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)) 
+                      : const Text("Verify Email", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
