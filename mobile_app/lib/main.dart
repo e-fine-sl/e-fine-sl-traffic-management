@@ -6,6 +6,7 @@ import 'services/police_locale_service.dart';
 import 'widgets/interaction_listener.dart';
 import 'screens/auth/login_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'services/sos_service.dart';
 import 'providers/theme_provider.dart';
 import 'package:provider/provider.dart';
@@ -16,6 +17,20 @@ void main() async {
   
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(); // Initialize Firebase for FCM
+
+  RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  if (initialMessage != null) {
+    final type = initialMessage.data['type'] ?? '';
+    if (type == 'SOS_ALERT') {
+      final lat = initialMessage.data['senderLat']?.toString() ?? '0';
+      final lng = initialMessage.data['senderLng']?.toString() ?? '0';
+      // Add a slight delay if necessary to ensure app is ready before launching external URL
+      Future.delayed(const Duration(milliseconds: 500), () {
+        SosService.openGoogleMapsForSOS(lat, lng);
+      });
+    }
+  }
+
   await EasyLocalization.ensureInitialized();
   await NotificationService().init();
   await PoliceLocaleService.instance.init();

@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'sos_service.dart';
 
 /// Singleton service for managing device notification bar alerts.
 class NotificationService {
@@ -30,7 +32,24 @@ class NotificationService {
 
     await _plugin.initialize(
       initSettings,
-      onDidReceiveNotificationResponse: _onNotificationTap,
+      onDidReceiveNotificationResponse: (NotificationResponse response) async {
+        debugPrint('[NotificationService] Notification tapped: ${response.payload}');
+        if (response.payload != null) {
+          try {
+            final data = jsonDecode(response.payload!);
+            final type = data['type'] ?? '';
+            
+            if (type == 'SOS_ALERT') {
+              final lat = data['senderLat']?.toString() ?? '0';
+              final lng = data['senderLng']?.toString() ?? '0';
+              // Call the Google Maps launcher
+              await SosService.openGoogleMapsForSOS(lat, lng);
+            }
+          } catch (e) {
+            debugPrint('[NotificationService] Error parsing notification payload: $e');
+          }
+        }
+      },
     );
 
     // Request permissions for Android 13+
@@ -121,8 +140,4 @@ class NotificationService {
   }
 
   // ── Tap handler ───────────────────────────────────────
-  void _onNotificationTap(NotificationResponse response) {
-    debugPrint('[NotificationService] Notification tapped: ${response.payload}');
-    // Can navigate to pay-fine screen via a global navigator key in the future
-  }
 }

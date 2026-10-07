@@ -59,33 +59,36 @@ router.post('/refresh', adminRefreshToken);
 router.post('/seed-badges', async (req, res) => {
   try {
     const mockBadges = [
-      { badgeNumber: '10001', notes: 'Constable - Colombo Fort' },
-      { badgeNumber: '10002', notes: 'Sergeant - Maradana' },
-      { badgeNumber: '10003', notes: 'Sub-Inspector - Kandy' },
-      { badgeNumber: '10004', notes: 'Inspector - Galle' },
-      { badgeNumber: '10005', notes: 'OIC - Kurunegala' },
+      // 3 for COL-01 (Colombo Fort - krasanjana81@gmail.com)
+      { badgeNumber: '19001', stationCode: 'COL-01', isRegistered: false, registeredAt: null, notes: 'Auto-generated - Colombo Fort (krasanjana81)' },
+      { badgeNumber: '19002', stationCode: 'COL-01', isRegistered: false, registeredAt: null, notes: 'Auto-generated - Colombo Fort (krasanjana81)' },
+      { badgeNumber: '19003', stationCode: 'COL-01', isRegistered: false, registeredAt: null, notes: 'Auto-generated - Colombo Fort (krasanjana81)' },
+      
+      // 3 for COL-03 (Cinnamon Gardens - krasanjana83@gmail.com)
+      { badgeNumber: '19004', stationCode: 'COL-03', isRegistered: false, registeredAt: null, notes: 'Auto-generated - Cinnamon Gardens (krasanjana83)' },
+      { badgeNumber: '19005', stationCode: 'COL-03', isRegistered: false, registeredAt: null, notes: 'Auto-generated - Cinnamon Gardens (krasanjana83)' },
+      { badgeNumber: '19006', stationCode: 'COL-03', isRegistered: false, registeredAt: null, notes: 'Auto-generated - Cinnamon Gardens (krasanjana83)' },
+
+      // 4 for COL-02 (Maradana - kavishkarasanjana217@gmail.com)
+      { badgeNumber: '19007', stationCode: 'COL-02', isRegistered: false, registeredAt: null, notes: 'Auto-generated - Maradana (kavishkarasanjana217)' },
+      { badgeNumber: '19008', stationCode: 'COL-02', isRegistered: false, registeredAt: null, notes: 'Auto-generated - Maradana (kavishkarasanjana217)' },
+      { badgeNumber: '19009', stationCode: 'COL-02', isRegistered: false, registeredAt: null, notes: 'Auto-generated - Maradana (kavishkarasanjana217)' },
+      { badgeNumber: '19010', stationCode: 'COL-02', isRegistered: false, registeredAt: null, notes: 'Auto-generated - Maradana (kavishkarasanjana217)' }
     ];
 
-    // insertMany with ordered:false so duplicates are skipped gracefully
-    const result = await PreApprovedOfficer.insertMany(mockBadges, {
-      ordered: false,
-    });
+    // Delete any old ones from this seed block to avoid duplicates during testing
+    await PreApprovedOfficer.deleteMany({ badgeNumber: { $regex: /^190/ } });
+
+    // We must pass strict:false on the model if stationCode isn't in schema
+    // But since it's already defined via insertMany, it should work depending on mongoose version
+    const result = await PreApprovedOfficer.collection.insertMany(mockBadges, { ordered: false });
 
     return res.status(201).json({
       success: true,
-      message: `${result.length} badge(s) seeded successfully.`,
-      inserted: result.map((r) => r.badgeNumber),
+      message: `${result.insertedCount} badge(s) seeded successfully with real stations.`,
+      inserted: mockBadges.map((r) => r.badgeNumber),
     });
   } catch (error) {
-    // If some badges already exist (code 11000 bulk write), report what was inserted
-    if (error.code === 11000 || error.writeErrors) {
-      const inserted = (error.insertedDocs || []).map((d) => d.badgeNumber);
-      return res.status(200).json({
-        success: true,
-        message: 'Seeding complete. Some badges already existed and were skipped.',
-        inserted,
-      });
-    }
     console.error('[SEED-BADGES] Error:', error.message);
     return res.status(500).json({ success: false, message: error.message });
   }

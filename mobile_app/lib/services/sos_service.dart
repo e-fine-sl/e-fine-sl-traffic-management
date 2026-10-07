@@ -23,10 +23,32 @@ import 'notification_service.dart';
 import '../config/app_constants.dart';
 import '../screens/police/accident_alert_screen.dart';
 import 'package:mobile_app/main.dart' show navigatorKey;
+import 'package:url_launcher/url_launcher.dart';
 
 class SosService {
   static const String _tag = '[SosService]';
   static const String _baseUrl = ApiConstants.baseUrl;
+
+  static Future<void> openGoogleMapsForSOS(String lat, String lng) async {
+    final double latitude = double.tryParse(lat) ?? 0.0;
+    final double longitude = double.tryParse(lng) ?? 0.0;
+    
+    if (latitude == 0.0 && longitude == 0.0) {
+      debugPrint('[SOS] Cannot open map: Location is 0.0');
+      return;
+    }
+
+    // Official Universal Google Maps Search URL
+    final String googleMapsUrl = 'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
+    final Uri mapUri = Uri.parse(googleMapsUrl);
+
+    try {
+      // Launching directly with externalApplication mode usually bypasses canLaunch checks on newer Androids
+      await launchUrl(mapUri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('[SOS] Could not launch Google Maps: $e');
+    }
+  }
 
   final _storage = const FlutterSecureStorage();
   final _authService = AuthService();
@@ -49,7 +71,10 @@ class SosService {
 
     if (badgeNumber == null || badgeNumber.isEmpty) {
       debugPrint('$_tag ❌ STEP 1 FAILED: badgeNumber not found in storage.');
-      return {'success': false, 'message': 'Officer badge number not found. Please log in again.'};
+      return {
+        'success': false,
+        'message': 'Officer badge number not found. Please log in again.'
+      };
     }
     debugPrint('$_tag ✅ STEP 1 OK');
 
@@ -65,13 +90,21 @@ class SosService {
     }
 
     if (permission == LocationPermission.deniedForever) {
-      debugPrint('$_tag ❌ STEP 2 FAILED: Location permission permanently denied.');
-      return {'success': false, 'message': 'Location permission permanently denied. Please enable it in Settings.'};
+      debugPrint(
+          '$_tag ❌ STEP 2 FAILED: Location permission permanently denied.');
+      return {
+        'success': false,
+        'message':
+            'Location permission permanently denied. Please enable it in Settings.'
+      };
     }
 
     if (permission == LocationPermission.denied) {
       debugPrint('$_tag ❌ STEP 2 FAILED: Location permission denied by user.');
-      return {'success': false, 'message': 'Location permission is required to send SOS.'};
+      return {
+        'success': false,
+        'message': 'Location permission is required to send SOS.'
+      };
     }
     debugPrint('$_tag ✅ STEP 2 OK: Permission = $permission');
 
@@ -82,7 +115,10 @@ class SosService {
 
     if (!serviceEnabled) {
       debugPrint('$_tag ❌ STEP 3 FAILED: Location service disabled.');
-      return {'success': false, 'message': 'GPS is disabled. Please turn on Location Services.'};
+      return {
+        'success': false,
+        'message': 'GPS is disabled. Please turn on Location Services.'
+      };
     }
     debugPrint('$_tag ✅ STEP 3 OK');
 
@@ -97,8 +133,10 @@ class SosService {
         desiredAccuracy: LocationAccuracy.high,
         timeLimit: const Duration(seconds: 15),
       );
-      debugPrint('$_tag ✅ STEP 4 OK: lat=${position.latitude}, lng=${position.longitude}');
-      debugPrint('$_tag    accuracy=${position.accuracy}m, altitude=${position.altitude}m');
+      debugPrint(
+          '$_tag ✅ STEP 4 OK: lat=${position.latitude}, lng=${position.longitude}');
+      debugPrint(
+          '$_tag    accuracy=${position.accuracy}m, altitude=${position.altitude}m');
     } catch (e) {
       debugPrint('$_tag ❌ STEP 4 FAILED: $e');
       return {'success': false, 'message': 'Failed to get GPS location: $e'};
@@ -132,7 +170,8 @@ class SosService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final notified = (data['debug'] as Map?)?['fcmSent'] ?? 0;
-        debugPrint('$_tag ✅ STEP 5 OK: SOS sent! $notified officer(s) notified.');
+        debugPrint(
+            '$_tag ✅ STEP 5 OK: SOS sent! $notified officer(s) notified.');
         return {
           'success': true,
           'message': 'SOS Alert Sent! $notified officer(s) notified.',
@@ -140,8 +179,12 @@ class SosService {
         };
       } else {
         final data = jsonDecode(response.body);
-        debugPrint('$_tag ❌ STEP 5 FAILED: ${response.statusCode} — ${data['message']}');
-        return {'success': false, 'message': data['message'] ?? 'SOS failed (${response.statusCode})'};
+        debugPrint(
+            '$_tag ❌ STEP 5 FAILED: ${response.statusCode} — ${data['message']}');
+        return {
+          'success': false,
+          'message': data['message'] ?? 'SOS failed (${response.statusCode})'
+        };
       }
     } catch (e) {
       debugPrint('$_tag ❌ STEP 5 EXCEPTION: $e');
@@ -162,10 +205,12 @@ class SosService {
     String? fcmToken;
     try {
       fcmToken = await FirebaseMessaging.instance.getToken();
-      debugPrint('$_tag ✅ FCM Token obtained: ...${fcmToken?.substring(fcmToken.length - 15)}');
+      debugPrint(
+          '$_tag ✅ FCM Token obtained: ...${fcmToken?.substring(fcmToken.length - 15)}');
     } catch (e) {
       debugPrint('$_tag ❌ Failed to get FCM token: $e');
-      debugPrint('$_tag    → Make sure google-services.json is in android/app/ and Firebase is initialized in main.dart');
+      debugPrint(
+          '$_tag    → Make sure google-services.json is in android/app/ and Firebase is initialized in main.dart');
       return; // Non-fatal — don't crash if FCM fails
     }
 
@@ -180,7 +225,8 @@ class SosService {
     double? lng;
     try {
       final perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.always || perm == LocationPermission.whileInUse) {
+      if (perm == LocationPermission.always ||
+          perm == LocationPermission.whileInUse) {
         final pos = await Geolocator.getCurrentPosition(
           // ignore: deprecated_member_use
           desiredAccuracy: LocationAccuracy.medium,
@@ -190,10 +236,12 @@ class SosService {
         lng = pos.longitude;
         debugPrint('$_tag ✅ Location for presence: lat=$lat, lng=$lng');
       } else {
-        debugPrint('$_tag ⚠️ Location permission not granted yet — skipping location in presence update.');
+        debugPrint(
+            '$_tag ⚠️ Location permission not granted yet — skipping location in presence update.');
       }
     } catch (e) {
-      debugPrint('$_tag ⚠️ Could not get location for presence (non-fatal): $e');
+      debugPrint(
+          '$_tag ⚠️ Could not get location for presence (non-fatal): $e');
     }
 
     // ── PUT /api/sos/update-location ───────────────────────────────────────
@@ -224,7 +272,8 @@ class SosService {
       if (response.statusCode == 200) {
         debugPrint('$_tag ✅ Presence registered successfully!');
       } else {
-        debugPrint('$_tag ❌ Presence registration failed: ${response.statusCode}');
+        debugPrint(
+            '$_tag ❌ Presence registration failed: ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('$_tag ❌ Presence registration exception (non-fatal): $e');
@@ -240,7 +289,8 @@ class SosService {
     double? lng;
     try {
       final perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.always || perm == LocationPermission.whileInUse) {
+      if (perm == LocationPermission.always ||
+          perm == LocationPermission.whileInUse) {
         final pos = await Geolocator.getCurrentPosition(
           // ignore: deprecated_member_use
           desiredAccuracy: LocationAccuracy.medium,
@@ -289,12 +339,15 @@ class SosService {
     debugPrint('$_tag 🔔 Setting up FCM listeners...');
 
     // Request notification permission (Android 13+ / iOS)
-    FirebaseMessaging.instance.requestPermission(
+    FirebaseMessaging.instance
+        .requestPermission(
       alert: true,
       badge: true,
       sound: true,
-    ).then((settings) {
-      debugPrint('$_tag    Notification permission status: ${settings.authorizationStatus}');
+    )
+        .then((settings) {
+      debugPrint(
+          '$_tag    Notification permission status: ${settings.authorizationStatus}');
     });
 
     // Foreground messages (app is open)
@@ -303,16 +356,18 @@ class SosService {
       debugPrint('$_tag    Title: ${message.notification?.title}');
       debugPrint('$_tag    Body:  ${message.notification?.body}');
       debugPrint('$_tag    Data:  ${message.data}');
-      
+
       // ── Handle ACCIDENT_ALERT ────────────────────────────────
       final type = message.data['type'] as String? ?? '';
       if (type == 'ACCIDENT_ALERT') {
-        debugPrint('$_tag [Accident] ACCIDENT_ALERT received — showing local notification');
-        
+        debugPrint(
+            '$_tag [Accident] ACCIDENT_ALERT received — showing local notification');
+
         // Show local high-priority notification
         NotificationService().showAccidentNotification(
           title: message.notification?.title ?? 'Accident Alert',
-          body: message.notification?.body ?? 'An accident has been reported nearby',
+          body: message.notification?.body ??
+              'An accident has been reported nearby',
           payload: jsonEncode(message.data),
         );
 
@@ -337,13 +392,23 @@ class SosService {
           ),
         );
       }
+
+      // ── Handle SOS_ALERT ───────────────────────────────────
+      if (type == 'SOS_ALERT') {
+        debugPrint('$_tag [SOS] SOS_ALERT received in foreground — showing local notification');
+        NotificationService().showAccidentNotification(
+          title: message.notification?.title ?? '🚨 SOS Emergency!',
+          body: message.notification?.body ?? 'Immediate backup requested!',
+          payload: jsonEncode(message.data),
+        );
+      }
     });
 
     // Background tap (app was in background, user tapped the notification)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint('$_tag 📲 User TAPPED background notification:');
       debugPrint('$_tag    Data: ${message.data}');
-      
+
       final type = message.data['type'] as String? ?? '';
       if (type == 'ACCIDENT_ALERT') {
         final data = message.data;
@@ -365,6 +430,12 @@ class SosService {
             ),
           ),
         );
+      }
+
+      if (type == 'SOS_ALERT') {
+        final lat = message.data['senderLat']?.toString() ?? '0';
+        final lng = message.data['senderLng']?.toString() ?? '0';
+        SosService.openGoogleMapsForSOS(lat, lng);
       }
     });
 

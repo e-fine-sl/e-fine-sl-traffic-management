@@ -7,6 +7,8 @@ const {
   registerPolice,
   registerDriver,
   loginUser,
+  logoutUser,
+  getPublicKey,
   forgotPassword,
   verifyResetOTP,
   resetPassword,
@@ -27,11 +29,13 @@ const { protect } = require('../middleware/authMiddleware');
 
 // --- Routes ---
 
+router.get('/public-key', getPublicKey);           // RSA public key for Flutter
 router.post('/request-verification', requestVerification);
 router.post('/verify-otp', verifyOTP);      
 router.post('/register-police', registerPolice);
 router.post('/register-driver', registerDriver);
 router.post('/login', loginUser);
+router.post('/logout', logoutUser);
 router.post('/forgot-password', forgotPassword);
 router.post('/verify-reset-otp', verifyResetOTP);
 router.post('/reset-password', resetPassword);

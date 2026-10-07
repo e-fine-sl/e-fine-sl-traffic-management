@@ -96,24 +96,27 @@ const triggerSOS = async (req, res) => {
     const senderName = updateResult.name || `Officer ${badgeNumber}`;
     
     // The data payload sent to the mobile devices
-    const fcmPayload = {
-      title: `🚨 SOS: ${emergencyType}`,
-      body: `${senderName} needs IMMEDIATE assistance!\nTap to respond.`,
-      data: {
-        type: 'SOS_ALERT',
-        badgeNumber: badgeNumber,
-        senderName: senderName,
-        emergencyType: emergencyType,
-        senderLat: String(latitude),
-        senderLng: String(longitude),
-        timestamp: new Date().toISOString(),
-      },
+    const messagePayload = {
+        notification: {
+            title: '🚨 SOS Emergency!',
+            body: `Officer ${req.body.badgeNumber || 'Unknown'} requests: ${req.body.emergencyType || 'Immediate Backup'}`
+        },
+        android: {
+            priority: 'high' // Bypasses Doze mode for killed apps
+        },
+        data: {
+            type: 'SOS_ALERT',
+            badgeNumber: String(req.body.badgeNumber || 'Unknown'),
+            emergencyType: String(req.body.emergencyType || 'Backup Needed'),
+            lat: String(req.body.lat || '0'),
+            lng: String(req.body.lng || '0')
+        }
     };
 
     // Dispatch the notifications
     let fcmResult = { sent: 0, failed: 0, results: [] };
     if (validTokens.length > 0) {
-      fcmResult = await sendToMultiple(validTokens, fcmPayload);
+      fcmResult = await sendToMultiple(validTokens, messagePayload);
     } else {
       console.warn(`${tag} No valid FCM tokens found for the nearby officers.`);
     }

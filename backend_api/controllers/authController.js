@@ -8,7 +8,7 @@ const PreApprovedOfficer = require('../models/preApprovedOfficerModel');
 const generateToken = require('../utils/generateToken');
 const Driver = require('../models/driverModel');
 const { HTTP, ROLES, AUTH } = require('../config/constants');
-const { decryptPassword } = require('../utils/cryptoService'); // RSA decrypt from Flutter
+const { decryptPassword, getPublicKeyPem } = require('../utils/cryptoService'); // RSA decrypt/public-key for Flutter
 
 
 // @desc    Request OTP for Police Registration
@@ -397,11 +397,27 @@ const registerDriver = async (req, res) => {
 
 // @desc    Login User (Police or Driver)
 // @route   POST /api/auth/login
-// --- THIS FUNCTION IS UPDATED ---
+// Accepts RSA-encrypted password from Flutter (same encryption used during registration)
 const loginUser = async (req, res) => {
-  const { email, password } = req.body;
+  // Flutter sends { email, encryptedPassword } — fall back to plain { email, password } for backward compat
+  const { email, encryptedPassword, password: rawPassword } = req.body;
 
   try {
+    // Decrypt RSA-encrypted password from Flutter, or use raw if plain text sent
+    let plainPassword;
+    if (encryptedPassword) {
+      try {
+        plainPassword = decryptPassword(encryptedPassword);
+      } catch (e) {
+        console.error('[AUTH/LOGIN] RSA decrypt failed:', e.message);
+        return res.status(HTTP.BAD_REQUEST).json({ message: 'Invalid encrypted password' });
+      }
+    } else if (rawPassword) {
+      plainPassword = rawPassword;
+    } else {
+      return res.status(HTTP.BAD_REQUEST).json({ message: 'Password is required' });
+    }
+
     let user = null;
     let role = '';
 
@@ -417,30 +433,33 @@ const loginUser = async (req, res) => {
       }
     }
 
-    if (user && (await bcrypt.compare(password, user.password))) {
+    if (user && (await bcrypt.compare(plainPassword, user.password))) {
+      const token = generateToken(user.id);
       res.json({
         success: true,
+        // Auth microservice-compatible token fields
+        accessToken:  token,
+        refreshToken: token, // same token — refresh handled by JWT expiry
+        sessionToken: require('crypto').randomUUID(),
+        idleTimeoutMinutes: 30,
         user: {
-          _id: user.id,
-          name: user.name,
-          email: user.email,
-          role: role,
-          badgeNumber: user.badgeNumber,
-  
-          // --- NEW FIELDS RETURNED FOR PROFILE ---
-          position: user.position,
-          policeStation: user.policeStation,
-          profileImage: user.profileImage,
+          _id:              user.id,
+          name:             user.name,
+          email:            user.email,
+          role:             role,
+          badgeNumber:      user.badgeNumber,
+          position:         user.position,
+          policeStation:    user.policeStation,
+          profileImage:     user.profileImage,
           licenseFrontImage: user.licenseFrontImage,
-          licenseBackImage: user.licenseBackImage,
-  
-          isVerified: user.isVerified,
-          licenseNumber: user.licenseNumber,
-          nic: user.nic,
-          phone: user.phone,
-          vehicleNumber: user.vehicleNumber,
+          licenseBackImage:  user.licenseBackImage,
+          isVerified:       user.isVerified,
+          licenseNumber:    user.licenseNumber,
+          nic:              user.nic,
+          phone:            user.phone,
+          vehicleNumber:    user.vehicleNumber,
         },
-        token: generateToken(user.id),
+        token: token, // legacy field kept for backward compat
       });
     } else {
       res.status(HTTP.UNAUTHORIZED).json({ message: 'Invalid email or password' });
@@ -962,6 +981,26 @@ const verifyWithDMT = async (req, res) => {
   }
 };
 
+// @desc   Serve RSA public key so Flutter can encrypt passwords before sending
+// @route  GET /api/auth/public-key
+// @access Public
+const getPublicKey = (req, res) => {
+  try {
+    const publicKey = getPublicKeyPem();
+    res.json({ publicKey });
+  } catch (e) {
+    res.status(500).json({ message: 'RSA public key not available' });
+  }
+};
+
+// @desc   Logout (session revocation stub — tokens are stateless JWTs)
+// @route  POST /api/auth/logout
+// @access Public
+const logoutUser = (req, res) => {
+  // JWT is stateless; client discards tokens. This is a no-op endpoint for compat.
+  res.json({ success: true, message: 'Logged out successfully' });
+};
+
 module.exports = {
   requestVerification,
   verifyOTP,
@@ -971,6 +1010,8 @@ module.exports = {
   verifyResetOTP,
   resetPassword,
   loginUser,
+  logoutUser,
+  getPublicKey,
   getMe,
   verifyDriver,
   updateProfileImage,
@@ -981,4 +1022,4 @@ module.exports = {
   lookupDriverByLicense,
   verifyLicenseScan,
   resetPasswordByLicense,
-};
+};
