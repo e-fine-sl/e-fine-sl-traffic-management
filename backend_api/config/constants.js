@@ -38,6 +38,12 @@ const DEMERIT = {
     P3_SERIOUS:  6,
     P4_CRITICAL: 8,
   },
+  SEVERITY_BY_POINTS: {
+    2: 'MINOR',
+    4: 'MODERATE',
+    6: 'SERIOUS',
+    8: 'CRITICAL',
+  },
   MONTHLY_RECOVERY: 2, // Points added to active drivers monthly
 };
 
