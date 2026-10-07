@@ -15,7 +15,9 @@ class AppInfo {
 // ── API ───────────────────────────────────────────────
 class ApiConstants {
   // Main backend API (existing)
-static const String baseUrl       = 'https://e-fine-sl-traffic-management-wapm.onrender.com/api';
+static const String primaryBaseUrl = 'https://e-fine-sl-traffic-management-1.onrender.com/api';
+static const String secondaryBaseUrl = 'https://e-fine-sl-traffic-management-wapm.onrender.com/api';  
+static const String baseUrl       = primaryBaseUrl;
    //static const String baseUrl    = 'http://10.231.145.6:5000/api'; // local dev
 
   // Auth Microservice URL (update after Render deployment)
@@ -28,7 +30,7 @@ static const String baseUrl       = 'https://e-fine-sl-traffic-management-wapm.o
   // Accident Report
   static const String accidentReportUrl = '$baseUrl/accident/report';
 
-  static const String walletBaseUrl = 'https://efine-mock-data-loader.onrender.com/api/wallet';
+  static const String walletUrl = '$baseUrl/wallet';
   static const int    connectTimeout = 30000;
   static const int    receiveTimeout = 30000;
   static const String authPrefix    = 'Bearer';
@@ -170,6 +172,7 @@ class PrefKeys {
   static const String profileImage = 'serverProfileImage';
   static const String user         = 'user';
   static const String profileData  = 'profile_data';
+  static const String walletData   = 'wallet_data';
   static const String historyCache  = 'driver_history_cache';
   static const String idleTimeoutMinutes = 'idle_timeout_minutes';
   static const String sessionStartTime = 'session_start_time';
@@ -200,9 +203,9 @@ class AppLocale {
 
 // ── DEMERIT LEVEL HELPER ──────────────────────────────
 class DemeritLevel {
-  static String getLabel(int points) {
-    const max = DemeritConstants.defaultPoints;
-    final ratio = points / max;
+  static String getLabel(int points, [int max = DemeritConstants.defaultPoints]) {
+    final ceiling = max <= 0 ? DemeritConstants.defaultPoints : max;
+    final ratio = points / ceiling;
 
     if (ratio >= 1.0) return 'demerit_excellent';
     if (ratio >= 0.8) return 'demerit_good';
@@ -212,9 +215,9 @@ class DemeritLevel {
     return 'demerit_suspended';
   }
 
-  static Color getColor(int points) {
-    const max = DemeritConstants.defaultPoints;
-    final ratio = points / max;
+  static Color getColor(int points, [int max = DemeritConstants.defaultPoints]) {
+    final ceiling = max <= 0 ? DemeritConstants.defaultPoints : max;
+    final ratio = points / ceiling;
 
     if (ratio >= 0.8) return AppColors.goodStanding;
     if (ratio >= 0.4) return AppColors.warningLevel;

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'login_screen.dart';
+import 'email_verification_screen.dart';
 import '../../config/app_constants.dart';
 import '../kyc_screen.dart'; // KYC face verification
 
@@ -399,28 +400,37 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
     return null;
   }
 
-  // ── Phase 1: open KYC screen (called when KYC not yet done) ─────────────────
+  // ── Phase 1: Email verification → KYC screen (called when KYC not yet done) ───
   void _openKyc() {
     if (!_validateFields()) return;
 
+    // Navigate to email verification first
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => KycScreen(
-          registeredNIC: _nicController.text,
-          registeredLicenseNumber: _licenseController.text,
-          onVerified: (classes, profileImageBase64, frontBase64, backBase64) async {
-            // Called when KYC liveness succeeds.
-            // This runs WHILE the KYC screen shows a loading overlay; navigation to
-            // LoginScreen happens at the end of _registerDriver(), not here.
-            setState(() {
-              _kycVerified        = true;
-              _vehicleClasses     = classes;
-              _profileImageBase64 = profileImageBase64;
-              _licenseFrontBase64 = frontBase64;
-              _licenseBackBase64  = backBase64;
-            });
-            await _registerDriver();
+        builder: (_) => EmailVerificationScreen(
+          email: _emailController.text.trim(),
+          onVerified: () {
+            // Email verified! Now navigate to KYC screen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => KycScreen(
+                  registeredNIC: _nicController.text,
+                  registeredLicenseNumber: _licenseController.text,
+                  onVerified: (classes, profileImageBase64, frontBase64, backBase64) async {
+                    setState(() {
+                      _kycVerified        = true;
+                      _vehicleClasses     = classes;
+                      _profileImageBase64 = profileImageBase64;
+                      _licenseFrontBase64 = frontBase64;
+                      _licenseBackBase64  = backBase64;
+                    });
+                    await _registerDriver();
+                  },
+                ),
+              ),
+            );
           },
         ),
       ),
@@ -442,6 +452,7 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
         'password':      _passwordController.text,
         'kycVerified':   _kycVerified,   // ← KYC flag saved to DB
         'isVerified':    _kycVerified,   // ← Mark as fully verified
+        'emailIsVerified': true,          // ← Email verified via OTP
         'vehicleClasses':    _vehicleClasses,
         'profileImage':      _profileImageBase64,
         'licenseFrontImage': _licenseFrontBase64,

@@ -25,6 +25,7 @@ import 'package:pointycastle/asn1/primitives/asn1_integer.dart';
 import 'package:pointycastle/asn1/primitives/asn1_sequence.dart';
 import 'package:pointycastle/api.dart';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'api_logger.dart' as http;
 import '../config/app_constants.dart';
 // Note: BiometricService is NOT imported here to avoid a circular dependency.
@@ -161,6 +162,14 @@ class AuthService {
     // Step 2: Encrypt password (never sent in plain text)
     final encryptedPassword = _encryptPassword(password, publicKey);
 
+    // Fetch FCM Push Token
+    String? fcmToken;
+    try {
+      fcmToken = await FirebaseMessaging.instance.getToken();
+    } catch (e) {
+      debugPrint('[AuthService] Error getting FCM token during login: $e');
+    }
+
     // Step 3: Send login request to main backend (supports RSA-encrypted password)
     final response = await http.post(
       Uri.parse('$_mainUrl/auth/login'),
@@ -168,6 +177,7 @@ class AuthService {
       body: jsonEncode({
         'email':             email,
         'encryptedPassword': encryptedPassword,
+        if (fcmToken != null) 'fcmToken': fcmToken,
       }),
     );
 
@@ -213,6 +223,29 @@ class AuthService {
     } else {
       final body = jsonDecode(response.body);
       throw Exception(body['message'] ?? 'Login Failed');
+    }
+  }
+
+  /// Syncs Firebase Push Notification Token with backend server
+  Future<void> syncFcmToken() async {
+    try {
+      final String? fcmToken = await FirebaseMessaging.instance.getToken();
+      final String? token = await getToken();
+      if (fcmToken != null && fcmToken.isNotEmpty && token != null) {
+        final response = await http.put(
+          Uri.parse('$_authUrl/auth/fcm-token'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({'fcmToken': fcmToken}),
+        );
+        if (response.statusCode == 200) {
+          debugPrint('[AuthService] FCM Push Token registered successfully: $fcmToken');
+        }
+      }
+    } catch (e) {
+      debugPrint('[AuthService] Error syncing FCM Push Token: $e');
     }
   }
 
@@ -274,8 +307,30 @@ class AuthService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // LOGOUT
+  // PRESENCE
   // ─────────────────────────────────────────────────────────────────────────
+
+  /// Called by InteractionListener when app lifecycle changes
+  Future<void> updatePresence(String state) async {
+    final role = await _storage.read(key: PrefKeys.userRole);
+    if (role != UserRoles.officer && role != 'police') return;
+
+    final badgeNumber = await _storage.read(key: 'badgeNumber');
+    if (badgeNumber == null) return;
+
+    try {
+      await http.put(
+        Uri.parse('$_mainUrl/officer/presence'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'badgeNumber': badgeNumber,
+          'state': state,
+        }),
+      );
+    } catch (e) {
+      debugPrint('[AuthService] Failed to update presence: $e');
+    }
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // LOGOUT — TWO PATHS
@@ -304,7 +359,7 @@ class AuthService {
       }
     }
 
-    // Clear session and auth tokens but PRESERVE biometric keys!
+    // Clear session, auth tokens, profile and wallet, but PRESERVE biometric keys!
     await Future.wait([
       _storage.delete(key: PrefKeys.accessToken),
       _storage.delete(key: PrefKeys.refreshToken),
@@ -314,6 +369,7 @@ class AuthService {
       _storage.delete(key: PrefKeys.userName),
       _storage.delete(key: PrefKeys.user),
       _storage.delete(key: PrefKeys.profileData),
+      _storage.delete(key: PrefKeys.walletData),
       _storage.delete(key: PrefKeys.authToken),
     ]);
 
@@ -351,7 +407,7 @@ class AuthService {
       }
     }
 
-    // Clear session and auth tokens but PRESERVE biometric keys!
+    // Clear session, auth tokens, profile and wallet, but PRESERVE biometric keys!
     await Future.wait([
       _storage.delete(key: PrefKeys.accessToken),
       _storage.delete(key: PrefKeys.refreshToken),
@@ -361,6 +417,7 @@ class AuthService {
       _storage.delete(key: PrefKeys.userName),
       _storage.delete(key: PrefKeys.user),
       _storage.delete(key: PrefKeys.profileData),
+      _storage.delete(key: PrefKeys.walletData),
       _storage.delete(key: PrefKeys.authToken),
     ]);
 
@@ -721,6 +778,36 @@ class AuthService {
         'dmtUnreachable': true,
         'message':        'Unable to reach DMT verification service. Please try again.',
       };
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DRIVER EMAIL OTP VERIFICATION
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Sends a 6-digit OTP to the driver's email for verification during registration.
+  Future<void> sendDriverEmailOTP(String email) async {
+    final response = await http.post(
+      Uri.parse('$_mainUrl/auth/driver-email-otp/send'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email.trim()}),
+    );
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? 'Failed to send verification code');
+    }
+  }
+
+  /// Verifies the driver's email OTP during registration.
+  Future<void> verifyDriverEmailOTP(String email, String otp) async {
+    final response = await http.post(
+      Uri.parse('$_mainUrl/auth/driver-email-otp/verify'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email.trim(), 'otp': otp.trim()}),
+    );
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? 'Invalid or expired verification code');
     }
   }
 

@@ -13,6 +13,7 @@ const Offense = require('../models/offenseModel');
 const { sendLicenseStatusEmail } = require('../services/emailService');
 const { HTTP, ROLES, PAYMENT, AUTH, PAGINATION, DEMERIT, LICENSE_STATUS } = require('../config/constants');
 const PdfReportService = require('../services/pdfReportService');
+const ReportController = require('./reportController');
 
 // Helper: Get or create Admin token configuration from DB
 const getAdminTokenConfig = async () => {
@@ -606,17 +607,32 @@ const suspendDriver = async (req, res) => {
             return res.status(HTTP.BAD_REQUEST).json({ message: 'License is already suspended' });
         }
 
+        const reasonNote = req.body.reason || req.body.note || 'Suspended by Traffic Management Authority Administrator';
+
         // Update license status
         driver.licenseStatus = 'SUSPENDED';
         driver.demeritLevel = 'SUSPENDED';
         driver.suspendedAt = new Date();
+        driver.suspensionReason = reasonNote;
         await driver.save();
 
-        // Send email notification
+        // Send email notification & push notification
         try {
-            await sendLicenseStatusEmail(driver, 'SUSPENDED');
+            await sendLicenseStatusEmail(driver, 'SUSPENDED', reasonNote);
+            if (driver.fcmToken) {
+                const { sendToToken } = require('../services/fcmService');
+                await sendToToken(driver.fcmToken, {
+                    title: 'LICENSE SUSPENDED',
+                    body: `Your driving license (${driver.licenseNumber}) has been SUSPENDED. Reason: ${reasonNote}`,
+                    data: {
+                        type: 'DRIVER_SUSPENDED',
+                        licenseNumber: driver.licenseNumber,
+                        reason: reasonNote
+                    }
+                });
+            }
         } catch (emailError) {
-            console.error('Email send error:', emailError);
+            console.error('Notification error on suspend:', emailError);
         }
 
         res.json({
@@ -679,6 +695,30 @@ const activateDriver = async (req, res) => {
 
     } catch (error) {
         console.error('Activate driver error:', error);
+        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
+    }
+};
+
+// @desc    Delete driver
+// @route   DELETE /api/admin/drivers/:id
+// @access  Private (Super Admin, Admin Officer)
+const deleteDriver = async (req, res) => {
+    try {
+        const driver = await Driver.findById(req.params.id);
+
+        if (!driver) {
+            return res.status(HTTP.NOT_FOUND).json({ message: 'Driver not found' });
+        }
+
+        await driver.deleteOne();
+
+        res.json({
+            success: true,
+            message: 'Driver deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('Delete driver error:', error);
         res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
     }
 };
@@ -919,6 +959,33 @@ const getAllIssuedFines = async (req, res) => {
     }
 };
 
+// @desc    Delete an issued fine
+// @route   DELETE /api/admin/fines/:id
+// @access  Private (Super Admin)
+const deleteFine = async (req, res) => {
+    try {
+        const fineId = req.params.id;
+        const fine = await IssuedFine.findById(fineId);
+        
+        if (!fine) {
+            return res.status(HTTP.NOT_FOUND).json({ message: 'Fine not found' });
+        }
+
+        await IssuedFine.findByIdAndDelete(fineId);
+        
+        // Note: If you want to deduct demerit points from the driver, that logic could go here.
+        // But since it's just deleting the record as requested by Super Admin, we just delete it.
+        
+        res.json({
+            success: true,
+            message: 'Fine deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete fine error:', error);
+        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
+    }
+};
+
 // @desc    Update offense type
 // @route   PUT /api/admin/fines/offenses/:id
 // @access  Private (Admin Officer, Super Admin)
@@ -1033,285 +1100,15 @@ const getAllPayments = async (req, res) => {
     }
 };
 
-// @desc    Generate monthly fine report
-// @route   POST /api/admin/reports/monthly-fines
-// @access  Private (Admin)
-const generateMonthlyReport = async (req, res) => {
-    try {
-        const { month, year } = req.body;
-
-        if (!month || !year) {
-            return res.status(HTTP.BAD_REQUEST).json({ message: 'Please provide month and year' });
-        }
-
-        // Calculate date range
-        const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0, 23, 59, 59);
-
-        // Get fines for the month
-        const fines = await IssuedFine.find({
-            date: { $gte: startDate, $lte: endDate }
-        }).populate('offenseId', 'offenseName');
-
-        // Calculate statistics
-        const totalFines = fines.length;
-        const paidFines = fines.filter(f => f.status === PAYMENT.STATUS.PAID).length;
-        const unpaidFines = fines.filter(f => f.status === PAYMENT.STATUS.UNPAID).length;
-        const totalAmount = fines.reduce((sum, f) => sum + f.amount, 0);
-        const paidAmount = fines.filter(f => f.status === PAYMENT.STATUS.PAID).reduce((sum, f) => sum + f.amount, 0);
-
-        // Offense breakdown
-        const offenseBreakdown = {};
-        fines.forEach(fine => {
-            const offenseName = fine.offenseName;
-            if (!offenseBreakdown[offenseName]) {
-                offenseBreakdown[offenseName] = { count: 0, amount: 0 };
-            }
-            offenseBreakdown[offenseName].count++;
-            offenseBreakdown[offenseName].amount += fine.amount;
-        });
-
-        if (req.query.format === 'json') {
-            return res.json({
-                success: true,
-                report: {
-                    month,
-                    year,
-                    period: `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`,
-                    summary: {
-                        totalFines,
-                        paidFines,
-                        unpaidFines,
-                        totalAmount,
-                        paidAmount,
-                        unpaidAmount: totalAmount - paidAmount
-                    },
-                    offenseBreakdown,
-                    fines
-                }
-            });
-        }
-
-        // Generate PDF
-        const doc = PdfReportService.createDocument();
-        const filename = `Monthly_Fines_Report_${year}_${month}.pdf`;
-        
-        res.setHeader('Content-disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-type', 'application/pdf');
-        
-        doc.pipe(res);
-        
-        PdfReportService.buildHeader(doc, `Monthly Fines Report (${month}/${year})`, req.user);
-        
-        doc.fontSize(14).text('Summary Statistics');
-        doc.moveDown(0.5);
-        doc.fontSize(10);
-        doc.text(`Total Fines Issued: ${totalFines}`);
-        doc.text(`Paid Fines: ${paidFines} / Unpaid Fines: ${unpaidFines}`);
-        doc.text(`Total Amount: LKR ${totalAmount}`);
-        doc.text(`Paid Amount: LKR ${paidAmount} / Unpaid Amount: LKR ${totalAmount - paidAmount}`);
-        
-        doc.moveDown(1);
-        doc.fontSize(14).text('Offense Breakdown');
-        doc.moveDown(0.5);
-        
-        const table = {
-            headers: ["Offense Name", "Count", "Total Amount (LKR)"],
-            rows: Object.keys(offenseBreakdown).map(name => [
-                name,
-                offenseBreakdown[name].count.toString(),
-                offenseBreakdown[name].amount.toString()
-            ])
-        };
-        
-        if (table.rows.length > 0) {
-            await doc.table(table, { 
-                prepareHeader: () => doc.font("Helvetica-Bold").fontSize(10),
-                prepareRow: () => doc.font("Helvetica").fontSize(10)
-            });
-        } else {
-            doc.fontSize(10).text("No offenses recorded for this month.");
-        }
-        
-        PdfReportService.buildFooter(doc);
-        doc.end();
-
-    } catch (error) {
-        console.error('Generate monthly report error:', error);
-        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
-    }
-};
-
-// @desc    Generate payment summary report
-// @route   POST /api/admin/reports/payments
-// @access  Private (Admin)
-const generatePaymentReport = async (req, res) => {
-    try {
-        const { startDate, endDate } = req.body;
-
-        if (!startDate || !endDate) {
-            return res.status(HTTP.BAD_REQUEST).json({ message: 'Please provide start and end dates' });
-        }
-
-        // Get paid fines in date range
-        const payments = await IssuedFine.find({
-            status: PAYMENT.STATUS.PAID,
-            paidAt: { $gte: new Date(startDate), $lte: new Date(endDate) }
-        }).populate('offenseId', 'offenseName');
-
-        // Calculate statistics
-        const totalPayments = payments.length;
-        const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
-
-        if (req.query.format === 'json') {
-            return res.json({
-                success: true,
-                report: {
-                    period: `${startDate} - ${endDate}`,
-                    summary: {
-                        totalPayments,
-                        totalRevenue
-                    },
-                    payments
-                }
-            });
-        }
-
-        // Generate PDF
-        const doc = PdfReportService.createDocument();
-        const filename = `Payments_Report_${startDate}_to_${endDate}.pdf`;
-        
-        res.setHeader('Content-disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-type', 'application/pdf');
-        
-        doc.pipe(res);
-        
-        PdfReportService.buildHeader(doc, `Payment Summary Report`, req.user);
-        
-        doc.fontSize(12).text(`Period: ${startDate} to ${endDate}`);
-        
-        doc.moveDown(0.5);
-        doc.fontSize(14).text('Summary');
-        doc.fontSize(10);
-        doc.text(`Total Payments Received: ${totalPayments}`);
-        doc.text(`Total Revenue: LKR ${totalRevenue}`);
-        
-        doc.moveDown(1);
-        doc.fontSize(14).text('Payment Details');
-        doc.moveDown(0.5);
-        
-        const table = {
-            headers: ["Date", "Offense", "License Number", "Amount (LKR)"],
-            rows: payments.map(p => [
-                new Date(p.paidAt).toLocaleDateString(),
-                p.offenseId && p.offenseId.offenseName ? p.offenseId.offenseName : "Unknown",
-                p.licenseNumber,
-                p.amount.toString()
-            ])
-        };
-        
-        if (table.rows.length > 0) {
-            await doc.table(table, { 
-                prepareHeader: () => doc.font("Helvetica-Bold").fontSize(10),
-                prepareRow: () => doc.font("Helvetica").fontSize(10)
-            });
-        } else {
-            doc.fontSize(10).text("No payments recorded for this period.");
-        }
-        
-        PdfReportService.buildFooter(doc);
-        doc.end();
-
-    } catch (error) {
-        console.error('Generate payment report error:', error);
-        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
-    }
-};
-
-// @desc    Generate driver violation report
-// @route   POST /api/admin/reports/driver-violations
-// @access  Private (Admin)
-const generateDriverViolationReport = async (req, res) => {
-    try {
-        const { licenseNumber } = req.body;
-
-        if (!licenseNumber) {
-            return res.status(HTTP.BAD_REQUEST).json({ message: 'Please provide license number' });
-        }
-
-        const driver = await Driver.findOne({ licenseNumber });
-        if (!driver) {
-            return res.status(HTTP.NOT_FOUND).json({ message: 'Driver not found' });
-        }
-
-        const violations = await IssuedFine.find({ licenseNumber })
-            .populate('offenseId', 'offenseName')
-            .sort({ date: -1 });
-
-        if (req.query.format === 'json') {
-            return res.json({
-                success: true,
-                driver: {
-                    name: driver.name,
-                    licenseNumber: driver.licenseNumber,
-                    status: driver.licenseStatus
-                },
-                violations
-            });
-        }
-
-        // Generate PDF
-        const doc = PdfReportService.createDocument();
-        const filename = `Driver_Violations_${licenseNumber}.pdf`;
-        
-        res.setHeader('Content-disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-type', 'application/pdf');
-        
-        doc.pipe(res);
-        
-        PdfReportService.buildHeader(doc, `Driver Violation Report`, req.user);
-        
-        doc.fontSize(14).text('Driver Information');
-        doc.moveDown(0.5);
-        doc.fontSize(10);
-        doc.text(`Name: ${driver.name}`);
-        doc.text(`License Number: ${driver.licenseNumber}`);
-        doc.text(`Current Status: ${driver.licenseStatus}`);
-        doc.text(`Total Violations: ${violations.length}`);
-        
-        doc.moveDown(1);
-        doc.fontSize(14).text('Violation History');
-        doc.moveDown(0.5);
-        
-        const table = {
-            headers: ["Date", "Offense", "Amount (LKR)", "Status"],
-            rows: violations.map(v => [
-                new Date(v.date).toLocaleDateString(),
-                v.offenseId && v.offenseId.offenseName ? v.offenseId.offenseName : "Unknown",
-                v.amount.toString(),
-                v.status
-            ])
-        };
-        
-        if (table.rows.length > 0) {
-            await doc.table(table, { 
-                prepareHeader: () => doc.font("Helvetica-Bold").fontSize(10),
-                prepareRow: () => doc.font("Helvetica").fontSize(10)
-            });
-        } else {
-            doc.fontSize(10).text("No violations recorded for this driver.");
-        }
-        
-        PdfReportService.buildFooter(doc);
-        doc.end();
-
-    } catch (error) {
-        console.error('Generate driver report error:', error);
-        res.status(HTTP.SERVER_ERROR).json({ message: 'Server error', error: error.message });
-    }
-};
-
-
+// ─────────────────────────────────────────────────────────────────────────────
+// REPORT GENERATION HANDLERS (Delegated to ReportController & Clean Architecture Layer)
+// ─────────────────────────────────────────────────────────────────────────────
+const verifyDriverForReport = (req, res) => ReportController.verifyDriver(req, res);
+const generateMonthlyReport = (req, res) => ReportController.generateMonthlyReport(req, res);
+const generatePaymentReport = (req, res) => ReportController.generatePaymentReport(req, res);
+const generateDriverViolationReport = (req, res) => ReportController.generateDriverViolationReport(req, res);
+const generateVehicleReport = (req, res) => ReportController.generateVehicleReport(req, res);
+const generateOfficerReport = (req, res) => ReportController.generateOfficerReport(req, res);
 
 // @desc    Get all admins
 // @route   GET /api/admin/all
@@ -1401,17 +1198,22 @@ module.exports = {
     getDriverDetails,
     suspendDriver,
     activateDriver,
+    deleteDriver,
     getAllOfficers,
     createOfficer,
     updateOfficer,
     deleteOfficer,
     getAllIssuedFines,
+    deleteFine,
     updateOffense,
     deleteOffense,
     getAllPayments,
+    verifyDriverForReport,
     generateMonthlyReport,
     generatePaymentReport,
     generateDriverViolationReport,
+    generateVehicleReport,
+    generateOfficerReport,
     // 2FA Exports
     generateTwoFactor,
     enableTwoFactor,

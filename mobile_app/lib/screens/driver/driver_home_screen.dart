@@ -30,6 +30,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   String driverName = "Loading..."; 
   int _demeritPoints = DemeritConstants.defaultPoints;
+  int _defaultDemeritPoints = DemeritConstants.defaultPoints;
   String _licenseStatus = 'ACTIVE';
   DateTime? _suspendedAt;
   bool _loadingStatus = true;
@@ -40,6 +41,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       if (mounted) {
         setState(() {
           _demeritPoints = response['demeritPoints'] ?? DemeritConstants.defaultPoints;
+          _defaultDemeritPoints = response['defaultDemeritPoints'] ??
+              response['maxDemeritPoints'] ??
+              response['defaultPoints'] ??
+              DemeritConstants.defaultPoints;
           _licenseStatus = response['licenseStatus'] ?? 'ACTIVE';
           _suspendedAt = response['suspendedAt'] != null
               ? DateTime.parse(response['suspendedAt'])
@@ -72,6 +77,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _loadUserData();
     _loadReadFines();
     _loadDriverStatus();
+    AuthService().syncFcmToken();
     // Initialize without notification
     FineService().getDriverPendingFines().then((fines) {
        if(mounted) {
@@ -427,6 +433,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen))
                 : DemeritStatusCard(
                     points: _demeritPoints,
+                    maxPoints: _defaultDemeritPoints,
                     status: _licenseStatus,
                     suspendedAt: _suspendedAt,
                   ),

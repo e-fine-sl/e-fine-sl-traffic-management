@@ -7,6 +7,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../services/fine_service.dart';
 import '../../config/app_constants.dart';
+import '../../widgets/police/driver_record_card.dart';
 
 class NewFineScreen extends StatefulWidget {
   final String? scannedLicenseNumber;
@@ -41,6 +42,12 @@ class _NewFineScreenState extends State<NewFineScreen> {
   bool _isGettingLocation = false;
   bool _isLoadingOffenses = true;
 
+  // License whose history is shown (set on scan, or when the officer taps "check")
+  String? _checkedLicense;
+  Map<String, dynamic>? _driverRecord;
+
+  String _t(String key) => PoliceLocaleService.instance.translate(key);
+
   @override
   void initState() {
     super.initState();
@@ -50,6 +57,9 @@ class _NewFineScreenState extends State<NewFineScreen> {
         TextEditingController(text: widget.scannedVehicleNumber ?? "");
     _dateController =
         TextEditingController(text: _formatDateTime(_selectedDate));
+    if ((widget.scannedLicenseNumber ?? '').trim().isNotEmpty) {
+      _checkedLicense = widget.scannedLicenseNumber!.trim();
+    }
     _loadInitialData();
   }
 
@@ -58,10 +68,26 @@ class _NewFineScreenState extends State<NewFineScreen> {
         "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
   }
 
+  bool _isLicenseSuspended = false;
+
   Future<void> _loadInitialData() async {
     await _loadOfficerDetails();
     await _getCurrentLocation();
     await _fetchOffenses();
+    if (_licenseController.text.isNotEmpty) {
+      await _checkDriverLicenseStatus(_licenseController.text);
+    }
+  }
+
+  Future<void> _checkDriverLicenseStatus(String licenseNum) async {
+    try {
+      final status = await FineService().getDriverStatusByLicense(licenseNum);
+      if (mounted && status != null) {
+        setState(() {
+          _isLicenseSuspended = status['licenseStatus'] == 'SUSPENDED' || (status['demeritPoints'] != null && status['demeritPoints'] <= 0);
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _fetchOffenses() async {
@@ -94,26 +120,113 @@ class _NewFineScreenState extends State<NewFineScreen> {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
+        if (permission == LocationPermission.denied) {
+          _locationController.text = "Permission Denied";
+          return;
+        }
       }
-      Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
-      List<Placemark> placemarks =
-          await placemarkFromCoordinates(position.latitude, position.longitude);
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        String address = "${place.street}, ${place.locality}";
-        if (address.startsWith(", ")) address = address.substring(2);
-        setState(() => _locationController.text = address);
-      } else {
+      if (permission == LocationPermission.deniedForever) {
+        _locationController.text = "Permission Permanently Denied";
+        return;
+      }
+      setState(() => _locationController.text = "Fetching location...");
+      
+      Position? lastKnown = await Geolocator.getLastKnownPosition();
+      Position position = lastKnown ?? await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 10));
+          
+      try {
+        List<Placemark> placemarks =
+            await placemarkFromCoordinates(position.latitude, position.longitude);
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks[0];
+          String address = "${place.street}, ${place.locality}";
+          if (address.startsWith(", ")) address = address.substring(2);
+          
+          if (address.trim().isEmpty || address == ", ") {
+            setState(() => _locationController.text = "${position.latitude}, ${position.longitude}");
+          } else {
+            setState(() => _locationController.text = address);
+          }
+        } else {
+          setState(() => _locationController.text =
+              "${position.latitude}, ${position.longitude}");
+        }
+      } catch (geocodingError) {
+        debugPrint("Geocoding failed, falling back to coords: $geocodingError");
         setState(() => _locationController.text =
             "${position.latitude}, ${position.longitude}");
       }
     } catch (e) {
+      debugPrint("Get Location Error: $e");
       setState(() => _locationController.text = "Error getting location");
     } finally {
       setState(() => _isGettingLocation = false);
     }
+  }
+
+  void _checkDriverHistory() {
+    final license = _licenseController.text.trim();
+    if (license.isEmpty) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _checkedLicense = license;
+      _driverRecord = null;
+    });
+  }
+
+  /// Demerit impact of the selected offense on the checked driver.
+  Widget _buildDemeritImpact() {
+    final points = (_selectedOffenseData?['demeritValue'] ?? 0) as num;
+    final driver = _driverRecord?['driver'] as Map<String, dynamic>?;
+    final maxPoints = (_driverRecord?['maxPoints'] ?? 24) as num;
+    final current = driver?['demeritPoints'] as num?;
+    final after = current == null ? null : (current - points).clamp(0, maxPoints);
+    final color = DemeritStyle.colorFor(points);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.trending_down, color: color),
+              const SizedBox(width: 8),
+              Text(_t('police.new_fine_points_label'), style: const TextStyle(fontWeight: FontWeight.w600)),
+              const Spacer(),
+              Text(_t(DemeritStyle.severityKey(points)),
+                  style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(width: 8),
+              DemeritChip(points: points),
+            ],
+          ),
+          if (current != null && after != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(child: Text(_t('police.new_fine_score_after'))),
+                Text("$current → ",
+                    style: TextStyle(color: DemeritStyle.scoreColor(current, maxPoints), fontWeight: FontWeight.bold)),
+                Text("$after / $maxPoints",
+                    style: TextStyle(color: DemeritStyle.scoreColor(after, maxPoints), fontWeight: FontWeight.bold)),
+              ],
+            ),
+            if (after <= 0 && driver?['licenseStatus'] != 'SUSPENDED') ...[
+              const SizedBox(height: 6),
+              Text(_t('police.new_fine_will_suspend'),
+                  style: const TextStyle(color: AppColors.errorRed, fontWeight: FontWeight.bold)),
+            ],
+          ],
+        ],
+      ),
+    );
   }
 
   Future<void> _submitFine() async {
@@ -192,6 +305,31 @@ class _NewFineScreenState extends State<NewFineScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (_isLicenseSuspended) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade800,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 28),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          PoliceLocaleService.instance.translate('police.new_fine_suspended_warning'),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, height: 1.3),
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 15),
+              ],
               Text(
                 PoliceLocaleService.instance.translate('police.new_fine_details_section'),
                 style:
@@ -204,7 +342,14 @@ class _NewFineScreenState extends State<NewFineScreen> {
                     labelText: PoliceLocaleService.instance
                         .translate('police.new_fine_license_label'),
                     border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.card_membership)),
+                    prefixIcon: const Icon(Icons.card_membership),
+                    suffixIcon: IconButton(
+                      tooltip: _t('police.record_check'),
+                      icon: const Icon(Icons.manage_search, color: AppColors.primaryBlue),
+                      onPressed: _checkDriverHistory,
+                    )),
+                textInputAction: TextInputAction.search,
+                onFieldSubmitted: (_) => _checkDriverHistory(),
                 validator: (val) => val!.isEmpty
                     ? PoliceLocaleService.instance
                         .translate('police.new_fine_required')
@@ -223,6 +368,28 @@ class _NewFineScreenState extends State<NewFineScreen> {
                         .translate('police.new_fine_vehicle_hint')
                     : null,
               ),
+              const SizedBox(height: 15),
+              if (_checkedLicense == null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _checkDriverHistory,
+                    icon: const Icon(Icons.history),
+                    label: Text(_t('police.record_check')),
+                  ),
+                )
+              else ...[
+                Text(
+                  _t('police.record_title'),
+                  style: const TextStyle(fontSize: 18, color: AppColors.primaryBlue),
+                ),
+                const SizedBox(height: 8),
+                DriverRecordCard(
+                  key: ValueKey(_checkedLicense),
+                  licenseNumber: _checkedLicense!,
+                  onLoaded: (record) => setState(() => _driverRecord = record),
+                ),
+              ],
               const SizedBox(height: 25),
               Text(
                 PoliceLocaleService.instance.translate('police.new_fine_offense_section'),
@@ -234,8 +401,16 @@ class _NewFineScreenState extends State<NewFineScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : DropdownSearch<Map<String, dynamic>>(
                       items: (filter, loadProps) => _offenseList,
-                      itemAsString: (item) =>
-                          "${item['offenseName'] ?? item['name']} - ${item['amount']}",
+                      itemAsString: (item) => [
+                        if (item['offenseCode'] != null) item['offenseCode'],
+                        item['offenseName'] ?? item['name'],
+                      ].join(' · '),
+                      filterFn: (item, filter) {
+                        final q = filter.toLowerCase();
+                        return "${item['offenseCode'] ?? ''} ${item['offenseName'] ?? item['name'] ?? ''} ${item['sectionOfAct'] ?? ''}"
+                            .toLowerCase()
+                            .contains(q);
+                      },
                       compareFn: (item1, item2) => item1['_id'] == item2['_id'],
                       onChanged: (data) {
                         setState(() {
@@ -246,7 +421,13 @@ class _NewFineScreenState extends State<NewFineScreen> {
                         });
                       },
                       selectedItem: _selectedOffenseData,
-                      popupProps: const PopupProps.menu(showSearchBox: true),
+                      popupProps: PopupProps.menu(
+                        showSearchBox: true,
+                        fit: FlexFit.loose,
+                        constraints: const BoxConstraints(maxHeight: 420),
+                        itemBuilder: (context, item, isDisabled, isSelected) =>
+                            _buildOffenseItem(item, isSelected),
+                      ),
                       decoratorProps: DropDownDecoratorProps(
                         decoration: InputDecoration(
                             labelText: PoliceLocaleService.instance
@@ -267,6 +448,10 @@ class _NewFineScreenState extends State<NewFineScreen> {
                     filled: true,
                     fillColor: Colors.white70),
               ),
+              if (_selectedOffenseData != null) ...[
+                const SizedBox(height: 15),
+                _buildDemeritImpact(),
+              ],
               const SizedBox(height: 15),
               TextFormField(
                 controller: _locationController,
@@ -306,7 +491,7 @@ class _NewFineScreenState extends State<NewFineScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
-                  onPressed: _isSubmitting ? null : _submitFine,
+                  onPressed: (_isSubmitting || _isGettingLocation) ? null : _submitFine,
                   icon: const Icon(Icons.send),
                   label: _isSubmitting
                       ? const CircularProgressIndicator(color: Colors.white)
@@ -319,6 +504,40 @@ class _NewFineScreenState extends State<NewFineScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildOffenseItem(Map<String, dynamic> item, bool isSelected) {
+    final points = (item['demeritValue'] ?? 0) as num;
+    return Container(
+      color: isSelected ? AppColors.primaryBlue.withValues(alpha: 0.08) : null,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item['offenseName'] ?? item['name'] ?? '',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  [
+                    if (item['offenseCode'] != null) item['offenseCode'],
+                    if (item['sectionOfAct'] != null) "${_t('police.section_short')} ${item['sectionOfAct']}",
+                    "Rs. ${item['amount']}",
+                  ].join(' • '),
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          DemeritChip(points: points),
+        ],
       ),
     );
   }

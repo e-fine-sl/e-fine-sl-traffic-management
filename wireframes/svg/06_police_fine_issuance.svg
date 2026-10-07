@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844" style="background:#0F172A; font-family:'Inter', system-ui, sans-serif;">
+  <!-- Frame Background -->
+  <rect width="390" height="844" rx="40" fill="#0F172A" stroke="#334155" stroke-width="4"/>
+  <!-- Dynamic Notch / Island -->
+  <rect x="135" y="12" width="120" height="30" rx="15" fill="#000000"/>
+  <!-- Status Bar -->
+  <text x="32" y="32" fill="#94A3B8" font-size="12" font-weight="600">09:41</text>
+  <text x="310" y="32" fill="#94A3B8" font-size="11">5G 🔋</text>
+
+  <!-- Screen Header -->
+  <rect x="0" y="50" width="390" height="60" fill="#1E293B"/>
+  <text x="20" y="86" fill="#F8FAFC" font-size="18" font-weight="700">Issue Spot Traffic Fine</text>
+
+  <!-- Content Layer -->
+  <g transform="translate(0, 110)">
+    
+  <!-- Inputs -->
+  <text x="20" y="25" fill="#94A3B8" font-size="12" font-weight="600">Driver License Number</text>
+  <rect x="20" y="35" width="350" height="45" rx="10" fill="#1E293B" stroke="#3B82F6"/>
+  <text x="35" y="63" fill="#F8FAFC" font-size="14" font-weight="700">WP-987654321</text>
+
+  <text x="20" y="100" fill="#94A3B8" font-size="12" font-weight="600">Vehicle Registration Number</text>
+  <rect x="20" y="110" width="350" height="45" rx="10" fill="#1E293B" stroke="#334155"/>
+  <text x="35" y="138" fill="#F8FAFC" font-size="14" font-weight="700">CAB-5544</text>
+
+  <!-- Offenses Checklist -->
+  <text x="20" y="178" fill="#F8FAFC" font-size="15" font-weight="700">Select Offenses</text>
+
+  <rect x="20" y="190" width="350" height="50" rx="10" fill="#1E293B" stroke="#2563EB"/>
+  <rect x="35" y="205" width="20" height="20" rx="4" fill="#2563EB"/>
+  <text x="40" y="220" fill="#FFFFFF" font-size="12" font-weight="800">✓</text>
+  <text x="70" y="218" fill="#F8FAFC" font-size="13" font-weight="600">Speeding (>20km/h)</text>
+  <text x="270" y="218" fill="#EF4444" font-size="12" font-weight="700">Rs.5,000 (-4P)</text>
+
+  <rect x="20" y="250" width="350" height="50" rx="10" fill="#1E293B" stroke="#334155"/>
+  <rect x="35" y="265" width="20" height="20" rx="4" fill="#334155"/>
+  <text x="70" y="278" fill="#94A3B8" font-size="13">Reckless Driving</text>
+  <text x="270" y="278" fill="#94A3B8" font-size="12">Rs.7,500 (-6P)</text>
+
+  <!-- Summary Box -->
+  <rect x="20" y="320" width="350" height="120" rx="16" fill="#1E293B" stroke="#F59E0B" stroke-width="1"/>
+  <text x="35" y="350" fill="#94A3B8" font-size="12">Calculated Total Fine Amount</text>
+  <text x="35" y="380" fill="#F59E0B" font-size="24" font-weight="800">LKR 5,000.00</text>
+  <text x="35" y="410" fill="#EF4444" font-size="13" font-weight="700">Demerit Point Deduction: -4 Points</text>
+
+  <!-- Confirm Button -->
+  <rect x="20" y="460" width="350" height="52" rx="14" fill="#DC2626"/>
+  <text x="195" y="492" fill="#FFFFFF" font-size="16" font-weight="800" text-anchor="middle">CONFIRM & ISSUE SPOT FINE</text>
+
+  </g>
+</svg>

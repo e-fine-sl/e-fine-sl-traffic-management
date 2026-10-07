@@ -27,8 +27,12 @@ class NotificationService {
 
     const androidSettings =
         AndroidInitializationSettings('@mipmap/launcher_icon');
+    const darwinSettings = DarwinInitializationSettings();
 
-    const initSettings = InitializationSettings(android: androidSettings);
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: darwinSettings,
+    );
 
     await _plugin.initialize(
       initSettings,
@@ -40,8 +44,8 @@ class NotificationService {
             final type = data['type'] ?? '';
             
             if (type == 'SOS_ALERT') {
-              final lat = data['senderLat']?.toString() ?? '0';
-              final lng = data['senderLng']?.toString() ?? '0';
+              final lat = data['lat']?.toString() ?? '0';
+              final lng = data['lng']?.toString() ?? '0';
               // Call the Google Maps launcher
               await SosService.openGoogleMapsForSOS(lat, lng);
             }

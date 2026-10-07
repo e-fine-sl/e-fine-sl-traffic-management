@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { protectAdmin, requireRole } = require('../middleware/adminMiddleware');
 const PreApprovedOfficer = require('../models/preApprovedOfficerModel');
+const { getOffenses, addOffense } = require('../controllers/fineController');
 const {
+    getStations,
     createStation,
     updateStation,
     deleteStation
@@ -12,21 +14,16 @@ const {
     adminLogout,
     adminRefreshToken,
     getDashboardStats,
-    getAllDrivers,
-    getDriverDetails,
-    suspendDriver,
-    activateDriver,
-    getAllOfficers,
-    createOfficer,
-    updateOfficer,
-    deleteOfficer,
     getAllIssuedFines,
+    deleteFine,
     updateOffense,
     deleteOffense,
-    getAllPayments,
     generateMonthlyReport,
     generatePaymentReport,
     generateDriverViolationReport,
+    generateVehicleReport,
+    generateOfficerReport,
+    verifyDriverForReport,
     // 2FA Imports
     generateTwoFactor,
     enableTwoFactor,
@@ -38,8 +35,54 @@ const {
     deleteAdmin
 } = require('../controllers/adminController');
 const {
+    getAllDrivers,
+    getDriverMetrics,
+    getDriverById,
+    createDriver,
+    updateDriver,
+    suspendDriver,
+    activateDriver,
+    adjustDriverDemerit,
+    resetDriverCredentials,
+    exportDrivers,
+    deleteDriver
+} = require('../controllers/adminDriverController');
+const {
+    getAllOfficers,
+    getOfficerMetrics,
+    getOfficerById,
+    createOfficer,
+    updateOfficer,
+    toggleOfficerStatus,
+    transferOfficerStation,
+    resetOfficerCredentials,
+    exportOfficers,
+    deleteOfficer
+} = require('../controllers/adminOfficerController');
+const {
+    getAllFines,
+    getFineMetrics,
+    getFineById,
+    createFine,
+    updateFineStatus,
+    exportFines,
+    deleteFine: deleteFineController
+} = require('../controllers/adminFineController');
+const {
+    getAllPayments,
+    getPaymentMetrics,
+    getPaymentById,
+    verifyPaymentGateway,
+    processPaymentRefund,
+    flagPaymentDispute,
+    exportPayments
+} = require('../controllers/adminPaymentController');
+const {
     getSystemConfig,
-    updateSystemConfig
+    updateSystemConfig,
+    toggleRecovery,
+    triggerManualRecovery,
+    resetDemeritConfig
 } = require('../controllers/systemConfigController');
 
 // ==========================================
@@ -101,37 +144,64 @@ router.post('/seed-badges', async (req, res) => {
 // Dashboard
 router.get('/dashboard/stats', protectAdmin, getDashboardStats);
 
-// Drivers - View only
+// Driver License & Demerit Management Suite
+router.get('/drivers/metrics', protectAdmin, getDriverMetrics);
+router.get('/drivers/export', protectAdmin, exportDrivers);
+router.get('/drivers/:id', protectAdmin, getDriverById);
+router.post('/drivers', protectAdmin, requireRole('admin_officer', 'super_admin'), createDriver);
+router.put('/drivers/:id', protectAdmin, requireRole('admin_officer', 'super_admin'), updateDriver);
+router.put('/drivers/:id/suspend', protectAdmin, requireRole('admin_officer', 'super_admin'), suspendDriver);
+router.put('/drivers/:id/activate', protectAdmin, requireRole('admin_officer', 'super_admin'), activateDriver);
+router.post('/drivers/:id/adjust-demerit', protectAdmin, requireRole('super_admin'), adjustDriverDemerit);
+router.post('/drivers/:id/reset-credentials', protectAdmin, requireRole('super_admin'), resetDriverCredentials);
+router.delete('/drivers/:id', protectAdmin, requireRole('super_admin', 'admin_officer'), deleteDriver);
 router.get('/drivers', protectAdmin, getAllDrivers);
-router.get('/drivers/:id', protectAdmin, getDriverDetails);
 
-// Officers - View only
+// Police Officer Workforce Management Suite
+router.get('/officers/metrics', protectAdmin, getOfficerMetrics);
+router.get('/officers/export', protectAdmin, exportOfficers);
+router.get('/officers/:id', protectAdmin, getOfficerById);
+router.post('/officers', protectAdmin, requireRole('admin_officer', 'super_admin'), createOfficer);
+router.put('/officers/:id', protectAdmin, requireRole('admin_officer', 'super_admin'), updateOfficer);
+router.patch('/officers/:id/status', protectAdmin, requireRole('admin_officer', 'super_admin'), toggleOfficerStatus);
+router.post('/officers/:id/transfer', protectAdmin, requireRole('admin_officer', 'super_admin'), transferOfficerStation);
+router.post('/officers/:id/reset-credentials', protectAdmin, requireRole('super_admin'), resetOfficerCredentials);
+router.delete('/officers/:id', protectAdmin, requireRole('super_admin', 'admin_officer'), deleteOfficer);
 router.get('/officers', protectAdmin, getAllOfficers);
 
-// Fines - View only
-router.get('/fines', protectAdmin, getAllIssuedFines);
+// Fines & Citations Enforcement Suite
+router.get('/fines/metrics', protectAdmin, getFineMetrics);
+router.get('/fines/export', protectAdmin, exportFines);
+router.get('/fines/:id', protectAdmin, getFineById);
+router.post('/fines', protectAdmin, requireRole('admin_officer', 'super_admin'), createFine);
+router.patch('/fines/:id/status', protectAdmin, requireRole('admin_officer', 'super_admin'), updateFineStatus);
+router.delete('/fines/:id', protectAdmin, requireRole('super_admin'), deleteFineController);
+router.get('/fines', protectAdmin, getAllFines);
 
-// Payments - View only
+// Payments & Financial Reconciliation - Enhanced Suite
+router.get('/payments/metrics', protectAdmin, getPaymentMetrics);
+router.get('/payments/export', protectAdmin, exportPayments);
+router.get('/payments/:id', protectAdmin, getPaymentById);
+router.post('/payments/:id/verify-gateway', protectAdmin, requireRole('super_admin', 'finance_officer', 'admin_officer'), verifyPaymentGateway);
+router.post('/payments/dispute', protectAdmin, requireRole('super_admin', 'finance_officer', 'admin_officer'), flagPaymentDispute);
+router.post('/payments/refund', protectAdmin, requireRole('super_admin'), processPaymentRefund);
 router.get('/payments', protectAdmin, getAllPayments);
 
 // Reports - All admins can generate reports
+router.post('/reports/verify-driver', protectAdmin, verifyDriverForReport);
 router.post('/reports/monthly-fines', protectAdmin, generateMonthlyReport);
 router.post('/reports/payments', protectAdmin, generatePaymentReport);
 router.post('/reports/driver-violations', protectAdmin, generateDriverViolationReport);
+router.post('/reports/vehicle-violations', protectAdmin, generateVehicleReport);
+router.post('/reports/officer-performance', protectAdmin, generateOfficerReport);
 
 // ==========================================
 // ADMIN OFFICER & SUPER ADMIN ONLY
 // ==========================================
 
-// Driver management
-router.put('/drivers/:id/suspend', protectAdmin, requireRole('admin_officer', 'super_admin'), suspendDriver);
-router.put('/drivers/:id/activate', protectAdmin, requireRole('admin_officer', 'super_admin'), activateDriver);
-
-// Officer management
-router.post('/officers', protectAdmin, requireRole('admin_officer', 'super_admin'), createOfficer);
-router.put('/officers/:id', protectAdmin, requireRole('admin_officer', 'super_admin'), updateOfficer);
-
 // Offense management
+router.get('/fines/offenses', protectAdmin, getOffenses);
+router.post('/fines/offenses', protectAdmin, requireRole('admin_officer', 'super_admin'), addOffense);
 router.put('/fines/offenses/:id', protectAdmin, requireRole('admin_officer', 'super_admin'), updateOffense);
 
 // ==========================================
@@ -151,10 +221,10 @@ router.post('/register/init', protectAdmin, requireRole('super_admin'), initAdmi
 router.post('/register/complete', protectAdmin, requireRole('super_admin'), completeAdminRegistration);
 
 // Delete operations
-router.delete('/officers/:id', protectAdmin, requireRole('super_admin'), deleteOfficer);
 router.delete('/fines/offenses/:id', protectAdmin, requireRole('super_admin'), deleteOffense);
 
 // Station management
+router.get('/stations', protectAdmin, getStations);
 router.post('/stations', protectAdmin, requireRole('super_admin'), createStation);
 router.put('/stations/:id', protectAdmin, requireRole('super_admin'), updateStation);
 router.delete('/stations/:id', protectAdmin, requireRole('super_admin'), deleteStation);
@@ -162,6 +232,15 @@ router.delete('/stations/:id', protectAdmin, requireRole('super_admin'), deleteS
 // System Config (Master Data)
 router.get('/system-config', protectAdmin, requireRole('super_admin', 'admin_officer'), getSystemConfig);
 router.put('/system-config', protectAdmin, requireRole('super_admin'), updateSystemConfig);
+
+// Demerit Config — toggle recovery on/off (super_admin only)
+router.patch('/system-config/recovery-toggle', protectAdmin, requireRole('super_admin'), toggleRecovery);
+
+// Demerit Config — trigger manual recovery run (super_admin only)
+router.post('/system-config/trigger-recovery', protectAdmin, requireRole('super_admin'), triggerManualRecovery);
+
+// Demerit Config — reset to factory defaults (super_admin only)
+router.delete('/system-config/demerit', protectAdmin, requireRole('super_admin'), resetDemeritConfig);
 
 // Admin management
 router.get('/all', protectAdmin, requireRole('super_admin'), getAllAdmins);

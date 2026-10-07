@@ -1,13 +1,19 @@
 const Offense = require('../models/offenseModel');
 const IssuedFine = require('../models/issuedFineModel');
+const Driver = require('../models/driverModel');
 const { applyDemeritPoints } = require('./demeritController');
-const { HTTP, PAYMENT } = require('../config/constants');
+const { HTTP, PAYMENT, DEMERIT } = require('../config/constants');
+
+// Exact, case-insensitive match for user-supplied strings (escapes regex special chars)
+const escapeRegex = (value) => String(value).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const exactMatch = (value) => new RegExp(`^${escapeRegex(value)}$`, 'i');
 
 // @desc    Get all fine types / offenses
 // @route   GET /api/fines/offenses
 const getOffenses = async (req, res) => {
   try {
-    const offenses = await Offense.find({}).sort({ offenseName: 1 });
+    // Only active offenses appear in the officer's dropdown (spot fines first, in gazette order)
+    const offenses = await Offense.find({ isActive: { $ne: false } }).sort({ spotFineNo: 1, offenseName: 1 });
     res.status(HTTP.OK).json(offenses);
   } catch (error) {
     res.status(HTTP.SERVER_ERROR).json({ message: 'Server Error', error: error.message });
@@ -45,6 +51,9 @@ const issueFine = async (req, res) => {
     const offense = await Offense.findById(offenseId);
     if (!offense) {
       return res.status(HTTP.NOT_FOUND).json({ message: 'Offense type not found' });
+    }
+    if (offense.isActive === false) {
+      return res.status(HTTP.BAD_REQUEST).json({ message: 'This offense type is no longer in use' });
     }
 
     const fine = await IssuedFine.create({
@@ -97,7 +106,8 @@ const getFineHistory = async (req, res) => {
 // @route   GET /api/fines/pending
 const getDriverPendingFines = async (req, res) => {
   try {
-    const { licenseNumber } = req.query;
+    // IDOR Prevention: If the user is a driver, force the query to their own license number.
+    const licenseNumber = req.user.role === 'Driver' ? req.user.licenseNumber : req.query.licenseNumber;
 
     if (!licenseNumber) {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'License number is required' });
@@ -131,6 +141,11 @@ const payFine = async (req, res) => {
       return res.status(HTTP.NOT_FOUND).json({ message: 'Fine not found' });
     }
 
+    // IDOR Prevention: Only the driver who received the fine can mark it as paid.
+    if (req.user.role === 'Driver' && fine.licenseNumber.toUpperCase() !== req.user.licenseNumber.toUpperCase()) {
+      return res.status(HTTP.FORBIDDEN).json({ message: 'Not authorized to pay this fine' });
+    }
+
     if (fine.status === PAYMENT.STATUS.PAID) {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'Fine is already paid' });
     }
@@ -151,7 +166,8 @@ const payFine = async (req, res) => {
 // @route   GET /api/fines/driver-history
 const getDriverPaidHistory = async (req, res) => {
   try {
-    const { licenseNumber } = req.query;
+    // IDOR Prevention: If the user is a driver, force the query to their own license number.
+    const licenseNumber = req.user.role === 'Driver' ? req.user.licenseNumber : req.query.licenseNumber;
 
     if (!licenseNumber) {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'License number is required' });
@@ -166,6 +182,61 @@ const getDriverPaidHistory = async (req, res) => {
     res.status(HTTP.OK).json(fines);
   } catch (error) {
     res.status(HTTP.SERVER_ERROR).json({ message: 'Failed to fetch history', error: error.message });
+  }
+};
+
+// @desc    Get a driver's full record for the officer (profile, demerit score, fine history)
+// @route   GET /api/fines/driver-record?licenseNumber=B1234567
+const getDriverRecord = async (req, res) => {
+  try {
+    const { licenseNumber } = req.query;
+
+    if (!licenseNumber || !String(licenseNumber).trim()) {
+      return res.status(HTTP.BAD_REQUEST).json({ message: 'License number is required' });
+    }
+
+    const licenseRegex = exactMatch(licenseNumber);
+
+    const [driver, fines] = await Promise.all([
+      Driver.findOne({ licenseNumber: licenseRegex })
+        .select('name nic licenseNumber phone vehicleNumber profileImage demeritPoints ratingScore licenseStatus demeritLevel suspendedAt licenseExpiryDate vehicleClasses')
+        .lean(),
+      IssuedFine.find({ licenseNumber: licenseRegex })
+        .select('vehicleNumber offenseId offenseName amount place policeOfficerId status paidAt demeritPoints date')
+        .populate('offenseId', 'offenseCode sectionOfAct severity')
+        .sort({ date: -1 })
+        .lean(),
+    ]);
+
+    const isPaid = (f) => /^PAID$/i.test(f.status || '');
+    const unpaid = fines.filter((f) => !isPaid(f));
+
+    const summary = {
+      totalFines: fines.length,
+      paidCount: fines.length - unpaid.length,
+      unpaidCount: unpaid.length,
+      unpaidAmount: unpaid.reduce((sum, f) => sum + (f.amount || 0), 0),
+      totalAmount: fines.reduce((sum, f) => sum + (f.amount || 0), 0),
+      totalDemeritDeducted: fines.reduce((sum, f) => sum + (f.demeritPoints || 0), 0),
+      lastOffenseDate: fines.length ? fines[0].date : null,
+    };
+
+    res.status(HTTP.OK).json({
+      found: !!driver,
+      maxPoints: DEMERIT.DEFAULT_POINTS,
+      driver,
+      summary,
+      fines: fines.map((f) => ({
+        ...f,
+        offenseId: f.offenseId?._id || f.offenseId,
+        offenseCode: f.offenseId?.offenseCode,
+        sectionOfAct: f.offenseId?.sectionOfAct,
+        severity: f.offenseId?.severity,
+      })),
+    });
+  } catch (error) {
+    console.error('[getDriverRecord] Error:', error);
+    res.status(HTTP.SERVER_ERROR).json({ message: 'Failed to fetch driver record', error: error.message });
   }
 };
 
@@ -241,6 +312,60 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
+// @desc    Generate and stream downloadable e-Fine SL Digital Fine Receipt (PDF)
+// @route   GET /api/fines/:id/pdf
+const generateFinePdf = async (req, res) => {
+  try {
+    const QRCode = require('qrcode');
+    const Driver = require('../models/driverModel');
+    const PdfReportService = require('../services/pdfReportService');
+
+    const { id } = req.params;
+    const fine = await IssuedFine.findById(id);
+
+    if (!fine) {
+      return res.status(HTTP.NOT_FOUND).json({ message: 'Fine record not found' });
+    }
+
+    const driver = await Driver.findOne({
+      licenseNumber: { $regex: new RegExp(`^${fine.licenseNumber}$`, 'i') }
+    });
+
+    // Generate Verification QR Code Buffer
+    const qrData = JSON.stringify({
+      receiptRef: `SL-FINE-${fine._id.toString().slice(-8).toUpperCase()}`,
+      fineId: fine._id,
+      licenseNumber: fine.licenseNumber,
+      amount: fine.amount,
+      status: fine.status,
+      verifyUrl: `https://efine.gov.lk/verify/${fine._id}`
+    });
+
+    const qrBuffer = await QRCode.toBuffer(qrData, {
+      width: 250,
+      margin: 1,
+      color: { dark: '#0F172A', light: '#FFFFFF' }
+    });
+
+    // Set Response Headers for Direct PDF Download
+    const fileName = `e-Fine-Receipt-${fine._id.toString().slice(-8).toUpperCase()}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    const doc = PdfReportService.createDocument();
+    doc.pipe(res);
+
+    PdfReportService.buildReceipt(doc, { fine, driver, qrBuffer });
+    doc.end();
+
+  } catch (error) {
+    console.error('[generateFinePdf] Error:', error);
+    if (!res.headersSent) {
+      res.status(HTTP.SERVER_ERROR).json({ message: 'Failed to generate fine receipt PDF', error: error.message });
+    }
+  }
+};
+
 module.exports = {
   getOffenses,
   addOffense,
@@ -249,5 +374,7 @@ module.exports = {
   getDriverPendingFines,
   payFine,
   getDriverPaidHistory,
-  getDashboardStats
+  getDriverRecord,
+  getDashboardStats,
+  generateFinePdf
 };

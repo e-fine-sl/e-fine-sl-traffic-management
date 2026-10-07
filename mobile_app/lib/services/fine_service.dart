@@ -69,6 +69,34 @@ class FineService {
   }
 
   // ----------------------------------------------------------------
+  // 2b. Driver Record (Officer view: profile, demerit score, fine history)
+  // ----------------------------------------------------------------
+  Future<Map<String, dynamic>> getDriverRecord(String licenseNumber) async {
+    String? token = await _authService.getToken();
+    if (token == null) {
+      throw Exception("Token missing. Please Logout & Login.");
+    }
+
+    final uri = Uri.parse('$baseUrl/fines/driver-record').replace(queryParameters: {
+      'licenseNumber': licenseNumber.trim(),
+    });
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(jsonDecode(response.body));
+    }
+    final msg = jsonDecode(response.body)['message'] ?? response.statusCode;
+    throw Exception("Server Error: $msg");
+  }
+
+  // ----------------------------------------------------------------
   // 3. Get History (Correct endpoint)
   // ----------------------------------------------------------------
   Future<List<Map<String, dynamic>>> getOfficerFineHistory() async {
@@ -287,6 +315,56 @@ class FineService {
       }
     } catch (e) {
       throw Exception('Error fetching driver status: $e');
+    }
+  }
+
+  // Fetch driver status by specific license number (used by Police Officers)
+  Future<Map<String, dynamic>?> getDriverStatusByLicense(String licenseNumber) async {
+    try {
+      String? token = await _authService.getToken();
+      if (token == null || licenseNumber.isEmpty) return null;
+
+      final uri = Uri.parse('$baseUrl/drivers/$licenseNumber/status');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching driver status by license: $e');
+      return null;
+    }
+  }
+
+  // Fetch downloadable e-Fine SL Digital Fine Receipt PDF bytes
+  Future<Uint8List?> getFinePdfBytes(String fineId) async {
+    try {
+      String? token = await _authService.getToken();
+      if (token == null) return null;
+
+      final uri = Uri.parse('$baseUrl/fines/$fineId/pdf');
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching fine PDF bytes: $e');
+      return null;
     }
   }
 }

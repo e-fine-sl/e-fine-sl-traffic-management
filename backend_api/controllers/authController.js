@@ -7,7 +7,8 @@ const Police = require('../models/policeModel');
 const PreApprovedOfficer = require('../models/preApprovedOfficerModel');
 const generateToken = require('../utils/generateToken');
 const Driver = require('../models/driverModel');
-const { HTTP, ROLES, AUTH } = require('../config/constants');
+const SystemConfig = require('../models/systemConfigModel');
+const { HTTP, ROLES, AUTH, DEMERIT } = require('../config/constants');
 const { decryptPassword, getPublicKeyPem } = require('../utils/cryptoService'); // RSA decrypt/public-key for Flutter
 
 
@@ -284,7 +285,7 @@ const registerPolice = async (req, res) => {
 const registerDriver = async (req, res) => {
   const { 
     name, nic, licenseNumber, email, phone, password, 
-    kycVerified, isVerified,
+    kycVerified, isVerified, emailIsVerified,
     vehicleClasses, profileImage, licenseFrontImage, licenseBackImage,
     addressLine1, addressLine2, city, postalCode
   } = req.body;
@@ -334,7 +335,18 @@ const registerDriver = async (req, res) => {
     const salt = await bcrypt.genSalt(AUTH.BCRYPT_SALT_ROUNDS);
     const hashedPassword = await bcrypt.hash(plainPassword, salt);
 
-    console.log(`[AUTH/REGISTER-DRIVER] Creating driver record for: ${email}`);
+    console.log(`[AUTH/REGISTER-DRIVER] Fetching system config for default demerit points: ${email}`);
+    let defaultPoints = DEMERIT.DEFAULT_POINTS;
+    try {
+      const sysConfig = await SystemConfig.findOne();
+      if (sysConfig && sysConfig.defaultDemeritPoints) {
+        defaultPoints = sysConfig.defaultDemeritPoints;
+      }
+    } catch (e) {
+      console.warn('[AUTH/REGISTER-DRIVER] Failed to load SystemConfig:', e.message);
+    }
+
+    console.log(`[AUTH/REGISTER-DRIVER] Creating driver record for: ${email} with default points: ${defaultPoints}`);
     const driver = await Driver.create({
       name,
       nic,
@@ -342,8 +354,12 @@ const registerDriver = async (req, res) => {
       email,
       phone,
       password: hashedPassword,
+      demeritPoints: defaultPoints,
+      ratingScore: 5.0,
+      demeritLevel: 'EXCELLENT',
       kycVerified: kycVerified === true,
       isVerified: isVerified === true,
+      emailIsVerified: emailIsVerified === true,
       vehicleClasses: vehicleClasses || [],
       profileImage,
       licenseFrontImage,
@@ -357,6 +373,10 @@ const registerDriver = async (req, res) => {
 
     if (driver) {
       console.log(`[AUTH/REGISTER-DRIVER] Successfully created driver ID: ${driver.id}`);
+
+      // Clean up email verification OTP records
+      await Verification.deleteMany({ badgeNumber: email.trim().toLowerCase(), stationCode: 'DRIVER_EMAIL' });
+
       res.status(HTTP.CREATED).json({
         success: true,
         _id: driver.id,
@@ -364,6 +384,7 @@ const registerDriver = async (req, res) => {
         email: driver.email,
         role: ROLES.DRIVER,
         kycVerified: driver.kycVerified,
+        emailIsVerified: driver.emailIsVerified,
         token: generateToken(driver.id),
       });
     } else {
@@ -400,7 +421,7 @@ const registerDriver = async (req, res) => {
 // Accepts RSA-encrypted password from Flutter (same encryption used during registration)
 const loginUser = async (req, res) => {
   // Flutter sends { email, encryptedPassword } — fall back to plain { email, password } for backward compat
-  const { email, encryptedPassword, password: rawPassword } = req.body;
+  const { email, encryptedPassword, password: rawPassword, fcmToken } = req.body;
 
   try {
     // Decrypt RSA-encrypted password from Flutter, or use raw if plain text sent
@@ -434,6 +455,20 @@ const loginUser = async (req, res) => {
     }
 
     if (user && (await bcrypt.compare(plainPassword, user.password))) {
+      // Save FCM token if provided
+      if (fcmToken) {
+        user.fcmToken = fcmToken;
+        await user.save();
+      }
+
+      let defaultPoints = DEMERIT.DEFAULT_POINTS;
+      try {
+        const sysConfig = await SystemConfig.findOne();
+        if (sysConfig && sysConfig.defaultDemeritPoints) {
+          defaultPoints = sysConfig.defaultDemeritPoints;
+        }
+      } catch (e) {}
+
       const token = generateToken(user.id);
       res.json({
         success: true,
@@ -458,6 +493,12 @@ const loginUser = async (req, res) => {
           nic:              user.nic,
           phone:            user.phone,
           vehicleNumber:    user.vehicleNumber,
+          // --- DEMERIT SYSTEM FIELDS ---
+          demeritPoints: user.demeritPoints !== undefined ? user.demeritPoints : defaultPoints,
+          defaultDemeritPoints: defaultPoints,
+          ratingScore: user.ratingScore !== undefined ? user.ratingScore : 5.0,
+          demeritLevel: user.demeritLevel || 'EXCELLENT',
+          licenseStatus: user.licenseStatus || 'ACTIVE',
         },
         token: token, // legacy field kept for backward compat
       });
@@ -466,6 +507,36 @@ const loginUser = async (req, res) => {
     }
   } catch (error) {
     res.status(HTTP.SERVER_ERROR).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Update FCM Token for logged in Driver / Police Officer
+// @route   PUT /api/auth/fcm-token
+// @access  Private
+const updateFcmToken = async (req, res) => {
+  try {
+    const { fcmToken } = req.body;
+    if (!fcmToken) {
+      return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'fcmToken is required' });
+    }
+
+    let user = await Driver.findById(req.user.id);
+    if (!user) {
+      user = await Police.findById(req.user.id);
+    }
+
+    if (!user) {
+      return res.status(HTTP.NOT_FOUND).json({ success: false, message: 'User not found' });
+    }
+
+    user.fcmToken = fcmToken;
+    await user.save();
+
+    console.log(`[authController] Successfully updated FCM token for ${user.name}`);
+    res.status(HTTP.OK).json({ success: true, message: 'FCM token updated successfully' });
+  } catch (error) {
+    console.error('[updateFcmToken] Error:', error);
+    res.status(HTTP.SERVER_ERROR).json({ success: false, message: 'Server Error', error: error.message });
   }
 };
 
@@ -479,8 +550,16 @@ const getMe = async (req, res) => {
     if (user) {
       res.status(HTTP.OK).json(user);
     } else {
-      const driver = await Driver.findById(req.user.id).select('-password');
+      const driver = await Driver.findById(req.user.id).select('-password').lean();
       if (driver) {
+        let defaultPoints = DEMERIT.DEFAULT_POINTS;
+        try {
+          const sysConfig = await SystemConfig.findOne();
+          if (sysConfig && sysConfig.defaultDemeritPoints) {
+            defaultPoints = sysConfig.defaultDemeritPoints;
+          }
+        } catch (e) {}
+        driver.defaultDemeritPoints = defaultPoints;
         res.status(HTTP.OK).json(driver);
       } else {
         res.status(HTTP.NOT_FOUND).json({ message: 'User not found' });
@@ -887,6 +966,105 @@ const checkFieldExistence = async (req, res) => {
   }
 };
 
+// ─── DRIVER EMAIL OTP VERIFICATION ─────────────────────────────────────────
+// These endpoints verify a driver's email address during registration.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// @desc    Send OTP to driver's email for verification
+// @route   POST /api/auth/driver-email-otp/send
+// @access  Public
+const sendDriverEmailOTP = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email || email.trim() === '') {
+    return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'Email is required.' });
+  }
+
+  try {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Clear any previous OTP for this email
+    await Verification.deleteMany({ badgeNumber: email.trim().toLowerCase(), stationCode: 'DRIVER_EMAIL' });
+
+    // Store new OTP (auto-expires via TTL index on createdAt)
+    await Verification.create({
+      badgeNumber: email.trim().toLowerCase(),
+      stationCode: 'DRIVER_EMAIL',
+      otp,
+    });
+
+    // Send styled HTML email
+    const htmlMessage = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #388E3C; padding: 20px; text-align: center;">
+          <h2 style="color: #ffffff; margin: 0;">E-Fine SL — Email Verification</h2>
+        </div>
+        <div style="padding: 20px; background-color: #ffffff;">
+          <p style="font-size: 16px; color: #333;">Hello,</p>
+          <p style="font-size: 16px; color: #333;">You are registering a new driver account on <strong>E-Fine SL</strong>. Please use the verification code below to confirm your email address.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="margin: 0; font-size: 14px; color: #777;">YOUR VERIFICATION CODE</p>
+            <h1 style="margin: 10px 0; font-size: 40px; color: #388E3C; letter-spacing: 8px; font-weight: bold;">
+              ${otp}
+            </h1>
+          </div>
+          <p style="color: #d9534f; font-size: 14px; text-align: center; font-weight: bold;">
+            This code will expire in ${AUTH.OTP_EXPIRY_MINUTES} minutes. Do not share it with anyone.
+          </p>
+        </div>
+        <div style="background-color: #eeeeee; padding: 10px; text-align: center; font-size: 12px; color: #777;">
+          © ${new Date().getFullYear()} E-Fine SL Project | Secure Verification System
+        </div>
+      </div>
+    `;
+
+    await sendEmail({
+      email: email.trim(),
+      subject: 'E-Fine SL — Verify Your Email Address',
+      message: `Your email verification code is: ${otp}`,
+      html: htmlMessage,
+    });
+
+    console.log(`[AUTH/DRIVER-EMAIL-OTP] OTP sent to: ${email}`);
+    res.status(HTTP.OK).json({ success: true, message: 'Verification code sent to your email.' });
+
+  } catch (error) {
+    console.error(`[AUTH/DRIVER-EMAIL-OTP] Error sending OTP: ${error.message}`);
+    res.status(HTTP.SERVER_ERROR).json({ success: false, message: 'Failed to send verification code.', error: error.message });
+  }
+};
+
+// @desc    Verify driver's email OTP
+// @route   POST /api/auth/driver-email-otp/verify
+// @access  Public
+const verifyDriverEmailOTP = async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'Email and OTP are required.' });
+  }
+
+  try {
+    const record = await Verification.findOne({
+      badgeNumber: email.trim().toLowerCase(),
+      stationCode: 'DRIVER_EMAIL',
+      otp: otp.trim(),
+    });
+
+    if (!record) {
+      console.log(`[AUTH/DRIVER-EMAIL-OTP] Invalid OTP attempt for: ${email}`);
+      return res.status(HTTP.BAD_REQUEST).json({ success: false, message: 'Invalid or expired verification code.' });
+    }
+
+    console.log(`[AUTH/DRIVER-EMAIL-OTP] Email verified: ${email}`);
+    res.status(HTTP.OK).json({ success: true, message: 'Email verified successfully.' });
+
+  } catch (error) {
+    console.error(`[AUTH/DRIVER-EMAIL-OTP] Error verifying OTP: ${error.message}`);
+    res.status(HTTP.SERVER_ERROR).json({ success: false, message: 'Server Error', error: error.message });
+  }
+};
+
 const verifyWithDMT = async (req, res) => {
   const { licenseNumber, nic } = req.body;
 
@@ -933,12 +1111,40 @@ const verifyWithDMT = async (req, res) => {
       clearTimeout(timeout);
     }
 
-    // Step 3: Parse DMT response
-    const dmtData = await dmtResponse.json();
+    // Step 3: Parse DMT response safely
+    let dmtData;
+    try {
+      dmtData = await dmtResponse.json();
+    } catch (parseError) {
+      console.error(`[AUTH/DMT-VERIFY] Non-JSON response from DMT (Status: ${dmtResponse.status})`);
+      return res.status(dmtResponse.status).json({
+        success: false,
+        dmtUnreachable: dmtResponse.status >= 500 || dmtResponse.status === 429,
+        message: dmtResponse.status === 429 
+          ? 'DMT server is currently busy (Too Many Requests). Please try again later.'
+          : 'DMT verification service returned an invalid response.'
+      });
+    }
+    
     console.log(`[AUTH/DMT-VERIFY] DMT Status: ${dmtResponse.status} for license: ${licenseNumber}`);
 
     // Step 4: Forward DMT result to Flutter
     if (dmtResponse.status === 200) {
+      // Background task: Update the local Driver record with the fetched vehicle classes
+      // so we don't have to hit the DMT server every time they fetch their profile.
+      if (dmtData && dmtData.data && dmtData.data.vehicleClasses) {
+        try {
+          const Driver = require('../models/driverModel');
+          await Driver.findOneAndUpdate(
+            { nic: nic.trim().toUpperCase(), licenseNumber: licenseNumber.trim().toUpperCase() },
+            { $set: { vehicleClasses: dmtData.data.vehicleClasses } }
+          );
+          console.log(`[AUTH/DMT-VERIFY] Automatically cached vehicleClasses for driver ${licenseNumber} in MongoDB.`);
+        } catch (dbErr) {
+          console.error(`[AUTH/DMT-VERIFY] Failed to cache vehicleClasses in DB: ${dbErr.message}`);
+        }
+      }
+
       return res.status(200).json({
         success: true,
         found: true,
@@ -1018,8 +1224,12 @@ module.exports = {
   updateProfile,
   checkFieldExistence,
   verifyWithDMT,
+  // Driver Email OTP
+  sendDriverEmailOTP,
+  verifyDriverEmailOTP,
   // Driver License Recovery
   lookupDriverByLicense,
   verifyLicenseScan,
   resetPasswordByLicense,
-};
+  updateFcmToken,
+};

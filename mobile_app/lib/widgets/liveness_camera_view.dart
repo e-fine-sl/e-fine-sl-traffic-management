@@ -217,7 +217,16 @@ class _LivenessCameraViewState extends State<LivenessCameraView>
       fit: StackFit.expand,
       children: [
         // ── Camera feed ────────────────────────────────────────────────────
-        CameraPreview(_cameraController!),
+        SizedBox.expand(
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: _cameraController!.value.previewSize!.height,
+              height: _cameraController!.value.previewSize!.width,
+              child: CameraPreview(_cameraController!),
+            ),
+          ),
+        ),
 
         // ── Face oval overlay ──────────────────────────────────────────────
         CustomPaint(

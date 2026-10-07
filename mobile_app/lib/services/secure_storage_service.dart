@@ -63,6 +63,50 @@ class SecureStorageService {
   }
 
   // ──────────────────────────────────────────
+  // Mark: WALLET CACHE OPERATIONS
+  // ──────────────────────────────────────────
+
+  Future<void> cacheWallet(Map<String, dynamic> data) async {
+    debugPrint('$_tag cacheWallet() called.');
+    try {
+      final jsonString = jsonEncode(data);
+      await _storage.write(key: PrefKeys.walletData, value: jsonString);
+      debugPrint('$_tag Wallet cached successfully.');
+    } catch (e) {
+      debugPrint('$_tag Error caching wallet: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getCachedWallet() async {
+    debugPrint('$_tag getCachedWallet() called.');
+    try {
+      final jsonString = await _storage.read(key: PrefKeys.walletData);
+      if (jsonString == null || jsonString.isEmpty) {
+        debugPrint('$_tag Cache miss — no wallet stored.');
+        return null;
+      }
+      final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+      debugPrint('$_tag Cache hit — wallet loaded from secure storage.');
+      return decoded;
+    } catch (e) {
+      debugPrint('$_tag Error reading cached wallet: $e');
+      return null;
+    }
+  }
+
+  Future<void> clearCachedWallet() async {
+    debugPrint('$_tag clearCachedWallet() called.');
+    try {
+      await _storage.delete(key: PrefKeys.walletData);
+      debugPrint('$_tag Wallet cache cleared.');
+    } catch (e) {
+      debugPrint('$_tag Error clearing wallet cache: $e');
+      rethrow;
+    }
+  }
+
+  // ──────────────────────────────────────────
   // AUTH TOKEN OPERATIONS
   // ──────────────────────────────────────────
 
@@ -104,6 +148,7 @@ class SecureStorageService {
         _storage.delete(key: PrefKeys.userRole),
         _storage.delete(key: PrefKeys.userName),
         _storage.delete(key: PrefKeys.profileData),
+        _storage.delete(key: PrefKeys.walletData),
         // Biometric credentials
         _storage.delete(key: PrefKeys.biometricEnabled),
         _storage.delete(key: PrefKeys.biometricEmail),

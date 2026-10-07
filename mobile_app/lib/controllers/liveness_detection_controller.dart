@@ -94,9 +94,9 @@ class LivenessDetectionController extends ChangeNotifier {
         break;
 
       // ── Step 2: Turn Left ───────────────────────────────────────────────────
-      // Negative yaw = face turned to user's left (camera's right)
+      // When user turns left, yaw becomes positive
       case LivenessState.turnLeft:
-        if (yaw < -yawThreshold) {
+        if (yaw > yawThreshold) {
           _updateState(
             LivenessState.turnRight,
             'Now turn your head to the RIGHT →',
@@ -105,9 +105,9 @@ class LivenessDetectionController extends ChangeNotifier {
         break;
 
       // ── Step 3: Turn Right ──────────────────────────────────────────────────
-      // Positive yaw = face turned to user's right (camera's left)
+      // When user turns right, yaw becomes negative
       case LivenessState.turnRight:
-        if (yaw > yawThreshold) {
+        if (yaw < -yawThreshold) {
           _updateState(
             LivenessState.nodDown,
             'Face forward, then nod your head DOWN ↓',

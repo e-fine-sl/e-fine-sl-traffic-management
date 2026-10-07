@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-// Import all required functions from fineController only (avoid duplicate declarations)
+const { protect } = require('../middleware/authMiddleware');
+
 const {
     getOffenses,
     addOffense,
@@ -9,30 +10,22 @@ const {
     getDriverPendingFines,
     payFine,
     getDriverPaidHistory,
-    getDashboardStats
+    getDriverRecord,
+    getDashboardStats,
+    generateFinePdf
 } = require('../controllers/fineController');
 
+// Public / Authenticated read for offenses list
 router.get('/offenses', getOffenses);
-
-
-router.post('/add', addOffense);
-
-
-router.post('/issue', issueFine);
-
-
-router.get('/dashboard-stats', getDashboardStats);
-
-
-router.get('/history', getFineHistory);
-
-
-router.get('/pending', getDriverPendingFines);
-
-router.get('/driver-history', getDriverPaidHistory);
-
-router.post('/:id/pay', payFine);
+router.post('/add', protect, addOffense);
+router.post('/issue', protect, issueFine);
+router.get('/dashboard-stats', protect, getDashboardStats);
+router.get('/history', protect, getFineHistory);
+router.get('/pending', protect, getDriverPendingFines);
+router.get('/driver-history', protect, getDriverPaidHistory);
+// Officer view: driver profile + demerit score + full fine history
+router.get('/driver-record', protect, getDriverRecord);
+router.get('/:id/pdf', protect, generateFinePdf);
+router.post('/:id/pay', protect, payFine);
 
 module.exports = router;
-
-//update the route name

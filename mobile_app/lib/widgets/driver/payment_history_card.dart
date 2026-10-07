@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../config/app_constants.dart';
 
@@ -337,6 +338,44 @@ class PaymentHistoryCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // ── SECTION C: DOWNLOAD PDF RECEIPT ──────────────
+                SizedBox(
+                  width: double.infinity,
+                  height: 38,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final Uri url = Uri.parse('${ApiConstants.baseUrl}/fines/$fineId/pdf');
+                      try {
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        } else {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Could not open e-Fine receipt PDF URL.')),
+                          );
+                        }
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error downloading receipt: $e')),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.picture_as_pdf, size: 16, color: AppColors.primaryGreen),
+                    label: const Text(
+                      "Download e-Fine Receipt (PDF)",
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primaryGreen),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.primaryGreen, width: 1.2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.small)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                  ),
                 ),
               ],
             ),

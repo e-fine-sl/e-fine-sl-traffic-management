@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart'; 
 import 'screens/splash/splash_screen.dart';
@@ -18,12 +19,23 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(); // Initialize Firebase for FCM
 
-  RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  RemoteMessage? initialMessage;
+  try {
+    // Only apply the 3-second timeout hack for iOS. Android returns instantly.
+    if (Platform.isIOS) {
+      initialMessage = await FirebaseMessaging.instance.getInitialMessage().timeout(const Duration(seconds: 3));
+    } else {
+      initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+    }
+  } catch (e) {
+    debugPrint('[main] getInitialMessage timed out or failed: $e');
+  }
+
   if (initialMessage != null) {
     final type = initialMessage.data['type'] ?? '';
     if (type == 'SOS_ALERT') {
-      final lat = initialMessage.data['senderLat']?.toString() ?? '0';
-      final lng = initialMessage.data['senderLng']?.toString() ?? '0';
+      final lat = initialMessage.data['lat']?.toString() ?? '0';
+      final lng = initialMessage.data['lng']?.toString() ?? '0';
       // Add a slight delay if necessary to ensure app is ready before launching external URL
       Future.delayed(const Duration(milliseconds: 500), () {
         SosService.openGoogleMapsForSOS(lat, lng);
