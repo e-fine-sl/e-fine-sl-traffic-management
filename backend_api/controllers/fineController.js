@@ -98,7 +98,11 @@ const getFineHistory = async (req, res) => {
 const getDriverPendingFines = async (req, res) => {
   try {
     // IDOR Prevention: If the user is a driver, force the query to their own license number.
-    const licenseNumber = req.user.role === 'Driver' ? req.user.licenseNumber : req.query.licenseNumber;
+    const isDriver = String(req.user?.role || '').toLowerCase() === 'driver';
+    const rawLicense = isDriver
+      ? (req.user.licenseNumber || req.query.licenseNumber || req.query.licenseNo)
+      : (req.query.licenseNumber || req.query.licenseNo);
+    const licenseNumber = rawLicense ? String(rawLicense).trim() : '';
 
     if (!licenseNumber) {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'License number is required' });
@@ -106,7 +110,7 @@ const getDriverPendingFines = async (req, res) => {
 
     // Case-insensitive match for both licenseNumber and status
     const fines = await IssuedFine.find({
-      licenseNumber: { $regex: new RegExp(`^${licenseNumber}$`, 'i') },
+      licenseNumber: { $regex: new RegExp(`^\\s*${licenseNumber}\\s*$`, 'i') },
       status: { $in: [
         /^UNPAID$/i,
         /^PENDING$/i
@@ -133,7 +137,8 @@ const payFine = async (req, res) => {
     }
 
     // IDOR Prevention: Only the driver who received the fine can mark it as paid.
-    if (req.user.role === 'Driver' && fine.licenseNumber.toUpperCase() !== req.user.licenseNumber.toUpperCase()) {
+    const isDriver = String(req.user?.role || '').toLowerCase() === 'driver';
+    if (isDriver && fine.licenseNumber.trim().toUpperCase() !== String(req.user.licenseNumber || '').trim().toUpperCase()) {
       return res.status(HTTP.FORBIDDEN).json({ message: 'Not authorized to pay this fine' });
     }
 
@@ -158,7 +163,11 @@ const payFine = async (req, res) => {
 const getDriverPaidHistory = async (req, res) => {
   try {
     // IDOR Prevention: If the user is a driver, force the query to their own license number.
-    const licenseNumber = req.user.role === 'Driver' ? req.user.licenseNumber : req.query.licenseNumber;
+    const isDriver = String(req.user?.role || '').toLowerCase() === 'driver';
+    const rawLicense = isDriver
+      ? (req.user.licenseNumber || req.query.licenseNumber || req.query.licenseNo)
+      : (req.query.licenseNumber || req.query.licenseNo);
+    const licenseNumber = rawLicense ? String(rawLicense).trim() : '';
 
     if (!licenseNumber) {
       return res.status(HTTP.BAD_REQUEST).json({ message: 'License number is required' });
@@ -166,7 +175,7 @@ const getDriverPaidHistory = async (req, res) => {
 
     // Case-insensitive match for both licenseNumber and status
     const fines = await IssuedFine.find({
-      licenseNumber: { $regex: new RegExp(`^${licenseNumber}$`, 'i') },
+      licenseNumber: { $regex: new RegExp(`^\\s*${licenseNumber}\\s*$`, 'i') },
       status: /^PAID$/i
     }).sort({ paidAt: -1 });
 

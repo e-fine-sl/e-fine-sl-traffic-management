@@ -2,6 +2,13 @@ const Driver = require('../models/driverModel');
 const { HTTP } = require('../config/constants');
 const https = require('https');
 
+// Keep efine-mock-data-loader awake on Render (prevents 15-min free-tier sleep)
+const wakeMockLoader = () => {
+  https.get('https://efine-mock-data-loader.onrender.com/api/wallet/health', (r) => r.resume()).on('error', () => {});
+};
+wakeMockLoader();
+setInterval(wakeMockLoader, 10 * 60 * 1000).unref();
+
 // Helper to use native fetch/https if needed, but since we are mocking, let's proxy to the mock loader
 const fetchMockWallet = (nic, licenseNumber) => {
   return new Promise((resolve, reject) => {
@@ -100,3 +107,4 @@ const getMyWallet = async (req, res) => {
 module.exports = {
   getMyWallet
 };
+

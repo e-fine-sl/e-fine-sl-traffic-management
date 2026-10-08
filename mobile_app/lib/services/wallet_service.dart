@@ -13,7 +13,7 @@ class WalletService {
   static const String _baseUrl = ApiConstants.walletUrl;
 
 
-  static const Duration _timeout = Duration(seconds: 15);
+  static const Duration _timeout = Duration(seconds: 60);
 
   // ── GET /api/wallet ───────────────────────────────
   /// Gets wallet from cache if available, otherwise fetches from API.

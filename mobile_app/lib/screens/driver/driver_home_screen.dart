@@ -381,11 +381,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: InkWell(
                   onTap: () async {
-                    if (_notifications.isEmpty) return;
                     bool? result = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => PayFineScreen(fine: _notifications.first),
+                        builder: (context) => PayFineScreen(fines: _notifications),
                       ),
                     );
                     if (result == true) _refreshData();
@@ -451,11 +450,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 mainAxisSpacing: 15,
                 children: [
                   _buildActionCard(Icons.payment, "pay_fines".tr(), Colors.orange, () async {
-                      if (_notifications.isEmpty) return;
                       bool? result = await Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => PayFineScreen(fine: _notifications.first),
+                          builder: (context) => PayFineScreen(fines: _notifications),
                         ),
                       );
                       if (result == true) _refreshData();
@@ -608,7 +606,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                           Navigator.pop(context);
                           bool? result = await Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => PayFineScreen(fine: fine)),
+                            MaterialPageRoute(
+                              builder: (_) => PayFineScreen(fine: fine, fines: _notifications),
+                            ),
                           );
                           if (result == true) _refreshData();
                         },

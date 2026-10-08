@@ -22,7 +22,7 @@ router.get('/dashboard-stats', protect, getDashboardStats);
 router.get('/history', protect, getFineHistory);
 router.get('/pending', protect, getDriverPendingFines);
 router.get('/driver-history', protect, getDriverPaidHistory);
-router.get('/:id/pdf', protect, generateFinePdf);
+router.get('/:id/pdf', generateFinePdf);
 router.post('/:id/pay', protect, payFine);
 
 module.exports = router;

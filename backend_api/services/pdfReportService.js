@@ -294,6 +294,14 @@ class PdfReportService {
            .fontSize(12)
            .text(statusLabel, margin + 14, cardY);
 
+        const subStatusText = isPaid
+           ? `Payment Ref: ${fine.paymentId || 'Verified'}  |  Paid: ${fine.paidAt ? new Date(fine.paidAt).toLocaleDateString('en-US', { timeZone: 'Asia/Colombo' }) : 'Settled'}`
+           : 'Pre-Payment Fine Notice — Pending Settlement';
+        doc.fillColor(this.COLORS.TEXT_MUTED)
+           .font('Helvetica')
+           .fontSize(8)
+           .text(subStatusText, margin + 14, cardY + 16);
+
         doc.fillColor(this.COLORS.TEXT_MUTED)
            .font('Helvetica')
            .fontSize(8.5)

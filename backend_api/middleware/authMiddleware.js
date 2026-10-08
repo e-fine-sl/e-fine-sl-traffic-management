@@ -10,13 +10,18 @@ const Admin = require('../models/adminModel');
  */
 const protect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
+  let token = null;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query && req.query.token) {
+    token = req.query.token;
+  }
+
+  if (!token) {
     console.warn(`[AUTH/PROTECT] No token provided for URL: ${req.originalUrl}`);
     return res.status(HTTP.UNAUTHORIZED).json({ message: 'Not authorized, no token' });
   }
-
-  const token = authHeader.split(' ')[1];
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret123');

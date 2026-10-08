@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'api_logger.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -117,11 +119,13 @@ class FineService {
       String? token = await _authService.getToken();
       String? licenseNumber = await _storage.read(key: PrefKeys.licenseNum);
       
-      if (token == null || licenseNumber == null) return [];
+      if (token == null) return [];
 
-      final uri = Uri.parse('$baseUrl/fines/pending').replace(queryParameters: {
-        'licenseNumber': licenseNumber,
-      });
+      final uri = (licenseNumber != null && licenseNumber.trim().isNotEmpty)
+          ? Uri.parse('$baseUrl/fines/pending').replace(queryParameters: {
+              'licenseNumber': licenseNumber.trim(),
+            })
+          : Uri.parse('$baseUrl/fines/pending');
 
       final response = await http.get(
         uri,
@@ -149,9 +153,11 @@ class FineService {
     required String queryKey,
     required String queryValue,
   }) async {
-    final uri = Uri.parse('$baseUrl/fines/$endpoint').replace(queryParameters: {
-      queryKey: queryValue,
-    });
+    final uri = queryValue.trim().isNotEmpty
+        ? Uri.parse('$baseUrl/fines/$endpoint').replace(queryParameters: {
+            queryKey: queryValue.trim(),
+          })
+        : Uri.parse('$baseUrl/fines/$endpoint');
 
     final response = await http.get(
       uri,
@@ -226,18 +232,18 @@ class FineService {
       String? token = await _authService.getToken();
       String? licenseNumber = await _storage.read(key: PrefKeys.licenseNum);
       
-      if (token == null || licenseNumber == null) return [];
+      if (token == null) return [];
 
       // Fetch from network
       List<Map<String, dynamic>> results = await _fetchFinesInternal(
         endpoint: 'driver-history',
         token: token,
         queryKey: 'licenseNumber',
-        queryValue: licenseNumber,
+        queryValue: licenseNumber ?? '',
       );
 
       // Fallback to 'licenseNo'
-      if (results.isEmpty) {
+      if (results.isEmpty && licenseNumber != null && licenseNumber.isNotEmpty) {
         results = await _fetchFinesInternal(
           endpoint: 'driver-history',
           token: token,
@@ -337,6 +343,53 @@ class FineService {
     } catch (e) {
       debugPrint('Error fetching fine PDF bytes: $e');
       return null;
+    }
+  }
+
+  // Build authenticated PDF receipt URL with ?token=<jwt> for browser download
+  Future<Uri> getFinePdfUrl(String fineId) async {
+    final String? token = await _authService.getToken();
+    final Uri baseUri = Uri.parse('$baseUrl/fines/$fineId/pdf');
+    if (token != null && token.isNotEmpty) {
+      return baseUri.replace(queryParameters: {'token': token});
+    }
+    return baseUri;
+  }
+
+  // Download e-Fine Receipt PDF (works both before paying in Pay Fines and after paying in History)
+  Future<void> downloadFineReceiptPdf(BuildContext context, String fineId) async {
+    final String cleanId = fineId.trim();
+    if (cleanId.isEmpty || cleanId == 'Unknown ID') {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid Fine ID for receipt download.')),
+      );
+      return;
+    }
+
+    try {
+      final Uri url = await getFinePdfUrl(cleanId);
+      bool launched = await launchUrl(
+        url,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        launched = await launchUrl(
+          url,
+          mode: LaunchMode.platformDefault,
+        );
+      }
+      if (!launched) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open e-Fine receipt PDF URL.')),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error downloading receipt: $e')),
+      );
     }
   }
 }
