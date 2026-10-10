@@ -361,6 +361,8 @@ const registerDriver = async (req, res) => {
       isVerified: isVerified === true,
       emailIsVerified: emailIsVerified === true,
       vehicleClasses: vehicleClasses || [],
+      licenseExpiryDate: req.body.licenseExpiryDate || '',
+      licenseIssueDate: req.body.licenseIssueDate || '',
       profileImage,
       licenseFrontImage,
       licenseBackImage,
@@ -474,6 +476,9 @@ const loginUser = async (req, res) => {
           nic: user.nic,
           phone: user.phone,
           vehicleNumber: user.vehicleNumber,
+          licenseExpiryDate: user.licenseExpiryDate,
+          licenseIssueDate: user.licenseIssueDate,
+          vehicleClasses: user.vehicleClasses || [],
 
           // --- DEMERIT SYSTEM FIELDS ---
           demeritPoints: user.demeritPoints !== undefined ? user.demeritPoints : defaultPoints,
@@ -1112,18 +1117,37 @@ const verifyWithDMT = async (req, res) => {
 
     // Step 4: Forward DMT result to Flutter
     if (dmtResponse.status === 200) {
-      // Background task: Update the local Driver record with the fetched vehicle classes
+      // Background task: Update the local Driver record with the fetched vehicle classes and expiry details
       // so we don't have to hit the DMT server every time they fetch their profile.
-      if (dmtData && dmtData.data && dmtData.data.vehicleClasses) {
+      if (dmtData && dmtData.data) {
         try {
           const Driver = require('../models/driverModel');
-          await Driver.findOneAndUpdate(
-            { nic: nic.trim().toUpperCase(), licenseNumber: licenseNumber.trim().toUpperCase() },
-            { $set: { vehicleClasses: dmtData.data.vehicleClasses } }
-          );
-          console.log(`[AUTH/DMT-VERIFY] Automatically cached vehicleClasses for driver ${licenseNumber} in MongoDB.`);
+          const updateFields = {};
+          if (dmtData.data.vehicleClasses) {
+            updateFields.vehicleClasses = dmtData.data.vehicleClasses;
+          }
+          if (dmtData.data.licenseExpiryDate) {
+            updateFields.licenseExpiryDate = dmtData.data.licenseExpiryDate;
+          }
+          if (dmtData.data.licenseIssueDate) {
+            updateFields.licenseIssueDate = dmtData.data.licenseIssueDate;
+          }
+          if (Object.keys(updateFields).length > 0) {
+            const cleanLicense = licenseNumber.trim();
+            const cleanNic = nic.trim();
+            await Driver.findOneAndUpdate(
+              {
+                $or: [
+                  { licenseNumber: { $regex: new RegExp(`^${cleanLicense}$`, 'i') } },
+                  { nic: { $regex: new RegExp(`^${cleanNic}$`, 'i') } }
+                ]
+              },
+              { $set: updateFields }
+            );
+            console.log(`[AUTH/DMT-VERIFY] Automatically cached vehicleClasses and expiry details for driver ${licenseNumber} in MongoDB.`);
+          }
         } catch (dbErr) {
-          console.error(`[AUTH/DMT-VERIFY] Failed to cache vehicleClasses in DB: ${dbErr.message}`);
+          console.error(`[AUTH/DMT-VERIFY] Failed to cache DMT details in DB: ${dbErr.message}`);
         }
       }
 
